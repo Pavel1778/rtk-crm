@@ -1,0 +1,37 @@
+# --- Backend ---
+APP_ENV=development
+APP_URL=http://localhost:8000
+# Для продакшена здесь будет IP или адрес типа *.nip.io или *.trycloudflare.com
+SECRET_KEY=super-secret-key-change-me-in-production
+
+# --- PostgreSQL ---
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_USER=rtk_user
+POSTGRES_PASSWORD=rtk_password
+POSTGRES_DB=rtk_crm
+DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+
+# --- Redis ---
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
+
+# --- Keycloak ---
+KEYCLOAK_URL=http://localhost:8080
+KEYCLOAK_REALM=rtk-crm
+KEYCLOAK_CLIENT_ID=rtk-crm-client
+KEYCLOAK_CLIENT_SECRET=change-me
+
+# --- Frontend ---
+VITE_API_URL=http://localhost:8000
+VITE_KEYCLOAK_URL=http://localhost:8080
+VITE_KEYCLOAK_REALM=rtk-crm
+VITE_KEYCLOAK_CLIENT_ID=rtk-crm-client
+
+# --- Files ---
+UPLOAD_DIR=/app/data/uploads
+MAX_UPLOAD_SIZE_MB=50
+
+# --- CORS (добавим сюда домены при деплое) ---
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
