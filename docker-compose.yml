@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # 1. Основная база данных приложения
+  postgres:
+    image: postgres:16-alpine
+    container_name: rtk_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: rtk_user
+      POSTGRES_PASSWORD: rtk_password
+      POSTGRES_DB: rtk_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rtk_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rtk_user -d rtk_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Кэш и очередь задач
+  redis:
+    image: redis:7-alpine
+    container_name: rtk_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - rtk_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Keycloak (Используем встроенную H2 БД для быстрого и стабильного локального запуска)
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: rtk_keycloak
+    restart: always
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: true
+    ports:
+      - "8080:8080"
+    networks:
+      - rtk_network
+
+  # 4. Backend (FastAPI)
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rtk_backend
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://rtk_user:rtk_password@postgres:5432/rtk_crm
+      - REDIS_URL=redis://redis:6379/0
+      - KEYCLOAK_URL=http://keycloak:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rtk_network
+
+  # 5. Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rtk_frontend
+    restart: always
+    ports:
+      - "3000:3000" # Если порт 3000 занят, поменяй на "3001:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Защита от перезаписи node_modules хост-машиной
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_KEYCLOAK_URL=http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - rtk_network
+
+volumes:
+  postgres_data:
+
+networks:
+  rtk_network:
+    driver: bridge
