@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ConfigProvider, theme as antdTheme } from 'antd';
 import MainLayout from './components/MainLayout';
 import KanbanBoard from './components/KanbanBoard';
 import { Typography, Card, Row, Col, Statistic, Progress } from 'antd';
@@ -8,6 +9,7 @@ import {
   ClockCircleOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
+import { rostelecomTheme } from './theme/theme';
 
 const { Title, Paragraph } = Typography;
 
@@ -21,6 +23,8 @@ const dashboardStats = {
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'kanban'>('dashboard');
+  // TODO: Добавить переключатель темы в MainLayout
+  const isDark = false;
 
   const renderContent = () => {
     if (currentView === 'kanban') {
@@ -126,7 +130,16 @@ const App: React.FC = () => {
     );
   };
 
-  return <MainLayout>{renderContent()}</MainLayout>;
+  return (
+    <ConfigProvider
+      theme={{
+        ...rostelecomTheme,
+        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+      }}
+    >
+      <MainLayout>{renderContent()}</MainLayout>
+    </ConfigProvider>
+  );
 };
 
 export default App;

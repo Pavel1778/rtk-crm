@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Dropdown } from 'antd';
 import {
   DashboardOutlined,
