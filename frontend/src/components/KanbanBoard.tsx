@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Tag, Button, Space, Typography, Modal, Form, Input, Select, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { DragEndEvent } from '@dnd-kit/core';
 import type { University, WorkflowStage } from '../types';
 import { universitiesApi, workflowApi } from '../api/client';
 
@@ -41,12 +40,6 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   useEffect(() => {
     loadData();
   }, []);
-
-  // Обработка перетаскивания (заглушка для будущей реализации dnd-kit)
-  const handleDragEnd = (event: DragEndEvent) => {
-    console.log('Drag ended:', event);
-    // Здесь будет логика обновления стадии вуза
-  };
 
   // Открытие модального окна создания/редактирования
   const openModal = (university?: University) => {
