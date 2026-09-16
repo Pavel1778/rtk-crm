@@ -21,6 +21,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "https://rtk-crm.vercel.app",
+        "https://rtk-crm-nx4r.vercel.app",  # Production Vercel domain
     ]
 
     # Debug
