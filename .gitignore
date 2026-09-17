@@ -1,0 +1,51 @@
+```
+# Зависимости
+node_modules/
+
+# Артефакты сборки
+dist/
+build/
+
+# Переменные окружения
+.env
+.env.local
+.env.*
+!.env.example
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# Логи
+*.log
+logs/
+
+# Локальные базы данных
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ОС
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+*.tmp
+*.temp
+_*.js
+_check_*.py
+_extract_*
+_fix_*
+
+```
