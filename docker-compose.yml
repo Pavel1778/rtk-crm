@@ -96,6 +96,24 @@ services:
     networks:
       - rtk_network
 
+  # 6. Nginx Reverse Proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: rtk_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./backend/static:/app/static:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - rtk_network
+
 volumes:
   postgres_data:
 
