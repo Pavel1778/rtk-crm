@@ -17,3 +17,4 @@ python-multipart==0.0.6
 aiofiles==23.2.1
 httpx==0.26.0
 chardet==5.2.0
+aiosmtplib==3.0.2

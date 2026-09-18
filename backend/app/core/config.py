@@ -60,6 +60,16 @@ class Settings(BaseSettings):
     # Notifications
     stale_status_days: int = 14
 
+    # Email / SMTP (российский провайдер — 152-ФЗ)
+    email_enabled: bool = False
+    email_host: str = "smtp.yandex.ru"
+    email_port: int = 465
+    email_user: str = ""
+    email_password: str = ""
+    email_from: str = ""
+    email_from_name: str = "RTK CRM"
+    email_use_tls: bool = True
+
     @property
     def max_file_size_bytes(self) -> int:
         return self.max_file_size_mb * 1024 * 1024
