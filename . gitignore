@@ -1,0 +1,29 @@
+# --- Добавления для нашего стека ---
+# Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+.pnp
+.pnp.js
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Generated Reports & Uploads (НЕ коммитим файлы пользователей и отчеты!)
+uploads/
+data/uploads/
+*.xlsx
+*.xls
+*.pdf
+!docs/**/*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

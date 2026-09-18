@@ -1,0 +1,1 @@
+Nothing needs to be added to .gitignore since the only change is adding the root directory itself ("."), which doesn't require any special ignore rules.
