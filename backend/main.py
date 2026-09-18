@@ -93,3 +93,9 @@ async def health() -> HealthResponse:
     except Exception:  # noqa: BLE001
         db_status = "unavailable"
     return HealthResponse(status="ok", app=settings.app_name, database=db_status)
+
+
+@app.get("/health", include_in_schema=False)
+async def health_compat() -> dict[str, str]:
+    """Алиас для Render-проверки: /health -> {"status":"ok"}."""
+    return {"status": "ok"}

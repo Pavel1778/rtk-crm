@@ -62,15 +62,27 @@ DEMO_USERS: list[tuple[str, str, str, bool]] = [
 ]
 
 
-async def seed_demo(session: AsyncSession) -> bool:
-    """Заполняет пустую базу. Возвращает True, если что-то создано."""
+async def seed_reference(session: AsyncSession) -> bool:
+    """Заполняет только справочники (этапы, пользователи, направления, продукты).
+
+    Идемпотентна: существующие данные пропускаются. Используется при старте
+    на Render, где демо-карточки не нужны.
+    """
     created_any = False
     created_any |= await _seed_stages(session)
     created_any |= await _seed_users(session)
     created_any |= await _seed_directories(session)
-    created_any |= await _seed_demo_interactions(session)
     if created_any:
         await session.commit()
+    return created_any
+
+
+async def seed_demo(session: AsyncSession) -> bool:
+    """Заполняет пустую базу целиком. Возвращает True, если что-то создано."""
+    created_any = await seed_reference(session)
+    if await _seed_demo_interactions(session):
+        await session.commit()
+        created_any = True
     return created_any
 
 
