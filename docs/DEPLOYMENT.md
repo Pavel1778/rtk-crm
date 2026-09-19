@@ -16,12 +16,12 @@ Supabase PostgreSQL 15 (Session Pooler, порт 5432)
 
 ## 1. Supabase (база данных)
 
-1. Проект создан, регион **eu-west-1 (Ирландия)**.
-2. Connection string берётся в **Connect → Session pooler** (порт `5432`, НЕ `6543`).
-3. Формат для backend (asyncpg):
+Проект: `azdovsiwdyjzoqmltvrv`
+Region: **eu-west-1 (Ирландия)**
 
+Connection string (Session Pooler, порт 5432):
 ```
-DATABASE_URL=postgresql+asyncpg://<user>:<password>@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql+asyncpg://postgres.azdovsiwdyjzoqmltvrv:PnDsBd1778P@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
 ```
 
 Требования:
@@ -52,11 +52,10 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@aws-1-eu-west-1.pooler.supab
 
 | Ключ | Значение |
 |---|---|
-| `DATABASE_URL` | строка из раздела 1 (без пробелов) |
-| `SECRET_KEY` | случайная строка 32+ символов |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` |
-| `CORS_ORIGINS` | `https://rtk-crm-nx4r.vercel.app,http://localhost:5173` (без пробелов) |
-| `SEED_DEMO_DATA` | `true` (демо-карточки) или `false` (только справочники) |
+| `DATABASE_URL` | `postgresql+asyncpg://postgres.azdovsiwdyjzoqmltvrv:PnDsBd1778P@aws-1-eu-west-1.pooler.supabase.com:5432/postgres` |
+| `SECRET_KEY` | `rtk-crm-2026-hackathon-secret-key-32chars` |
+| `CORS_ORIGINS` | `https://rtk-crm-nx4r.vercel.app,http://localhost:5173` |
+| `SEED_DEMO_DATA` | `true` |
 
 ### Как это работает при старте
 
@@ -83,6 +82,7 @@ GET https://rtk-crm-backend.onrender.com/docs        -> Swagger UI
 |---|---|---|
 | Администратор | `admin@rtk.ru` | `admin123` |
 | Менеджер | `manager@rtk.ru` | `manager123` |
+| КАМ | `user@rtk.ru` | `user123` |
 
 ---
 
@@ -149,4 +149,3 @@ npm run dev
 - JWT-доступ ко всем эндпоинтам, кроме `/health` и логина.
 - После публичного показа: сменить пароль Supabase
   (Settings → Database → Reset password) и отозвать использованные токены GitHub.
-"C:\Users\sabad\Downloads\rtk-crm-main (1)\rtk-crm-main"
