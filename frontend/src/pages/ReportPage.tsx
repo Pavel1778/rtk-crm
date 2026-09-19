@@ -1,9 +1,10 @@
-import { BarChartOutlined } from '@ant-design/icons';
-import { Card, Col, Empty, Progress, Row, Space, Spin, Statistic, Typography } from 'antd';
+import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Empty, Progress, Row, Space, Spin, Statistic, Typography } from 'antd';
 import { useEffect, useState } from 'react';
+import { saveAs } from 'file-saver';
 
 import { errorMessage } from '../api/client';
-import { getReport } from '../api/endpoints';
+import { exportPdf, exportXls, exportXlsx, getReport } from '../api/endpoints';
 import type { ReportResponse } from '../types';
 
 /**
@@ -14,6 +15,32 @@ export default function ReportPage() {
   const [data, setData] = useState<ReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = async (format: 'xlsx' | 'xls' | 'pdf') => {
+    setExporting(format);
+    try {
+      let blob;
+      let filename;
+
+      if (format === 'xlsx') {
+        blob = await exportXlsx();
+        filename = `interactions_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      } else if (format === 'xls') {
+        blob = await exportXls();
+        filename = `interactions_${new Date().toISOString().slice(0, 10)}.xls`;
+      } else {
+        blob = await exportPdf();
+        filename = `interactions_${new Date().toISOString().slice(0, 10)}.pdf`;
+      }
+
+      saveAs(blob, filename);
+    } catch (err) {
+      errorMessage(err, 'Не удалось экспортировать отчёт');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   useEffect(() => {
     getReport()
@@ -36,6 +63,31 @@ export default function ReportPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Row justify="end">
+        <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() => handleExport('xlsx')}
+            loading={exporting === 'xlsx'}
+          >
+            Экспорт XLSX
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() => handleExport('xls')}
+            loading={exporting === 'xls'}
+          >
+            Экспорт XLS
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() => handleExport('pdf')}
+            loading={exporting === 'pdf'}
+          >
+            Экспорт PDF
+          </Button>
+        </Space>
+      </Row>
       <Row gutter={[16, 16]}>
         {data.metrics.map((metric) => (
           <Col key={metric.key} xs={12} md={8} lg={4}>

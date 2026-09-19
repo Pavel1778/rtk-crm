@@ -136,3 +136,33 @@ export const deleteStage = (id: number) =>
 // --- Отчёты ---
 export const getReport = () =>
   api.get<ReportResponse>('/api/reports').then((r) => r.data);
+
+export const exportXlsx = (params?: {
+  stage_id?: number;
+  university_id?: number;
+  product_id?: number;
+}) =>
+  api.get('/api/reports/xlsx', {
+    params,
+    responseType: 'blob',
+  }).then((r) => r.data);
+
+export const exportXls = (params?: {
+  stage_id?: number;
+  university_id?: number;
+  product_id?: number;
+}) =>
+  api.get('/api/reports/xls', {
+    params,
+    responseType: 'blob',
+  }).then((r) => r.data);
+
+export const exportPdf = (params?: {
+  stage_id?: number;
+  university_id?: number;
+  product_id?: number;
+}) =>
+  api.get('/api/reports/pdf', {
+    params,
+    responseType: 'blob',
+  }).then((r) => r.data);
