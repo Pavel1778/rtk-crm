@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { login as apiLogin, me as apiMe } from '../api/endpoints';
 import { setToken } from '../api/client';
-import type { User } from '../types';
+import type { User, UserRole } from '../types';
 
 interface AuthState {
   user: User | null;
@@ -45,3 +45,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null });
   },
 }));
+
+// Хук для получения роли пользователя
+export const useRole = (): UserRole => {
+  const user = useAuthStore((state) => state.user);
+  return user?.role || 'user';
+};

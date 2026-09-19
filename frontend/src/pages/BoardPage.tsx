@@ -50,6 +50,7 @@ import type {
   University,
   WorkflowStage,
 } from '../types';
+import { useRole } from '../stores/authStore';
 import InteractionDrawer from '../components/interaction/InteractionDrawer';
 import MobileStageFilter from '../components/kanban/MobileStageFilter';
 
@@ -185,6 +186,7 @@ function KanbanColumn({
 export default function BoardPage() {
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
+  const role = useRole();
   const [data, setData] = useState<BoardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -280,13 +282,15 @@ export default function BoardPage() {
               value={mobileStage}
               onChange={setMobileStage}
             />
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreating(true)}
-            >
-              Создать взаимодействие
-            </Button>
+            {role !== 'user' && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setCreating(true)}
+              >
+                Создать взаимодействие
+              </Button>
+            )}
           </Space>
         </Col>
       </Row>

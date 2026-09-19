@@ -4,6 +4,7 @@ export interface User {
   id: number;
   email: string;
   full_name: string;
+  role: UserRole;
   is_admin: boolean;
   is_active: boolean;
   created_at: string;

@@ -22,17 +22,27 @@ import {
   updateStage,
 } from '../api/endpoints';
 import type { WorkflowStage } from '../types';
+import { useRole } from '../stores/authStore';
 
 /**
  * Настройка воркфлоу: этапы можно добавлять, переименовывать,
  * менять цвет колонки и порядок. Удаление доступно, если на этапе
- * нет взаимодействий.
+ * нет взаимодействий. Только для admin.
  */
 export default function SettingsPage() {
   const { message } = AntApp.useApp();
+  const role = useRole();
   const [stages, setStages] = useState<WorkflowStage[]>([]);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
+
+  if (role !== 'admin') {
+    return (
+      <Card>
+        <p>Доступ запрещён. Только администраторы могут редактировать этапы воркфлоу.</p>
+      </Card>
+    );
+  }
 
   const load = () => {
     listStages()
