@@ -251,6 +251,21 @@ class CommentCreate(CommentBase):
     pass
 
 
+# ---------- Файлы ----------
+class AttachedFileBase(BaseModel):
+    filename: str = Field(max_length=255)
+    size: int
+    mime_type: str = Field(max_length=100)
+
+
+class AttachedFileRead(ORMModel, AttachedFileBase):
+    id: int
+    interaction_id: int
+    uploaded_by: int | None = None
+    uploader_name: str | None = None
+    created_at: datetime
+
+
 # ---------- Отчётность ----------
 class ReportMetric(BaseModel):
     key: str
