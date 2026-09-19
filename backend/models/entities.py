@@ -105,9 +105,6 @@ class Interaction(Base, TimestampMixin):
     )
     contract_number: Mapped[str | None] = mapped_column(String(100))
     contract_date: Mapped[str | None] = mapped_column(String(30))
-    rkn_specialist_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL")
-    )
     assigned_kam_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -120,7 +117,6 @@ class Interaction(Base, TimestampMixin):
         back_populates="interactions"
     )
     stage: Mapped["WorkflowStageRef"] = relationship(back_populates="interactions")
-    rkn_specialist: Mapped["User | None"] = relationship()
     assigned_kam: Mapped["User | None"] = relationship()
     actions: Mapped[list["Action"]] = relationship(
         back_populates="interaction", cascade="all, delete-orphan"

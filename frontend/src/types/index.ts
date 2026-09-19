@@ -54,7 +54,7 @@ export interface Interaction {
   stage_id: number;
   contract_number: string | null;
   contract_date: string | null;
-  rkn_specialist_id: number | null;
+  assigned_kam_id: number | null;
   university_specialist: string | null;
   notes: string | null;
   is_active: boolean;
@@ -62,7 +62,7 @@ export interface Interaction {
   product_name: string | null;
   stage_name: string | null;
   stage_code: string | null;
-  rkn_specialist_name: string | null;
+  assigned_kam_name: string | null;
 }
 
 export interface InteractionCard {
@@ -76,7 +76,7 @@ export interface InteractionCard {
   stage_code: string | null;
   contract_number: string | null;
   university_specialist: string | null;
-  rkn_specialist_name: string | null;
+  assigned_kam_name: string | null;
   is_active: boolean;
   actions_open: number;
   actions_total: number;

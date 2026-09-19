@@ -142,7 +142,6 @@ class InteractionBase(BaseModel):
     stage_id: int
     contract_number: str | None = None
     contract_date: str | None = None
-    rkn_specialist_id: int | None = None
     assigned_kam_id: int | None = None
     university_specialist: str | None = None
     notes: str | None = None
@@ -160,7 +159,6 @@ class InteractionUpdate(BaseModel):
     stage_id: int | None = None
     contract_number: str | None = None
     contract_date: str | None = None
-    rkn_specialist_id: int | None = None
     assigned_kam_id: int | None = None
     university_specialist: str | None = None
     notes: str | None = None
@@ -191,7 +189,7 @@ class InteractionRead(ORMModel, InteractionBase):
     product_name: str | None = None
     stage_name: str | None = None
     stage_code: str | None = None
-    rkn_specialist_name: str | None = None
+    assigned_kam_name: str | None = None
 
 
 class InteractionCard(ORMModel):
@@ -207,7 +205,7 @@ class InteractionCard(ORMModel):
     stage_code: str | None = None
     contract_number: str | None = None
     university_specialist: str | None = None
-    rkn_specialist_name: str | None = None
+    assigned_kam_name: str | None = None
     is_active: bool
     actions_open: int = 0
     actions_total: int = 0

@@ -65,8 +65,8 @@ async def _card(db: AsyncSession, interaction: Interaction) -> InteractionCard:
     )
     stage = await db.get(WorkflowStageRef, interaction.stage_id)
     specialist = (
-        await db.get(User, interaction.rkn_specialist_id)
-        if interaction.rkn_specialist_id
+        await db.get(User, interaction.assigned_kam_id)
+        if interaction.assigned_kam_id
         else None
     )
     actions_total = await db.scalar(
@@ -94,7 +94,7 @@ async def _card(db: AsyncSession, interaction: Interaction) -> InteractionCard:
         stage_code=stage.code if stage else None,
         contract_number=interaction.contract_number,
         university_specialist=interaction.university_specialist,
-        rkn_specialist_name=specialist.full_name if specialist else None,
+        assigned_kam_name=specialist.full_name if specialist else None,
         is_active=interaction.is_active,
         actions_open=actions_open or 0,
         actions_total=actions_total or 0,
@@ -111,8 +111,8 @@ async def _read(db: AsyncSession, interaction: Interaction) -> InteractionRead:
     )
     stage = await db.get(WorkflowStageRef, interaction.stage_id)
     specialist = (
-        await db.get(User, interaction.rkn_specialist_id)
-        if interaction.rkn_specialist_id
+        await db.get(User, interaction.assigned_kam_id)
+        if interaction.assigned_kam_id
         else None
     )
     payload = InteractionRead.model_validate(interaction)
@@ -122,7 +122,7 @@ async def _read(db: AsyncSession, interaction: Interaction) -> InteractionRead:
             "product_name": product.name if product else None,
             "stage_name": stage.name if stage else None,
             "stage_code": stage.code if stage else None,
-            "rkn_specialist_name": specialist.full_name if specialist else None,
+            "assigned_kam_name": specialist.full_name if specialist else None,
         }
     )
 
@@ -155,7 +155,7 @@ async def _ensure_unique(
 async def get_board(
     search: str | None = Query(default=None, description="Поиск по названию вуза"),
     product_id: int | None = None,
-    rkn_specialist_id: int | None = None,
+    assigned_kam_id: int | None = None,
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> BoardResponse:
@@ -165,8 +165,8 @@ async def get_board(
     filters: list = [Interaction.is_active.is_(True)]
     if product_id is not None:
         filters.append(Interaction.product_id == product_id)
-    if rkn_specialist_id is not None:
-        filters.append(Interaction.rkn_specialist_id == rkn_specialist_id)
+    if assigned_kam_id is not None:
+        filters.append(Interaction.assigned_kam_id == assigned_kam_id)
     if search:
         matching = select(University.id).where(University.name.ilike(f"%{search}%"))
         filters.append(Interaction.university_id.in_(matching))
