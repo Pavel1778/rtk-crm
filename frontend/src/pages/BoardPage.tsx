@@ -101,6 +101,11 @@ function KanbanCard({
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             <CalendarOutlined /> {card.university_specialist ?? '—'}
           </Typography.Text>
+          {card.assigned_kam_name && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              КАМ: {card.assigned_kam_name}
+            </Typography.Text>
+          )}
         </Space>
         <div style={{ marginTop: 6 }}>
           <Space size={8}>

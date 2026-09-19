@@ -14,7 +14,6 @@ import {
   Timeline,
   Typography,
   Upload,
-  message,
 } from 'antd';
 import {
   DeleteOutlined,
@@ -280,6 +279,7 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                       save({ university_specialist: value }, 'Сохранено')
                     }
                   />
+                  <InfoField label="КАМ" value={full.assigned_kam_name} />
                   <EditableField
                     label="Примечание"
                     value={full.notes}

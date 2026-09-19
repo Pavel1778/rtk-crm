@@ -1,5 +1,5 @@
 import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
-import { Button, Card, Col, Empty, Progress, Row, Space, Spin, Statistic, Typography } from 'antd';
+import { Button, Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 import {
@@ -176,12 +176,12 @@ export default function ReportPage() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {productData.map((entry, index) => (
+                  {productData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

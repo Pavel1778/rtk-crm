@@ -141,7 +141,7 @@ async def _build_interaction_data(
         university = await db.get(University, interaction.university_id)
         product = await db.get(ITProduct, interaction.product_id) if interaction.product_id else None
         stage = await db.get(WorkflowStageRef, interaction.stage_id)
-        rkn_specialist = await db.get(User, interaction.rkn_specialist_id) if interaction.rkn_specialist_id else None
+        assigned_kam = await db.get(User, interaction.assigned_kam_id) if interaction.assigned_kam_id else None
         assigned_kam = await db.get(User, interaction.assigned_kam_id) if interaction.assigned_kam_id else None
         
         data.append({
