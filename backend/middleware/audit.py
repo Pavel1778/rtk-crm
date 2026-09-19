@@ -6,7 +6,7 @@ from typing import Callable
 from fastapi import Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db.session import async_session_maker
+from backend.db.session import SessionLocal
 from backend.models.entities import ActionLog, User
 
 
@@ -51,7 +51,7 @@ async def audit_middleware(request: Request, call_next: Callable) -> Response:
                 ip_address = request.client.host if request.client else None
                 
                 # Логируем в БД
-                async with async_session_maker() as session:
+                async with SessionLocal() as session:
                     try:
                         # Ограничиваем размер тела для логирования
                         body_str = body.decode("utf-8", errors="ignore")[:10000] if body else None
