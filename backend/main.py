@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import text
 
-from backend.api import auth, catalogs, directories, interactions, reports, stages, universities
+from backend.api import auth, catalogs, directories, files, interactions, reports, stages, universities
 from backend.core.config import get_settings
 from backend.db.session import SessionLocal, create_tables, engine
 from backend.schemas.entities import HealthResponse
@@ -79,6 +79,7 @@ app.include_router(auth.router)
 app.include_router(universities.router)
 app.include_router(directories.router)
 app.include_router(catalogs.router)
+app.include_router(files.router)
 app.include_router(stages.router)
 app.include_router(interactions.router)
 app.include_router(reports.router)

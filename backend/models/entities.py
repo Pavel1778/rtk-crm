@@ -128,6 +128,9 @@ class Interaction(Base, TimestampMixin):
     comments: Mapped[list["Comment"]] = relationship(
         back_populates="interaction", cascade="all, delete-orphan"
     )
+    files: Mapped[list["AttachedFile"]] = relationship(
+        back_populates="interaction", cascade="all, delete-orphan"
+    )
 
 
 class Action(Base, TimestampMixin):
@@ -167,3 +170,22 @@ class Comment(Base, TimestampMixin):
 
     interaction: Mapped["Interaction"] = relationship(back_populates="comments")
     author: Mapped["User | None"] = relationship(back_populates="comments")
+
+
+class AttachedFile(Base, TimestampMixin):
+    """Прикреплённый файл к взаимодействию."""
+
+    __tablename__ = "attached_files"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    interaction_id: Mapped[int] = mapped_column(
+        ForeignKey("interactions.id", ondelete="CASCADE"), index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255))
+    file_path: Mapped[str] = mapped_column(String(500))
+    size: Mapped[int] = mapped_column(Integer)
+    mime_type: Mapped[str] = mapped_column(String(100))
+    uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    interaction: Mapped["Interaction"] = relationship(back_populates="files")
+    uploader: Mapped["User | None"] = relationship()
