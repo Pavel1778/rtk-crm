@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,40 +7,30 @@ class Settings(BaseSettings):
     """Конфигурация приложения. Значения берутся из переменных окружения."""
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
     )
 
     # Общие
     app_name: str = "RTK CRM"
+    environment: str = "development"
     debug: bool = False
-
-    # База данных
-    database_url: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/rtk_crm"
-    )
-
-    # Безопасность
-    secret_key: str = "change-me-in-production"
+    database_url: str = ""
+    secret_key: str = "change-me-32-chars"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24
+    access_token_expire_minutes: int = 1440
 
-    # CORS
-    cors_origins: list[str] = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:4173",
-    ]
+    # CORS — строка через запятую в env
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
     # Загрузка справочников и демо-данных при старте
     seed_demo_data: bool = True
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def _parse_cors_origins(cls, value: object) -> object:
-        """CORS_ORIGINS можно задать строкой через запятую (формат Render)."""
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 @lru_cache
