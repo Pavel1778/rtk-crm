@@ -63,7 +63,7 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@aws-1-eu-west-1.pooler.supab
 1. `Dockerfile` ставит зависимости из `backend/requirements.txt`.
 2. `start.sh` (CMD в образе):
    - создаёт схему БД (`create_tables()`);
-   - загружает справочники (`seed_reference()`: 13 этапов, пользователи,
+   - загружает справочники (`seed_reference()`: 14 этапов, пользователи,
      направления, продукты) — идемпотентно;
    - запускает `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`.
 3. Если `SEED_DEMO_DATA=true`, приложение при старте дополнительно
@@ -149,3 +149,4 @@ npm run dev
 - JWT-доступ ко всем эндпоинтам, кроме `/health` и логина.
 - После публичного показа: сменить пароль Supabase
   (Settings → Database → Reset password) и отозвать использованные токены GitHub.
+"C:\Users\sabad\Downloads\rtk-crm-main (1)\rtk-crm-main"

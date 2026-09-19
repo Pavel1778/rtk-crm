@@ -68,7 +68,7 @@ class ITProduct(Base, TimestampMixin):
 
 
 class WorkflowStageRef(Base, TimestampMixin):
-    """Этап воркфлоу (справочник из 13 этапов, настраивается пользователем)."""
+    """Этап воркфлоу (справочник из 14 этапов, настраивается пользователем)."""
 
     __tablename__ = "workflow_stages"
 
