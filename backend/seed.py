@@ -15,21 +15,23 @@ from backend.models.entities import (
     WorkflowStageRef,
 )
 
-# 13 этапов воркфлоу: (код, название, цвет колонки канбан-доски)
+# 14 этапов воркфлоу по ТЗ (код, название, цвет колонки канбан-доски).
+# Порядок списка = порядок этапов 1..14.
 WORKFLOW_STAGES: list[tuple[str, str, str]] = [
-    ("lead", "Лиды", "#8c8c8c"),
-    ("meeting", "Встреча", "#1677ff"),
-    ("commercial_proposal", "КП", "#13c2c2"),
-    ("contract", "Договор", "#2f54eb"),
-    ("license", "Лицензия", "#722ed1"),
-    ("implementation", "Внедрение", "#fa8c16"),
-    ("academy", "Академия", "#eb2f96"),
-    ("exams", "Экзамены", "#f5222d"),
-    ("ranking", "Рейтинг", "#faad14"),
-    ("grants", "Гранты", "#a0d911"),
-    ("conference", "Конференция", "#52c41a"),
-    ("extension", "Продление", "#389e0d"),
-    ("done", "Завершено", "#237804"),
+    ("contact_search", "Поиск контактов ответственного в вузе", "#8c8c8c"),
+    ("communication", "Коммуникация и уточнение актуальности программ", "#1677ff"),
+    ("meeting", "Организация встречи с представителями вуза", "#13c2c2"),
+    ("document_exchange", "Обмен пакетом документов для подписания", "#2f54eb"),
+    ("document_revision", "Корректировка документов перед подписанием", "#722ed1"),
+    ("document_signing", "Подписание документов", "#eb2f96"),
+    ("materials_transfer", "Передача материалов, лицензии и документации", "#f5222d"),
+    ("implementation", "Сопровождение внедрения ИТ-продуктов", "#fa8c16"),
+    ("teacher_training", "Обучение преподавателей", "#faad14"),
+    ("program_update", "Актуализация учебной программы", "#a0d911"),
+    ("classes", "Ведение занятий", "#52c41a"),
+    ("documentation_update", "Актуализация документации по продукту", "#389e0d"),
+    ("qualification_upgrade", "Повышение квалификации преподавателей", "#237804"),
+    ("stage_control", "Контроль за исполнением каждого этапа", "#08979c"),
 ]
 
 DIRECTIONS: list[str] = [
@@ -87,18 +89,33 @@ async def seed_demo(session: AsyncSession) -> bool:
 
 
 async def _seed_stages(session: AsyncSession) -> bool:
-    existing = await session.scalar(
-        select(func.count(WorkflowStageRef.id)).where(
-            WorkflowStageRef.code == WORKFLOW_STAGES[0][0]
-        )
-    )
-    if existing:
-        return False
-    for order, (code, name, color) in enumerate(WORKFLOW_STAGES, start=1):
+    """Дозаполняет отсутствующие этапы, не трогая уже созданные.
+
+    Сравнение по коду: базу, созданную в 13-этапной версии, можно дополнить
+    недостающими этапами. Порядок существующих этапов не меняется, чтобы не
+    ломать уже расставленные карточки.
+    """
+    existing_codes = set(await session.scalars(select(WorkflowStageRef.code)))
+    if not existing_codes:
+        for order, (code, name, color) in enumerate(WORKFLOW_STAGES, start=1):
+            session.add(
+                WorkflowStageRef(code=code, name=name, order=order, color=color)
+            )
+        return True
+
+    max_order = await session.scalar(
+        select(func.max(WorkflowStageRef.order))
+    ) or 0
+    created = False
+    for code, name, color in WORKFLOW_STAGES:
+        if code in existing_codes:
+            continue
+        max_order += 1
         session.add(
-            WorkflowStageRef(code=code, name=name, order=order, color=color)
+            WorkflowStageRef(code=code, name=name, order=max_order, color=color)
         )
-    return True
+        created = True
+    return created
 
 
 async def _seed_users(session: AsyncSession) -> bool:
@@ -166,13 +183,13 @@ async def _seed_demo_interactions(session: AsyncSession) -> bool:
 
     # карточки: (индекс вуза, индекс продукта, код этапа, номер договора)
     demo_cards: list[tuple[int, int | None, str, str | None]] = [
-        (0, 0, "lead", None),
+        (0, 0, "contact_search", None),
         (1, 1, "meeting", None),
-        (2, 2, "contract", "РТК-2026-001"),
-        (3, 3, "license", "РТК-2026-002"),
+        (2, 2, "document_signing", "РТК-2026-001"),
+        (3, 3, "materials_transfer", "РТК-2026-002"),
         (4, 4, "implementation", "РТК-2026-003"),
-        (0, 2, "academy", "РТК-2026-004"),
-        (1, 3, "done", "РТК-2025-114"),
+        (0, 2, "teacher_training", "РТК-2026-004"),
+        (1, 3, "stage_control", "РТК-2025-114"),
     ]
     for university_idx, product_idx, stage_code, contract in demo_cards:
         product = products[product_idx] if product_idx is not None else None
