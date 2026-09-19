@@ -189,3 +189,20 @@ class AttachedFile(Base, TimestampMixin):
 
     interaction: Mapped["Interaction"] = relationship(back_populates="files")
     uploader: Mapped["User | None"] = relationship()
+
+
+class ActionLog(Base, TimestampMixin):
+    """Лог действий для 152-ФЗ (аудит)."""
+
+    __tablename__ = "action_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    action: Mapped[str] = mapped_column(String(50))  # CREATE, UPDATE, DELETE
+    entity_type: Mapped[str] = mapped_column(String(50))  # Interaction, University, etc.
+    entity_id: Mapped[int] = mapped_column(Integer)
+    old_value: Mapped[str | None] = mapped_column(Text)
+    new_value: Mapped[str | None] = mapped_column(Text)
+    ip_address: Mapped[str | None] = mapped_column(String(50))
+
+    user: Mapped["User | None"] = relationship()

@@ -12,6 +12,7 @@ from sqlalchemy import text
 from backend.api import auth, catalogs, directories, files, interactions, reports, stages, universities
 from backend.core.config import get_settings
 from backend.db.session import SessionLocal, create_tables, engine
+from backend.middleware.audit import audit_middleware
 from backend.schemas.entities import HealthResponse
 
 
@@ -55,6 +56,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware для аудита (152-ФЗ)
+app.middleware("http")(audit_middleware)
 
 
 @app.exception_handler(RequestValidationError)
