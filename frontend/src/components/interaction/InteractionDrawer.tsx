@@ -13,9 +13,18 @@ import {
   Tabs,
   Timeline,
   Typography,
+  Upload,
+  message,
 } from 'antd';
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  FileOutlined,
+  InboxOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
+import { saveAs } from 'file-saver';
 
 import { errorMessage } from '../../api/client';
 import {
@@ -23,15 +32,20 @@ import {
   createComment,
   deleteAction,
   deleteComment,
+  deleteFile,
+  downloadFile,
   getInteraction,
   listActions,
   listComments,
+  listFiles,
   listStages,
   updateAction,
   updateInteraction,
+  uploadFile,
 } from '../../api/endpoints';
 import type {
   ActionItem,
+  AttachedFile,
   CommentItem,
   Interaction,
   InteractionCard,
@@ -51,8 +65,10 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
   const [full, setFull] = useState<Interaction | null>(null);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [comments, setComments] = useState<CommentItem[]>([]);
+  const [files, setFiles] = useState<AttachedFile[]>([]);
   const [stages, setStages] = useState<WorkflowStage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [actionForm] = Form.useForm();
 
@@ -60,14 +76,16 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
     if (!card) return;
     setLoading(true);
     try {
-      const [detail, acts, cmts] = await Promise.all([
+      const [detail, acts, cmts, fls] = await Promise.all([
         getInteraction(card.id),
         listActions(card.id),
         listComments(card.id),
+        listFiles(card.id),
       ]);
       setFull(detail);
       setActions(acts);
       setComments(cmts);
+      setFiles(fls);
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось загрузить карточку'));
     } finally {
@@ -125,6 +143,70 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
       onChanged();
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось добавить комментарий'));
+    }
+  };
+
+  const handleUpload = async (file: File) => {
+    if (!card) return;
+
+    // Валидация MIME-типов
+    const allowedTypes = [
+      'image/png',
+      'image/jpeg',
+      'application/pdf',
+      'application/zip',
+      'application/gzip',
+      'application/x-rar-compressed',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      message.error('Недопустимый тип файла');
+      return Upload.LIST_IGNORE;
+    }
+
+    // Валидация размера (50 МБ)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      message.error('Файл слишком большой (максимум 50 МБ)');
+      return Upload.LIST_IGNORE;
+    }
+
+    setUploading(true);
+    try {
+      await uploadFile(card.id, file);
+      message.success('Файл загружен');
+      await load();
+      onChanged();
+    } catch (error) {
+      message.error(errorMessage(error, 'Не удалось загрузить файл'));
+    } finally {
+      setUploading(false);
+    }
+
+    return Upload.LIST_IGNORE;
+  };
+
+  const handleDownload = async (fileId: number, filename: string) => {
+    try {
+      const blob = await downloadFile(fileId);
+      saveAs(blob, filename);
+    } catch (error) {
+      message.error(errorMessage(error, 'Не удалось скачать файл'));
+    }
+  };
+
+  const handleDeleteFile = async (fileId: number) => {
+    try {
+      await deleteFile(fileId);
+      message.success('Файл удалён');
+      await load();
+      onChanged();
+    } catch (error) {
+      message.error(errorMessage(error, 'Не удалось удалить файл'));
     }
   };
 
@@ -345,6 +427,81 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                       Отправить
                     </Button>
                   </Space.Compact>
+                </Space>
+              ),
+            },
+            {
+              key: 'files',
+              label: `Файлы (${files.length})`,
+              children: (
+                <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                  <Upload.Dragger
+                    name="file"
+                    multiple={false}
+                    beforeUpload={handleUpload}
+                    showUploadList={false}
+                    disabled={uploading}
+                  >
+                    <p className="ant-upload-drag-icon">
+                      <InboxOutlined />
+                    </p>
+                    <p className="ant-upload-text">
+                      {uploading ? 'Загрузка...' : 'Нажмите или перетащите файл'}
+                    </p>
+                    <p className="ant-upload-hint">
+                      Разрешены: PNG, JPEG, PDF, ZIP, RAR, DOC, DOCX, XLS, XLSX (максимум 50 МБ)
+                    </p>
+                  </Upload.Dragger>
+                  {files.length === 0 && <Empty description="Файлов нет" />}
+                  <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                    {files.map((file) => (
+                      <div
+                        key={file.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          border: '1px solid #E0E0E5',
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Space align="center">
+                          <FileOutlined style={{ color: '#6E41F2' }} />
+                          <div>
+                            <Typography.Text style={{ fontSize: 13 }}>
+                              {file.filename}
+                            </Typography.Text>
+                            <div>
+                              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                {(file.size / 1024).toFixed(1)} КБ • {file.uploader_name ?? 'Автор'}
+                              </Typography.Text>
+                            </div>
+                          </div>
+                        </Space>
+                        <Space>
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<DownloadOutlined />}
+                            onClick={() => handleDownload(file.id, file.filename)}
+                          />
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() =>
+                              modal.confirm({
+                                title: 'Удалить файл?',
+                                onOk: () => handleDeleteFile(file.id),
+                              })
+                            }
+                          />
+                        </Space>
+                      </div>
+                    ))}
+                  </Space>
                 </Space>
               ),
             },
