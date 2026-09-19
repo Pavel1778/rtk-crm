@@ -129,3 +129,14 @@ export interface ReportResponse {
   stage_progress: StageProgress[];
   generated_at: string;
 }
+
+export interface AttachedFile {
+  id: number;
+  interaction_id: number;
+  filename: string;
+  size: number;
+  mime_type: string;
+  uploaded_by: number | null;
+  uploader_name: string | null;
+  created_at: string;
+}

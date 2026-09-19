@@ -85,6 +85,26 @@ export const createComment = (interactionId: number, text: string) =>
 export const deleteComment = (id: number) =>
   api.delete(`/api/interactions/comments/${id}`);
 
+// --- Файлы ---
+export const listFiles = (interactionId: number) =>
+  api.get(`/api/files/interactions/${interactionId}`).then((r) => r.data);
+
+export const uploadFile = (interactionId: number, file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post(`/api/files/interactions/${interactionId}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data);
+};
+
+export const downloadFile = (fileId: number) =>
+  api.get(`/api/files/${fileId}/download`, {
+    responseType: 'blob',
+  }).then((r) => r.data);
+
+export const deleteFile = (fileId: number) =>
+  api.delete(`/api/files/${fileId}`);
+
 // --- Справочники ---
 export const listUniversities = (search?: string) =>
   api
