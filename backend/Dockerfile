@@ -9,10 +9,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Копируем requirements и ставим зависимости
+COPY backend/requirements.txt /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
-COPY . .
+# Копируем весь backend как пакет `backend` в /app/backend
+COPY backend/ /app/backend/
 
 EXPOSE 8000
 
