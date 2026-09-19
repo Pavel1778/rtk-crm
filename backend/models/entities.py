@@ -1,11 +1,12 @@
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.db.base import Base, TimestampMixin
+from backend.models.enums import UserRole
 
 
 class User(Base, TimestampMixin):
-    """Пользователь системы (роль: admin — администратор, manager — пользователь)."""
+    """Пользователь системы (роль: admin — администратор, manager — менеджер, user — КАМ)."""
 
     __tablename__ = "users"
 
@@ -13,6 +14,9 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(255))
     hashed_password: Mapped[str] = mapped_column(String(255))
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole), default=UserRole.USER, server_default=UserRole.USER.value
+    )
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
