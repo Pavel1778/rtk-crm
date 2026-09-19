@@ -15,6 +15,7 @@ from backend.models.entities import (
     User,
     WorkflowStageRef,
 )
+from backend.models.enums import UserRole
 from backend.schemas.entities import (
     ActionCreate,
     ActionRead,
@@ -156,7 +157,7 @@ async def get_board(
     product_id: int | None = None,
     rkn_specialist_id: int | None = None,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> BoardResponse:
     """Колонки = этапы воркфлоу, карточки = взаимодействия."""
     stmt = select(WorkflowStageRef).order_by(WorkflowStageRef.order)
@@ -169,6 +170,8 @@ async def get_board(
     if search:
         matching = select(University.id).where(University.name.ilike(f"%{search}%"))
         filters.append(Interaction.university_id.in_(matching))
+    if current.role == UserRole.USER:
+        filters.append(Interaction.assigned_kam_id == current.id)
 
     interactions = list(
         await db.scalars(
@@ -211,7 +214,7 @@ async def list_interactions(
     product_id: int | None = None,
     include_inactive: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> list[InteractionRead]:
     filters: list = []
     if not include_inactive:
@@ -222,6 +225,8 @@ async def list_interactions(
         filters.append(Interaction.university_id == university_id)
     if product_id is not None:
         filters.append(Interaction.product_id == product_id)
+    if current.role == UserRole.USER:
+        filters.append(Interaction.assigned_kam_id == current.id)
 
     stmt = select(Interaction).order_by(Interaction.id)
     if filters:

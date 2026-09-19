@@ -9,6 +9,7 @@ from backend.models.entities import (
     User,
     WorkflowStageRef,
 )
+from backend.models.enums import UserRole
 from backend.schemas.entities import (
     WorkflowStageCreate,
     WorkflowStageRead,
@@ -48,9 +49,13 @@ async def list_stages(
 async def create_stage(
     payload: WorkflowStageCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> WorkflowStageRead:
-    """Добавление этапа (настройка воркфлоу пользователем)."""
+    """Добавление этапа (настройка воркфлоу пользователем). Только для admin."""
+    if current.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403, detail="Только администраторы могут редактировать этапы"
+        )
     clash = await db.scalar(
         select(WorkflowStageRef.id).where(
             (WorkflowStageRef.code == payload.code)
@@ -74,8 +79,12 @@ async def update_stage(
     stage_id: int,
     payload: WorkflowStageUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> WorkflowStageRead:
+    if current.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403, detail="Только администраторы могут редактировать этапы"
+        )
     stage = await db.get(WorkflowStageRef, stage_id)
     if stage is None:
         raise HTTPException(status_code=404, detail="Этап не найден")
@@ -90,9 +99,13 @@ async def update_stage(
 async def delete_stage(
     stage_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> None:
-    """Удаление этапа. Запрещено, если на нём есть взаимодействия."""
+    """Удаление этапа. Запрещено, если на нём есть взаимодействия. Только для admin."""
+    if current.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403, detail="Только администраторы могут редактировать этапы"
+        )
     stage = await db.get(WorkflowStageRef, stage_id)
     if stage is None:
         raise HTTPException(status_code=404, detail="Этап не найден")
