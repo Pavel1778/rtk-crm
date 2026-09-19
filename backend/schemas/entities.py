@@ -143,6 +143,7 @@ class InteractionBase(BaseModel):
     contract_number: str | None = None
     contract_date: str | None = None
     rkn_specialist_id: int | None = None
+    assigned_kam_id: int | None = None
     university_specialist: str | None = None
     notes: str | None = None
     is_active: bool = True
@@ -160,6 +161,7 @@ class InteractionUpdate(BaseModel):
     contract_number: str | None = None
     contract_date: str | None = None
     rkn_specialist_id: int | None = None
+    assigned_kam_id: int | None = None
     university_specialist: str | None = None
     notes: str | None = None
     is_active: bool | None = None

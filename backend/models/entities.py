@@ -108,6 +108,9 @@ class Interaction(Base, TimestampMixin):
     rkn_specialist_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    assigned_kam_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     university_specialist: Mapped[str | None] = mapped_column(String(255))
     notes: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -118,6 +121,7 @@ class Interaction(Base, TimestampMixin):
     )
     stage: Mapped["WorkflowStageRef"] = relationship(back_populates="interactions")
     rkn_specialist: Mapped["User | None"] = relationship()
+    assigned_kam: Mapped["User | None"] = relationship()
     actions: Mapped[list["Action"]] = relationship(
         back_populates="interaction", cascade="all, delete-orphan"
     )
