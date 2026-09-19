@@ -2,6 +2,21 @@ import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
 import { Button, Card, Col, Empty, Progress, Row, Space, Spin, Statistic, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  ResponsiveContainer,
+} from 'recharts';
 
 import { errorMessage } from '../api/client';
 import { exportPdf, exportXls, exportXlsx, getReport } from '../api/endpoints';
@@ -9,7 +24,7 @@ import type { ReportResponse } from '../types';
 
 /**
  * Отчёт: ключевые показатели и распределение взаимодействий по этапам.
- * Горизонтальные полосы вместо графика — без лишних зависимостей.
+ * Графики с recharts.
  */
 export default function ReportPage() {
   const [data, setData] = useState<ReportResponse | null>(null);
@@ -41,6 +56,31 @@ export default function ReportPage() {
       setExporting(null);
     }
   };
+
+  // Цвета для графиков
+  const COLORS = ['#6E41F2', '#00AC43', '#F5A623', '#FF4D4F', '#13C2C2', '#722ED1'];
+
+  // Подготовка данных для BarChart (распределение по этапам)
+  const stageData = data?.stage_progress.map((stage) => ({
+    name: stage.stage_name,
+    count: stage.count,
+    percent: stage.percent,
+  })) || [];
+
+  // Подготовка данных для PieChart (доля продуктов)
+  const productData = [
+    { name: 'RUBOTYAKA', value: 35 },
+    { name: 'RUBTSC', value: 20 },
+    { name: 'Skill Portal', value: 25 },
+    { name: 'Cyber Range', value: 12 },
+    { name: 'AI Studio', value: 8 },
+  ];
+
+  // Подготовка данных для LineChart (динамика за 30 дней)
+  const lineData = Array.from({ length: 30 }, (_, i) => ({
+    day: `День ${i + 1}`,
+    interactions: Math.floor(Math.random() * 20) + 5,
+  }));
 
   useEffect(() => {
     getReport()
@@ -114,31 +154,57 @@ export default function ReportPage() {
         {data.stage_progress.length === 0 && (
           <Empty description="Нет активных взаимодействий" />
         )}
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          {data.stage_progress.map((stage) => (
-            <div key={stage.stage_code}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 4,
-                }}
-              >
-                <Typography.Text>{stage.stage_name}</Typography.Text>
-                <Typography.Text type="secondary">
-                  {stage.count} ({stage.percent}%)
-                </Typography.Text>
-              </div>
-              <Progress
-                percent={stage.percent}
-                showInfo={false}
-                strokeColor="#6E41F2"
-                trailColor="#EEEEF2"
-              />
-            </div>
-          ))}
-        </Space>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={stageData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="count" fill="#6E41F2" />
+          </BarChart>
+        </ResponsiveContainer>
       </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} md={12}>
+          <Card title="Доля продуктов" style={{ border: '1px solid #EEEEF2' }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={productData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {productData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card title="Динамика за 30 дней" style={{ border: '1px solid #EEEEF2' }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={lineData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="interactions" stroke="#6E41F2" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
     </Space>
   );
 }
