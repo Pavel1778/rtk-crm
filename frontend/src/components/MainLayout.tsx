@@ -8,7 +8,7 @@ import {
 import { Button, Grid, Layout, Menu, Space, Tooltip, Typography } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore, useRole } from '../stores/authStore';
 
 const { Header, Content } = Layout;
 
@@ -29,9 +29,10 @@ export default function MainLayout() {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const role = useRole();
   const screens = Grid.useBreakpoint();
 
-  const items = user?.is_admin
+  const items = role === 'admin'
     ? [...MENU_ITEMS, ADMIN_ITEM]
     : MENU_ITEMS;
 

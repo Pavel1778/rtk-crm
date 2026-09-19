@@ -24,6 +24,7 @@ import {
   listUniversities,
 } from '../api/endpoints';
 import type { ITDirection, ITProduct, University } from '../types';
+import { useRole } from '../stores/authStore';
 
 export default function DirectoryPage() {
   return (
@@ -41,6 +42,7 @@ export default function DirectoryPage() {
 
 function UniversitiesTab() {
   const { message } = AntApp.useApp();
+  const role = useRole();
   const [rows, setRows] = useState<University[]>([]);
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
@@ -71,23 +73,25 @@ function UniversitiesTab() {
 
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
-      <Space wrap>
-        <Input
-          placeholder="Название вуза"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ width: 260 }}
-        />
-        <Input
-          placeholder="Город"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          style={{ width: 160 }}
-        />
-        <Button type="primary" onClick={add} loading={loading}>
-          Добавить
-        </Button>
-      </Space>
+      {role !== 'user' && (
+        <Space wrap>
+          <Input
+            placeholder="Название вуза"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ width: 260 }}
+          />
+          <Input
+            placeholder="Город"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            style={{ width: 160 }}
+          />
+          <Button type="primary" onClick={add} loading={loading}>
+            Добавить
+          </Button>
+        </Space>
+      )}
       <Table<University>
         rowKey="id"
         dataSource={rows}
@@ -97,7 +101,7 @@ function UniversitiesTab() {
           { title: 'Название', dataIndex: 'name' },
           { title: 'Город', dataIndex: 'city', width: 140 },
           { title: 'Контакт', dataIndex: 'contact_person', width: 180 },
-          {
+          role !== 'user' ? {
             title: '',
             width: 90,
             render: (_, r) => (
@@ -114,7 +118,7 @@ function UniversitiesTab() {
                 </Button>
               </Popconfirm>
             ),
-          },
+          } : { title: '', width: 0, render: () => null },
         ]}
       />
     </Space>
@@ -123,6 +127,7 @@ function UniversitiesTab() {
 
 function DirectionsTab() {
   const { message } = AntApp.useApp();
+  const role = useRole();
   const [rows, setRows] = useState<ITDirection[]>([]);
   const [name, setName] = useState('');
 
@@ -147,18 +152,20 @@ function DirectionsTab() {
 
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
-      <Space>
-        <Input
-          placeholder="Название направления"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ width: 260 }}
-          onPressEnter={add}
-        />
-        <Button type="primary" onClick={add}>
-          Добавить
-        </Button>
-      </Space>
+      {role !== 'user' && (
+        <Space>
+          <Input
+            placeholder="Название направления"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ width: 260 }}
+            onPressEnter={add}
+          />
+          <Button type="primary" onClick={add}>
+            Добавить
+          </Button>
+        </Space>
+      )}
       <Table<ITDirection>
         rowKey="id"
         dataSource={rows}
@@ -166,7 +173,7 @@ function DirectionsTab() {
         pagination={false}
         columns={[
           { title: 'Направление', dataIndex: 'name' },
-          {
+          role !== 'user' ? {
             title: '',
             width: 90,
             render: (_, r) => (
@@ -184,7 +191,7 @@ function DirectionsTab() {
                 </Button>
               </Popconfirm>
             ),
-          },
+          } : { title: '', width: 0, render: () => null },
         ]}
       />
     </Space>
@@ -193,6 +200,7 @@ function DirectionsTab() {
 
 function ProductsTab() {
   const { message } = AntApp.useApp();
+  const role = useRole();
   const [rows, setRows] = useState<ITProduct[]>([]);
   const [directions, setDirections] = useState<ITDirection[]>([]);
   const [name, setName] = useState('');
@@ -226,25 +234,27 @@ function ProductsTab() {
 
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
-      <Space wrap>
-        <Input
-          placeholder="Название продукта"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ width: 220 }}
-        />
-        <Select
-          placeholder="Направление"
-          allowClear
-          style={{ width: 220 }}
-          value={directionId}
-          onChange={setDirectionId}
-          options={directions.map((d) => ({ value: d.id, label: d.name }))}
-        />
-        <Button type="primary" onClick={add}>
-          Добавить
-        </Button>
-      </Space>
+      {role !== 'user' && (
+        <Space wrap>
+          <Input
+            placeholder="Название продукта"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ width: 220 }}
+          />
+          <Select
+            placeholder="Направление"
+            allowClear
+            style={{ width: 220 }}
+            value={directionId}
+            onChange={setDirectionId}
+            options={directions.map((d) => ({ value: d.id, label: d.name }))}
+          />
+          <Button type="primary" onClick={add}>
+            Добавить
+          </Button>
+        </Space>
+      )}
       <Table<ITProduct>
         rowKey="id"
         dataSource={rows}
@@ -253,7 +263,7 @@ function ProductsTab() {
         columns={[
           { title: 'Продукт', dataIndex: 'name' },
           { title: 'Направление', dataIndex: 'direction_name', width: 240 },
-          {
+          role !== 'user' ? {
             title: '',
             width: 90,
             render: (_, r) => (
@@ -270,7 +280,7 @@ function ProductsTab() {
                 </Button>
               </Popconfirm>
             ),
-          },
+          } : { title: '', width: 0, render: () => null },
         ]}
       />
     </Space>
