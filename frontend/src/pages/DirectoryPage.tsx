@@ -3,7 +3,6 @@ import {
   App as AntApp,
   Button,
   Card,
-  Empty,
   Grid,
   Input,
   Popconfirm,
@@ -27,6 +26,7 @@ import {
 } from '../api/endpoints';
 import type { ITDirection, ITProduct, University } from '../types';
 import { useRole } from '../stores/authStore';
+import EmptyState from '../components/EmptyState';
 
 export default function DirectoryPage() {
   return (
@@ -96,7 +96,7 @@ function UniversitiesTab() {
         </Space>
       )}
       {rows.length === 0 ? (
-        <Empty description="Нет вузов" />
+        <EmptyState title="Нет вузов" />
       ) : (
         <div className="scroll-box">
           <Table<University>
@@ -178,7 +178,7 @@ function DirectionsTab() {
         </Space>
       )}
       {rows.length === 0 ? (
-        <Empty description="Нет направлений" />
+        <EmptyState title="Нет направлений" />
       ) : (
         <div className="scroll-box">
           <Table<ITDirection>
@@ -275,7 +275,7 @@ function ProductsTab() {
         </Space>
       )}
       {rows.length === 0 ? (
-        <Empty description="Нет продуктов" />
+        <EmptyState title="Нет продуктов" />
       ) : (
         <div className="scroll-box">
           <Table<ITProduct>

@@ -2,6 +2,7 @@ import { Button, Popconfirm, Space, Switch, Tag } from 'antd';
 import { HolderOutlined } from '@ant-design/icons';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import StageToggle from './StageToggle';
 
 interface StageData {
   id: number;
@@ -15,20 +16,16 @@ interface StageData {
 
 interface SortableStageRowProps {
   stage: StageData;
-  loading?: boolean;
   onEdit: (stage: StageData) => void;
   onDelete: (stage: StageData) => void;
-  onToggle: (id: number, checked: boolean) => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
 }
 
 export default function SortableStageRow({
   stage,
-  loading,
   onEdit,
   onDelete,
-  onToggle,
   onDragStart,
   onDragEnd,
 }: SortableStageRowProps) {
@@ -80,12 +77,7 @@ export default function SortableStageRow({
         </Space>
         <Space size={12} style={{ alignItems: 'center', flexShrink: 0 }}>
           <span style={{ minWidth: 60, textAlign: 'center' }}>{stage.order}</span>
-          <Switch
-            checked={stage.is_active}
-            loading={loading}
-            onChange={(checked) => onToggle(stage.id, checked)}
-            size="small"
-          />
+          <StageToggle stageId={stage.id} isActive={stage.is_active} />
           <Button type="link" size="small" onClick={() => onEdit(stage)}>
             Редактировать
           </Button>
