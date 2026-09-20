@@ -55,11 +55,11 @@ app = FastAPI(
 # wildcard-ответ, а origin сверяется по точному совпадению из env.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=["*"],  # Для отладки на Render
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
-    expose_headers=["Content-Disposition", "Content-Length"],
+    allow_headers=["*"],
+    expose_headers=["*"],
     max_age=3600,
 )
 
