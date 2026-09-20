@@ -302,11 +302,22 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                       name="title"
                       rules={[{ required: true, message: 'Укажите название' }]}
                     >
-                      <Input placeholder="Новая задача" />
+                      <Input 
+                        id="action-title"
+                        name="title"
+                        placeholder="Новая задача"
+                        autoComplete="off"
+                      />
                     </Form.Item>
                     <Space align="start" style={{ width: '100%' }}>
                       <Form.Item name="due_date" style={{ marginBottom: 0 }}>
-                        <DatePicker placeholder="Срок" style={{ width: 140 }} />
+                        <DatePicker 
+                          id="action-due-date"
+                          name="due_date"
+                          placeholder="Срок" 
+                          style={{ width: 140 }}
+                          autoComplete="off"
+                        />
                       </Form.Item>
                       <Button type="primary" onClick={submitAction}>
                         Добавить

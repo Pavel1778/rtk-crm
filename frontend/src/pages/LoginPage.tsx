@@ -52,7 +52,14 @@ export default function LoginPage() {
               { type: 'email', message: 'Некорректный адрес' },
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="user@rtk.ru" size="large" />
+            <Input 
+              id="login-email"
+              name="email"
+              prefix={<MailOutlined />} 
+              placeholder="user@rtk.ru" 
+              size="large"
+              autoComplete="email"
+            />
           </Form.Item>
           <Form.Item
             name="password"
@@ -60,9 +67,12 @@ export default function LoginPage() {
             rules={[{ required: true, message: 'Укажите пароль' }]}
           >
             <Input.Password
+              id="login-password"
+              name="password"
               prefix={<LockOutlined />}
               placeholder="Пароль"
               size="large"
+              autoComplete="current-password"
             />
           </Form.Item>
           <Form.Item style={{ marginBottom: 0 }}>

@@ -79,16 +79,22 @@ function UniversitiesTab() {
       {role !== 'user' && (
         <Space wrap>
           <Input
+            id="university-name"
+            name="university_name"
             placeholder="Название вуза"
             value={name}
             onChange={(e) => setName(e.target.value)}
             style={{ width: 260 }}
+            autoComplete="off"
           />
           <Input
+            id="university-city"
+            name="city"
             placeholder="Город"
             value={city}
             onChange={(e) => setCity(e.target.value)}
             style={{ width: 160 }}
+            autoComplete="off"
           />
           <Button type="primary" onClick={add} loading={loading}>
             Добавить
@@ -166,11 +172,14 @@ function DirectionsTab() {
       {role !== 'user' && (
         <Space>
           <Input
+            id="direction-name"
+            name="direction_name"
             placeholder="Название направления"
             value={name}
             onChange={(e) => setName(e.target.value)}
             style={{ width: 260 }}
             onPressEnter={add}
+            autoComplete="off"
           />
           <Button type="primary" onClick={add}>
             Добавить
@@ -256,18 +265,24 @@ function ProductsTab() {
       {role !== 'user' && (
         <Space wrap>
           <Input
+            id="product-name"
+            name="product_name"
             placeholder="Название продукта"
             value={name}
             onChange={(e) => setName(e.target.value)}
             style={{ width: 220 }}
+            autoComplete="off"
           />
           <Select
+            id="product-direction"
+            name="direction_id"
             placeholder="Направление"
             allowClear
             style={{ width: 220 }}
             value={directionId}
             onChange={setDirectionId}
             options={directions.map((d) => ({ value: d.id, label: d.name }))}
+            autoComplete="off"
           />
           <Button type="primary" onClick={add}>
             Добавить
