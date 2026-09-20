@@ -131,11 +131,11 @@ export default function ReportPage() {
       <Row gutter={[16, 16]}>
         {data.metrics.map((metric) => (
           <Col key={metric.key} xs={12} md={8} lg={4}>
-            <Card style={{ border: '1px solid #EEEEF2' }}>
+            <Card style={{ border: '1px solid #EEEEF2', textAlign: 'center' }}>
               <Statistic
                 title={metric.label}
                 value={metric.value}
-                valueStyle={{ color: '#6E41F2' }}
+                valueStyle={{ color: '#6E41F2', fontSize: 28, fontWeight: 600 }}
               />
             </Card>
           </Col>
@@ -154,11 +154,11 @@ export default function ReportPage() {
         {data.stage_progress.length === 0 && (
           <Empty description="Нет активных взаимодействий" />
         )}
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={stageData}>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart data={stageData} layout="vertical" margin={{ left: 200, right: 20, top: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-            <YAxis />
+            <XAxis type="number" />
+            <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 12 }} />
             <Tooltip />
             <Legend />
             <Bar dataKey="count" fill="#6E41F2" />
