@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from backend.models.enums import UserRole
+
 
 class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -11,6 +13,7 @@ class ORMModel(BaseModel):
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str = Field(max_length=255)
+    role: UserRole = UserRole.USER
     is_admin: bool = False
 
 
@@ -21,6 +24,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     email: EmailStr | None = None
     full_name: str | None = None
+    role: UserRole | None = None
     is_admin: bool | None = None
     is_active: bool | None = None
     password: str | None = Field(default=None, min_length=6, max_length=128)
@@ -30,6 +34,7 @@ class UserRead(ORMModel):
     id: int
     email: EmailStr
     full_name: str
+    role: UserRole
     is_admin: bool
     is_active: bool
     created_at: datetime

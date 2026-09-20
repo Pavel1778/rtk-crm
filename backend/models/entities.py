@@ -2,7 +2,7 @@ from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.db.base import Base, TimestampMixin
-from backend.models.enums import UserRole
+from backend.models.enums import USER_ROLE_VALUES, UserRole
 
 
 class User(Base, TimestampMixin):
@@ -14,8 +14,21 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(255))
     hashed_password: Mapped[str] = mapped_column(String(255))
+    # native_enum=False: роль хранится как VARCHAR + CHECK, а не как
+    # Postgres-ENUM. Это снимает конфликт с устаревшим типом userrole,
+    # который pooler Supabase продолжает кэшировать даже после DROP TYPE.
+    # values_callable нужен, чтобы в БД попадали значения (admin), а не
+    # имена членов перечисления (ADMIN).
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole), default=UserRole.USER, server_default=UserRole.USER.value
+        Enum(
+            UserRole,
+            name="user_role_v2",
+            native_enum=False,
+            length=20,
+            values_callable=lambda enum_cls: USER_ROLE_VALUES,
+        ),
+        default=UserRole.USER,
+        server_default=UserRole.USER.value,
     )
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

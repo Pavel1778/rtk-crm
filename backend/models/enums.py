@@ -31,6 +31,14 @@ class UserRole(str, enum.Enum):
     MANAGER = "manager"
     USER = "user"
 
+    def __str__(self) -> str:  # значение в БД, а не "UserRole.ADMIN"
+        return self.value
+
+
+# Явные значения для колонки БД: без values_callable SQLAlchemy пишет
+# имена членов перечисления (ADMIN), а не значения (admin).
+USER_ROLE_VALUES: list[str] = [role.value for role in UserRole]
+
 
 STAGE_ORDER: list[WorkflowStage] = list(WorkflowStage)
 

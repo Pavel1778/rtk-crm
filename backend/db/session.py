@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from backend.core.config import get_settings
 from backend.db.base import Base
@@ -11,6 +12,7 @@ engine = create_async_engine(
     get_settings().database_url,
     echo=False,
     pool_pre_ping=True,
+    poolclass=NullPool,  # Важно для Supabase pooler (pgbouncer)
 )
 
 SessionLocal = async_sessionmaker(
@@ -33,4 +35,12 @@ async def create_tables() -> None:
     import backend.models  # noqa: F401  регистрирует модели в Base.metadata
 
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+
+
+async def drop_all() -> None:
+    """Удаление всех таблиц. Используется для миграций."""
+    import backend.models  # noqa: F401  регистрирует модели в Base.metadata
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
