@@ -1,17 +1,20 @@
-/* Адаптивность для планшетов и мобильных устройств */
+/* Базовая адаптивность для всех устройств */
 
-/* Планшет: 768px - 1024px */
-@media (max-width: 1024px) {
-  .ant-layout-sider {
-    position: fixed;
-    z-index: 1000;
-  }
-  .kanban-board {
-    overflow-x: auto;
-  }
+/* Изображения и графика - запрет на вылет из сетки */
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
-/* Мобильный: до 767px */
+/* Локальный скролл для сложных схем и таблиц */
+.scroll-box {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Плавный скролл на смартфонах */
+}
+
+/* Стили для телефонов (до 767px) */
 @media (max-width: 767px) {
   .ant-layout-sider {
     display: none;
@@ -22,10 +25,8 @@
   .ant-page-header {
     padding: 12px;
   }
-}
 
-/* Kanban на мобильном - вертикальный список */
-@media (max-width: 767px) {
+  /* Kanban на мобильном - вертикальный список */
   .kanban-board {
     flex-direction: column !important;
     overflow-x: hidden !important;
@@ -34,5 +35,27 @@
   .kanban-column {
     min-width: 100% !important;
     max-height: none !important;
+  }
+
+  /* Минимальный размер текста для телефонов */
+  body {
+    font-size: 16px;
+  }
+
+  /* Кнопки и кликабельные элементы - минимум 44x44px */
+  .ant-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Стили для планшетов (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ant-layout-sider {
+    position: fixed;
+    z-index: 1000;
+  }
+  .kanban-board {
+    overflow-x: auto;
   }
 }

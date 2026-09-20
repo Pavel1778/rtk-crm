@@ -154,54 +154,60 @@ export default function ReportPage() {
         {data.stage_progress.length === 0 && (
           <Empty description="Нет активных взаимодействий" />
         )}
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={stageData} layout="vertical" margin={{ left: 200, right: 20, top: 20, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="count" fill="#6E41F2" />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="scroll-box">
+          <ResponsiveContainer width="100%" height={400} aspect={undefined}>
+            <BarChart data={stageData} layout="vertical" margin={{ left: 200, right: 20, top: 20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#6E41F2" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </Card>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
           <Card title="Доля продуктов" style={{ border: '1px solid #EEEEF2' }}>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={productData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {productData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="scroll-box">
+              <ResponsiveContainer width="100%" height={300} aspect={undefined}>
+                <PieChart>
+                  <Pie
+                    data={productData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {productData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </Card>
         </Col>
         <Col xs={24} md={12}>
           <Card title="Динамика за 30 дней" style={{ border: '1px solid #EEEEF2' }}>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={lineData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="interactions" stroke="#6E41F2" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="scroll-box">
+              <ResponsiveContainer width="100%" height={300} aspect={undefined}>
+                <LineChart data={lineData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="interactions" stroke="#6E41F2" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </Card>
         </Col>
       </Row>

@@ -107,92 +107,94 @@ export default function SettingsPage() {
       </Card>
 
       <Card title="Этапы воркфлоу" style={{ border: '1px solid #EEEEF2' }}>
-        <Table<WorkflowStage>
-          rowKey="id"
-          dataSource={stages}
-          pagination={false}
-          size="small"
-          scroll={{ x: 'max-content' }}
-          columns={[
-            { title: 'Порядок', dataIndex: 'order', width: 80 },
-            {
-              title: 'Этап',
-              dataIndex: 'name',
-              render: (name: string, record) => (
-                <Space>
-                  <span
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      background: record.color ?? '#6E41F2',
-                      display: 'inline-block',
-                    }}
-                  />
-                  <EditableText
-                    value={name}
-                    onSave={(value) =>
-                      updateStage(record.id, { name: value })
-                        .then(() => message.success('Название обновлено'))
+        <div className="scroll-box">
+          <Table<WorkflowStage>
+            rowKey="id"
+            dataSource={stages}
+            pagination={false}
+            size="small"
+            scroll={{ x: 'max-content' }}
+            columns={[
+              { title: 'Порядок', dataIndex: 'order', width: 80 },
+              {
+                title: 'Этап',
+                dataIndex: 'name',
+                render: (name: string, record) => (
+                  <Space>
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 5,
+                        background: record.color ?? '#6E41F2',
+                        display: 'inline-block',
+                      }}
+                    />
+                    <EditableText
+                      value={name}
+                      onSave={(value) =>
+                        updateStage(record.id, { name: value })
+                          .then(() => message.success('Название обновлено'))
+                          .then(load)
+                          .catch((e) => message.error(errorMessage(e)))
+                      }
+                    />
+                  </Space>
+                ),
+              },
+              {
+                title: 'Код',
+                dataIndex: 'code',
+                width: 150,
+                render: (code: string) => <Tag>{code}</Tag>,
+              },
+              {
+                title: 'Взаимодействий',
+                dataIndex: 'interaction_count',
+                width: 120,
+              },
+              {
+                title: 'Активен',
+                dataIndex: 'is_active',
+                width: 100,
+                render: (active: boolean, record) => (
+                  <Switch
+                    checked={active}
+                    onChange={(checked) =>
+                      updateStage(record.id, { is_active: checked })
                         .then(load)
                         .catch((e) => message.error(errorMessage(e)))
                     }
                   />
-                </Space>
-              ),
-            },
-            {
-              title: 'Код',
-              dataIndex: 'code',
-              width: 150,
-              render: (code: string) => <Tag>{code}</Tag>,
-            },
-            {
-              title: 'Взаимодействий',
-              dataIndex: 'interaction_count',
-              width: 120,
-            },
-            {
-              title: 'Активен',
-              dataIndex: 'is_active',
-              width: 100,
-              render: (active: boolean, record) => (
-                <Switch
-                  checked={active}
-                  onChange={(checked) =>
-                    updateStage(record.id, { is_active: checked })
-                      .then(load)
-                      .catch((e) => message.error(errorMessage(e)))
-                  }
-                />
-              ),
-            },
-            {
-              title: '',
-              width: 80,
-              render: (_, record) => (
-                <Popconfirm
-                  title="Удалить этап?"
-                  disabled={record.interaction_count > 0}
-                  onConfirm={() =>
-                    deleteStage(record.id)
-                      .then(load)
-                      .catch((e) => message.error(errorMessage(e)))
-                  }
-                >
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
+                ),
+              },
+              {
+                title: '',
+                width: 80,
+                render: (_, record) => (
+                  <Popconfirm
+                    title="Удалить этап?"
                     disabled={record.interaction_count > 0}
+                    onConfirm={() =>
+                      deleteStage(record.id)
+                        .then(load)
+                        .catch((e) => message.error(errorMessage(e)))
+                    }
                   >
-                    Удалить
-                  </Button>
-                </Popconfirm>
-              ),
-            },
-          ]}
-        />
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      disabled={record.interaction_count > 0}
+                    >
+                      Удалить
+                    </Button>
+                  </Popconfirm>
+                ),
+              },
+            ]}
+          />
+        </div>
       </Card>
     </Space>
   );
