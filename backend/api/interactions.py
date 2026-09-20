@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.security import get_current_user
-from backend.db.session import get_db
-from backend.models.entities import (
+from app.auth.security import get_current_user
+from app.db.session import get_db
+from app.models.entities import (
     Action,
     Comment,
     Interaction,
@@ -15,8 +15,8 @@ from backend.models.entities import (
     User,
     WorkflowStageRef,
 )
-from backend.models.enums import UserRole
-from backend.schemas.entities import (
+from app.models.enums import UserRole
+from app.schemas.entities import (
     ActionCreate,
     ActionRead,
     ActionUpdate,
@@ -194,7 +194,7 @@ async def get_board(
 async def _stage_with_count(
     db: AsyncSession, stage: WorkflowStageRef
 ) -> "object":
-    from backend.schemas.entities import WorkflowStageRead
+    from app.schemas.entities import WorkflowStageRead
 
     count = await db.scalar(
         select(func.count(Interaction.id)).where(

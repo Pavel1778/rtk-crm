@@ -5,9 +5,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.security import get_current_user
-from backend.db.session import get_db
-from backend.models.entities import (
+from app.auth.security import get_current_user
+from app.db.session import get_db
+from app.models.entities import (
     Action,
     Interaction,
     ITDirection,
@@ -16,13 +16,13 @@ from backend.models.entities import (
     User,
     WorkflowStageRef,
 )
-from backend.schemas.entities import (
+from app.schemas.entities import (
     ReportMetric,
     ReportResponse,
     StageProgress,
     UniversityRead,
 )
-from backend.services.excel_export import generate_xlsx, generate_xls, generate_pdf
+from app.services.excel_export import generate_xlsx, generate_xls, generate_pdf
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 

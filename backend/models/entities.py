@@ -1,8 +1,8 @@
 from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.db.base import Base, TimestampMixin
-from backend.models.enums import USER_ROLE_VALUES, UserRole
+from app.db.base import Base, TimestampMixin
+from app.models.enums import USER_ROLE_VALUES, UserRole
 
 
 class User(Base, TimestampMixin):

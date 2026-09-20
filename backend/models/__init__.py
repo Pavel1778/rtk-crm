@@ -1,7 +1,7 @@
 """Модели SQLAlchemy: справочники, взаимодействия, задачи, комментарии."""
 
-from backend.db.base import Base
-from backend.models.entities import (
+from app.db.base import Base
+from app.models.entities import (
     Action,
     Comment,
     Interaction,
@@ -11,7 +11,7 @@ from backend.models.entities import (
     User,
     WorkflowStageRef,
 )
-from backend.models.enums import (
+from app.models.enums import (
     STAGE_ORDER,
     WorkflowStage,
     next_stage,

@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from backend.core.config import get_settings
-from backend.db.base import Base
+from app.core.config import get_settings
+from app.db.base import Base
 
 engine = create_async_engine(
     get_settings().database_url,
@@ -32,7 +32,7 @@ async def get_db() -> AsyncSession:
 
 async def create_tables() -> None:
     """Создание таблиц. Используется в dev-режиме и в seed."""
-    import backend.models  # noqa: F401  регистрирует модели в Base.metadata
+    import app.models  # noqa: F401  регистрирует модели в Base.metadata
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all, checkfirst=True)
@@ -40,7 +40,7 @@ async def create_tables() -> None:
 
 async def drop_all() -> None:
     """Удаление всех таблиц. Используется для миграций."""
-    import backend.models  # noqa: F401  регистрирует модели в Base.metadata
+    import app.models  # noqa: F401  регистрирует модели в Base.metadata
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

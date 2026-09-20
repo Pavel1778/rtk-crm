@@ -6,8 +6,8 @@ from typing import Callable
 from fastapi import Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db.session import SessionLocal
-from backend.models.entities import ActionLog, User
+from app.db.session import SessionLocal
+from app.models.entities import ActionLog, User
 
 
 async def audit_middleware(request: Request, call_next: Callable) -> Response:

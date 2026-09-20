@@ -1,25 +1,22 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+# Рабочая директория — корень, чтобы пакет `app` лежал в /app
+WORKDIR /
 
+# Системные зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev \
-    fonts-dejavu \
-    fonts-liberation \
-    fontconfig \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+# Python-зависимости
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Копируем requirements и ставим зависимости
-COPY backend/requirements.txt /app/backend/requirements.txt
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+# Копируем всё содержимое backend/ в /app/
+COPY . /app/
 
-# Копируем весь backend как пакет `backend` в /app/backend
-COPY backend/ /app/backend/
+ENV PYTHONPATH=/
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

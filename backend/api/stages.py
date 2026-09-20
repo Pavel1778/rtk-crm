@@ -3,15 +3,15 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.security import get_current_user
-from backend.db.session import get_db
-from backend.models.entities import (
+from app.auth.security import get_current_user
+from app.db.session import get_db
+from app.models.entities import (
     Interaction,
     User,
     WorkflowStageRef,
 )
-from backend.models.enums import UserRole
-from backend.schemas.entities import (
+from app.models.enums import UserRole
+from app.schemas.entities import (
     WorkflowStageCreate,
     WorkflowStageRead,
     WorkflowStageUpdate,

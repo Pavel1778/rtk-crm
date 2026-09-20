@@ -9,11 +9,11 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import text
 
-from backend.api import auth, catalogs, directories, files, interactions, reports, stages, universities
-from backend.core.config import get_settings
-from backend.db.session import SessionLocal, create_tables, engine
-from backend.middleware.audit import audit_middleware
-from backend.schemas.entities import HealthResponse
+from app.api import auth, catalogs, directories, files, interactions, reports, stages, universities
+from app.core.config import get_settings
+from app.db.session import SessionLocal, create_tables, engine
+from app.middleware.audit import audit_middleware
+from app.schemas.entities import HealthResponse
 
 
 @asynccontextmanager
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 
     if settings.seed_demo_data:
         try:
-            from backend.seed import seed_demo
+            from app.seed import seed_demo
 
             async with SessionLocal() as session:
                 created = await seed_demo(session)
