@@ -129,7 +129,7 @@ def generate_xls(interactions: list[dict]) -> BytesIO:
     # Стиль заголовков
     header_style = easyxf(
         'font: bold on, color white, height 220; align: horiz center, vert centre; '
-        'pattern: pattern solid, fore_color #6E41F2'
+        'pattern: pattern solid, fore_colour dark_purple'
     )
 
     # Запись заголовков
@@ -212,7 +212,7 @@ def generate_pdf(interactions: list[dict]) -> BytesIO:
 
     # Стиль таблицы
     table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6E41F2')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.dark_blue),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), font_name),
