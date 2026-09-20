@@ -6,7 +6,7 @@ import {
   SettingOutlined,
 } from '@ant-design/icons';
 import { Button, Grid, Layout, Menu, Space, Tooltip, Typography } from 'antd';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuthStore, useRole } from '../stores/authStore';
 
@@ -50,12 +50,14 @@ export default function MainLayout() {
           zIndex: 100,
         }}
       >
-        <Typography.Text
-          strong
-          style={{ fontSize: 18, color: '#6E41F2', whiteSpace: 'nowrap' }}
-        >
-          RTK CRM
-        </Typography.Text>
+        <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Typography.Text
+            strong
+            style={{ fontSize: 18, color: '#6E41F2', whiteSpace: 'nowrap' }}
+          >
+            RTK CRM
+          </Typography.Text>
+        </Link>
         <Menu
           mode="horizontal"
           selectedKeys={[location.pathname]}
