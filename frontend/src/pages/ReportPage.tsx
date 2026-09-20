@@ -1,5 +1,5 @@
 import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
-import { App as AntApp, Button, Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd';
+import { App as AntApp, Button, Card, Col, Empty, Grid, Row, Space, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 import {
@@ -27,6 +27,8 @@ import type { ReportResponse } from '../types';
  */
 export default function ReportPage() {
   const { message } = AntApp.useApp();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [data, setData] = useState<ReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -190,6 +192,7 @@ export default function ReportPage() {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend verticalAlign="bottom" layout={isMobile ? "horizontal" : "vertical"} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -204,7 +207,7 @@ export default function ReportPage() {
                   <XAxis dataKey="day" />
                   <YAxis />
                   <Tooltip />
-                  <Legend />
+                  <Legend verticalAlign="bottom" layout={isMobile ? "horizontal" : "vertical"} />
                   <Line type="monotone" dataKey="interactions" stroke="#6E41F2" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
