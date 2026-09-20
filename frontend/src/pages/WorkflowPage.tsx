@@ -23,7 +23,6 @@ export default function WorkflowPage() {
   const [editingStage, setEditingStage] = useState<WorkflowStage | undefined>();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingStage, setDeletingStage] = useState<WorkflowStage | undefined>();
-  const [togglingStageId, setTogglingStageId] = useState<number | null>(null);
 
   if (role !== 'admin') {
     return (
@@ -86,15 +85,12 @@ export default function WorkflowPage() {
   };
 
   const handleToggle = async (id: number, checked: boolean) => {
-    setTogglingStageId(id);
     try {
       await updateStage(id, { is_active: checked });
       message.success('Этап обновлён');
       load();
     } catch (e) {
       message.error(errorMessage(e));
-    } finally {
-      setTogglingStageId(null);
     }
   };
 
@@ -157,7 +153,13 @@ export default function WorkflowPage() {
 
       <StageEditor
         open={editorOpen}
-        stage={editingStage}
+        stage={editingStage ? {
+          id: editingStage.id,
+          code: editingStage.code,
+          name: editingStage.name,
+          order: editingStage.order,
+          color: editingStage.color ?? '#6E41F2',
+        } : undefined}
         onCancel={() => {
           setEditorOpen(false);
           setEditingStage(undefined);

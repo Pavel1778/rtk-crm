@@ -1,4 +1,4 @@
-import { App as AntApp, Button, ColorPicker, Form, Input, InputNumber, Modal, Space } from 'antd';
+import { App as AntApp, ColorPicker, Form, Input, InputNumber, Modal } from 'antd';
 import { useEffect } from 'react';
 
 interface StageEditorProps {

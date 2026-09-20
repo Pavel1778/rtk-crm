@@ -1,20 +1,22 @@
-import { App as AntApp, Button, Popconfirm, Space, Switch, Tag } from 'antd';
+import { Button, Popconfirm, Space, Switch, Tag } from 'antd';
 import { HolderOutlined } from '@ant-design/icons';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+interface StageData {
+  id: number;
+  code: string;
+  name: string;
+  order: number;
+  color: string | null;
+  is_active: boolean;
+  interaction_count: number;
+}
+
 interface SortableStageRowProps {
-  stage: {
-    id: number;
-    code: string;
-    name: string;
-    order: number;
-    color: string;
-    is_active: boolean;
-    interaction_count: number;
-  };
-  onEdit: (stage: typeof stage) => void;
-  onDelete: (stage: typeof stage) => void;
+  stage: StageData;
+  onEdit: (stage: StageData) => void;
+  onDelete: (stage: StageData) => void;
   onToggle: (id: number, checked: boolean) => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
@@ -28,7 +30,6 @@ export default function SortableStageRow({
   onDragStart,
   onDragEnd,
 }: SortableStageRowProps) {
-  const { message } = AntApp.useApp();
   const {
     attributes,
     listeners,
@@ -66,7 +67,7 @@ export default function SortableStageRow({
             width: 12,
             height: 12,
             borderRadius: 6,
-            background: stage.color,
+            background: stage.color ?? '#6E41F2',
             display: 'inline-block',
             flexShrink: 0,
           }}
