@@ -212,7 +212,7 @@ export default function ReportPage() {
               />
               <Tooltip
                 contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                formatter={(value: number) => [`${value} взаимодействий`, 'Количество']}
+                formatter={(value) => [`${Number(value ?? 0)} взаимодействий`, 'Количество']}
               />
               <Bar
                 dataKey="count"

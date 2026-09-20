@@ -132,13 +132,7 @@ export default function SettingsPage() {
             />
           </Form.Item>
           <Form.Item name="color" initialValue="#6E41F2">
-            <ColorPicker 
-              id="settings-stage-color"
-              name="color"
-              showText 
-              format="hex"
-              autoComplete="off"
-            />
+            <ColorPicker showText format="hex" />
           </Form.Item>
           <Form.Item>
             <Button type="primary" onClick={addStage} loading={saving} block={isMobile}>

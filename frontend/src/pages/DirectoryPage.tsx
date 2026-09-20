@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   App as AntApp,
   Button,
-  Card,
   Grid,
   Input,
   Popconfirm,
@@ -280,14 +279,12 @@ function ProductsTab() {
           />
           <Select
             id="product-direction"
-            name="direction_id"
             placeholder="Направление"
             allowClear
             style={{ width: 220 }}
             value={directionId}
             onChange={setDirectionId}
             options={directions.map((d) => ({ value: d.id, label: d.name }))}
-            autoComplete="off"
           />
           <Button type="primary" onClick={add}>
             Добавить

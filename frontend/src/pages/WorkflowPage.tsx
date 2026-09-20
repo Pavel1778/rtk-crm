@@ -1,4 +1,4 @@
-import { App as AntApp, Button, Card, Space, Spin, Typography } from 'antd';
+import { App as AntApp, Button, Card, Space, Spin } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -11,8 +11,7 @@ import { useRole } from '../stores/authStore';
 import StageEditor from '../components/workflow/StageEditor';
 import DeleteStageModal from '../components/workflow/DeleteStageModal';
 import SortableStageRow from '../components/workflow/SortableStageRow';
-
-const { Title } = Typography;
+import EmptyState from '../components/EmptyState';
 
 export default function WorkflowPage() {
   const { message } = AntApp.useApp();
