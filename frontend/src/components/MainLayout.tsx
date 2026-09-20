@@ -3,10 +3,12 @@ import {
   BarChartOutlined,
   DatabaseOutlined,
   LogoutOutlined,
+  MenuOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { Button, Grid, Layout, Menu, Space, Tooltip, Typography } from 'antd';
+import { Button, Drawer, Grid, Layout, Menu, Space, Tooltip, Typography } from 'antd';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 import { useAuthStore, useRole } from '../stores/authStore';
 
@@ -31,6 +33,7 @@ export default function MainLayout() {
   const signOut = useAuthStore((s) => s.signOut);
   const role = useRole();
   const screens = Grid.useBreakpoint();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const items = role === 'admin'
     ? [...MENU_ITEMS, ADMIN_ITEM]
@@ -50,6 +53,12 @@ export default function MainLayout() {
           zIndex: 100,
         }}
       >
+        {!screens.md && (
+          <Button
+            icon={<MenuOutlined />}
+            onClick={() => setMobileMenuOpen(true)}
+          />
+        )}
         <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
           <Typography.Text
             strong
@@ -58,13 +67,15 @@ export default function MainLayout() {
             RTK CRM
           </Typography.Text>
         </Link>
-        <Menu
-          mode="horizontal"
-          selectedKeys={[location.pathname]}
-          items={items}
-          onClick={({ key }) => navigate(key)}
-          style={{ flex: 1, borderBottom: 'none', minWidth: 0 }}
-        />
+        {screens.md ? (
+          <Menu
+            mode="horizontal"
+            selectedKeys={[location.pathname]}
+            items={items}
+            onClick={({ key }) => navigate(key)}
+            style={{ flex: 1, borderBottom: 'none', minWidth: 0 }}
+          />
+        ) : null}
         <Space>
           {screens.md && (
             <Typography.Text type="secondary">{user?.full_name}</Typography.Text>
@@ -81,6 +92,22 @@ export default function MainLayout() {
           </Tooltip>
         </Space>
       </Header>
+
+      <Drawer
+        placement="left"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+      >
+        <Menu
+          mode="vertical"
+          selectedKeys={[location.pathname]}
+          items={items}
+          onClick={({ key }) => {
+            navigate(key);
+            setMobileMenuOpen(false);
+          }}
+        />
+      </Drawer>
       <Content style={{ padding: screens.md ? 24 : 12 }}>
         <Outlet />
       </Content>

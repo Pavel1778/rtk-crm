@@ -1,0 +1,38 @@
+/* Адаптивность для планшетов и мобильных устройств */
+
+/* Планшет: 768px - 1024px */
+@media (max-width: 1024px) {
+  .ant-layout-sider {
+    position: fixed;
+    z-index: 1000;
+  }
+  .kanban-board {
+    overflow-x: auto;
+  }
+}
+
+/* Мобильный: до 767px */
+@media (max-width: 767px) {
+  .ant-layout-sider {
+    display: none;
+  }
+  .ant-layout-header {
+    padding: 0 12px;
+  }
+  .ant-page-header {
+    padding: 12px;
+  }
+}
+
+/* Kanban на мобильном - вертикальный список */
+@media (max-width: 767px) {
+  .kanban-board {
+    flex-direction: column !important;
+    overflow-x: hidden !important;
+    overflow-y: auto;
+  }
+  .kanban-column {
+    min-width: 100% !important;
+    max-height: none !important;
+  }
+}

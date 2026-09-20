@@ -142,6 +142,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
+      className="kanban-column"
       style={{
         width: 280,
         flexShrink: 0,
@@ -313,6 +314,7 @@ export default function BoardPage() {
       {!loading && columns.length > 0 && (
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div
+            className="kanban-board"
             style={{
               display: 'flex',
               gap: 12,
