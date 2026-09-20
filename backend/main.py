@@ -58,12 +58,11 @@ app = FastAPI(
 
 # CORS должен быть добавлен до include_router и до остальных middleware,
 # чтобы preflight OPTIONS обрабатывался до входа в обработчики.
-# allow_credentials=False обязателен: с credentials браузер отклоняет
-# wildcard-ответ, а origin сверяется по точному совпадению из env.
+# allow_credentials=True нужен для Authorization header.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Для отладки на Render
-    allow_credentials=False,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
