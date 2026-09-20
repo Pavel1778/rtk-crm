@@ -310,16 +310,6 @@ export default function BoardPage() {
               Обновить
             </Button>
           </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreating(true)}
-              disabled={role === 'user'}
-            >
-              Создать взаимодействие
-            </Button>
-          </Col>
         </Row>
       </div>
 
