@@ -4,6 +4,7 @@ import {
   DatabaseOutlined,
   LogoutOutlined,
   MenuOutlined,
+  QuestionCircleOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
 import { Button, Drawer, Grid, Layout, Menu, Space, Tooltip, Typography } from 'antd';
@@ -18,6 +19,7 @@ const MENU_ITEMS = [
   { key: '/', icon: <AppstoreOutlined />, label: 'Доска' },
   { key: '/reports', icon: <BarChartOutlined />, label: 'Отчёты' },
   { key: '/directories', icon: <DatabaseOutlined />, label: 'Справочники' },
+  { key: '/help', icon: <QuestionCircleOutlined />, label: 'Помощь' },
 ];
 
 const ADMIN_ITEM = {
