@@ -148,6 +148,7 @@ function KanbanColumn({
         flexShrink: 0,
         background: isOver ? '#F3E5F5' : '#F5F5F7',
         border: '1px solid #EEEEF2',
+        borderRight: '2px solid #E0E0E5',
         borderRadius: 12,
         padding: 12,
         display: 'flex',

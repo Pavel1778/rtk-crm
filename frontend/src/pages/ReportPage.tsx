@@ -105,9 +105,10 @@ export default function ReportPage() {
   }
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Row justify="end">
-        <Space>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>Отчёты</h1>
+        <div className="export-buttons">
           <Button
             icon={<DownloadOutlined />}
             onClick={() => handleExport('xlsx')}
@@ -129,12 +130,13 @@ export default function ReportPage() {
           >
             Экспорт PDF
           </Button>
-        </Space>
-      </Row>
-      <Row gutter={[16, 16]}>
+        </div>
+      </div>
+      
+      <Row gutter={[16, 16]} className="stats-grid">
         {data.metrics.map((metric) => (
           <Col key={metric.key} xs={12} md={8} lg={4}>
-            <Card style={{ border: '1px solid #EEEEF2', textAlign: 'center' }}>
+            <Card className="stat-card" style={{ border: '1px solid #EEEEF2', textAlign: 'center' }}>
               <Statistic
                 title={metric.label}
                 value={metric.value}
@@ -157,8 +159,8 @@ export default function ReportPage() {
         {data.stage_progress.length === 0 && (
           <Empty description="Нет активных взаимодействий" />
         )}
-        <div className="scroll-box">
-          <ResponsiveContainer width="100%" height={400} aspect={undefined}>
+        <div className="chart-container scroll-box">
+          <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
             <BarChart data={stageData} layout="vertical" margin={{ left: 200, right: 20, top: 20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
@@ -184,8 +186,8 @@ export default function ReportPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
           <Card title="Доля продуктов" style={{ border: '1px solid #EEEEF2' }}>
-            <div className="scroll-box">
-              <ResponsiveContainer width="100%" height={300} aspect={undefined}>
+            <div className="chart-container scroll-box">
+              <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
                 <PieChart>
                   <Pie
                     data={productData}
@@ -210,8 +212,8 @@ export default function ReportPage() {
         </Col>
         <Col xs={24} md={12}>
           <Card title="Динамика за 30 дней" style={{ border: '1px solid #EEEEF2' }}>
-            <div className="scroll-box">
-              <ResponsiveContainer width="100%" height={300} aspect={undefined}>
+            <div className="chart-container scroll-box">
+              <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
                 <LineChart data={lineData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" />
