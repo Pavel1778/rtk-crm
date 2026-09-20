@@ -21,6 +21,13 @@ async def lifespan(app: FastAPI):
     """При старте: таблицы + демо-данные (если включено)."""
     settings = get_settings()
     try:
+        # Удаляем старый тип enum userrole, если он существует
+        async with engine.begin() as conn:
+            try:
+                await conn.execute(text("DROP TYPE IF EXISTS userrole CASCADE"))
+                logger.info("Удалён старый тип enum userrole")
+            except Exception:  # noqa: BLE001
+                pass  # Тип может не существовать
         await create_tables()
         logger.info("Схема БД проверена/создана")
     except Exception as exc:  # noqa: BLE001

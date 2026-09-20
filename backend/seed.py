@@ -4,7 +4,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.security import hash_password
+from backend.models.enums import UserRole
 from backend.models.entities import (
+
     Action,
     Comment,
     Interaction,
@@ -58,10 +60,12 @@ UNIVERSITIES: list[tuple[str, str, str]] = [
     ("НГУ", "Новосибирск", "Смирнова Е. В."),
 ]
 
-DEMO_USERS: list[tuple[str, str, str, bool]] = [
-    ("admin@rtk.ru", "Администратор РТК", "admin123", True),
-    ("manager@rtk.ru", "Менеджер РТК", "manager123", False),
+DEMO_USERS: list[tuple[str, str, str, UserRole]] = [
+    ("admin@rtk.ru", "Администратор РТК", "admin123", UserRole.ADMIN),
+    ("manager@rtk.ru", "Менеджер РТК", "manager123", UserRole.MANAGER),
+    ("kam@rtk.ru", "КАМ РТК", "kam123", UserRole.USER),
 ]
+
 
 
 async def seed_reference(session: AsyncSession) -> bool:
@@ -124,15 +128,19 @@ async def _seed_users(session: AsyncSession) -> bool:
     )
     if existing:
         return False
-    for email, full_name, password, is_admin in DEMO_USERS:
+    for email, full_name, password, role in DEMO_USERS:
         session.add(
             User(
                 email=email,
                 full_name=full_name,
-                is_admin=is_admin,
+                role=role,
+                # Флаг is_admin оставлен синхронно с ролью: часть проверок
+                # в коде опирается на него.
+                is_admin=role == UserRole.ADMIN,
                 hashed_password=hash_password(password),
             )
         )
+
     return True
 
 
@@ -179,9 +187,13 @@ async def _seed_demo_interactions(session: AsyncSession) -> bool:
             select(WorkflowStageRef).order_by(WorkflowStageRef.order)
         )
     }
-    manager = await session.scalar(select(User).where(User.is_admin.is_(False)))
+    # Ответственный КАМ назначается демо-пользователем с ролью user,
+    # чтобы на доске было видно эффект фильтрации по роли.
+    kam = await session.scalar(select(User).where(User.role == UserRole.USER))
+
 
     # карточки: (индекс вуза, индекс продукта, код этапа, номер договора)
+
     demo_cards: list[tuple[int, int | None, str, str | None]] = [
         (0, 0, "contact_search", None),
         (1, 1, "meeting", None),
@@ -200,8 +212,11 @@ async def _seed_demo_interactions(session: AsyncSession) -> bool:
                 stage_id=stages[stage_code].id,
                 contract_number=contract,
                 university_specialist=universities[university_idx].contact_person,
+                assigned_kam_id=kam.id if kam else None,
+
             )
         )
+
     await session.flush()
 
     first = await session.scalar(
