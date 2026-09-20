@@ -93,8 +93,11 @@ async def update_stage(
     stage = await db.get(WorkflowStageRef, stage_id)
     if stage is None:
         raise HTTPException(status_code=404, detail="Этап не найден")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(stage, field, value)
+    
     await db.commit()
     await db.refresh(stage)
     return await _with_counts(db, stage)

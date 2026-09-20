@@ -25,11 +25,15 @@ export default function StageToggle({ stageId, isActive, disabled }: Props) {
       );
       return { prev };
     },
-    onError: (_e, _v, ctx) => {
+    onError: (err, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(['stages'], ctx.prev);
-      message.error('Не удалось изменить этап');
+      message.error('Не удалось изменить этап: ' + 
+        (err instanceof Error ? err.message : 'Ошибка'));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['stages'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['stages'] });
+      qc.invalidateQueries({ queryKey: ['board'] });
+    },
   });
 
   return (
@@ -38,7 +42,7 @@ export default function StageToggle({ stageId, isActive, disabled }: Props) {
       loading={mutation.isPending}
       disabled={disabled}
       onChange={(next) => mutation.mutate(next)}
-      aria-label="Активен"
+      aria-label={`Этап ${stageId}: ${isActive ? 'активен' : 'неактивен'}`}
     />
   );
 }

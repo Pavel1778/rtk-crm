@@ -41,7 +41,7 @@ export default function SortableStageRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.5 : (stage.is_active ? 1 : 0.5),
   };
 
   return (
@@ -74,6 +74,7 @@ export default function SortableStageRow({
           />
           <span style={{ flex: 1, minWidth: 0 }}>{stage.name}</span>
           <Tag>{stage.code}</Tag>
+          {!stage.is_active && <Tag color="default">Неактивен</Tag>}
         </Space>
         <Space size={12} style={{ alignItems: 'center', flexShrink: 0 }}>
           <span style={{ minWidth: 60, textAlign: 'center' }}>{stage.order}</span>
