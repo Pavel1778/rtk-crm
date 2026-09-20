@@ -23,6 +23,7 @@ export default function WorkflowPage() {
   const [editingStage, setEditingStage] = useState<WorkflowStage | undefined>();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingStage, setDeletingStage] = useState<WorkflowStage | undefined>();
+  const [togglingStageId, setTogglingStageId] = useState<number | null>(null);
 
   if (role !== 'admin') {
     return (
@@ -85,28 +86,28 @@ export default function WorkflowPage() {
   };
 
   const handleToggle = async (id: number, checked: boolean) => {
+    setTogglingStageId(id);
     try {
       await updateStage(id, { is_active: checked });
       message.success('Этап обновлён');
       load();
     } catch (e) {
       message.error(errorMessage(e));
+    } finally {
+      setTogglingStageId(null);
     }
   };
 
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
-      setStages((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id);
-        const newIndex = items.findIndex((i) => i.id === over.id);
-        const reordered = arrayMove(items, oldIndex, newIndex);
-        const updated = reordered.map((s, idx) => ({ ...s, order: idx + 1 }));
-        return updated;
-      });
+      const oldIndex = stages.findIndex((i) => i.id === active.id);
+      const newIndex = stages.findIndex((i) => i.id === over.id);
+      const reordered = arrayMove(stages, oldIndex, newIndex);
+      const updated = reordered.map((s, idx) => ({ ...s, order: idx + 1 }));
+      setStages(updated);
 
-      const newStages = stages.map((s, idx) => ({ ...s, order: idx + 1 }));
-      for (const stage of newStages) {
+      for (const stage of updated) {
         try {
           await updateStage(stage.id, { order: stage.order });
         } catch (e) {
@@ -135,12 +136,13 @@ export default function WorkflowPage() {
 
       <Card style={{ border: '1px solid #EEEEF2' }}>
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={stages} strategy={verticalListSortingStrategy}>
+          <SortableContext items={stages.map(s => ({ id: s.id }))} strategy={verticalListSortingStrategy}>
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
               {stages.map((stage) => (
                 <SortableStageRow
                   key={stage.id}
                   stage={stage}
+                  loading={togglingStageId === stage.id}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onToggle={handleToggle}

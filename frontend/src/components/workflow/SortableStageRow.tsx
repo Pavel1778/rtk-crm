@@ -15,6 +15,7 @@ interface StageData {
 
 interface SortableStageRowProps {
   stage: StageData;
+  loading?: boolean;
   onEdit: (stage: StageData) => void;
   onDelete: (stage: StageData) => void;
   onToggle: (id: number, checked: boolean) => void;
@@ -24,6 +25,7 @@ interface SortableStageRowProps {
 
 export default function SortableStageRow({
   stage,
+  loading,
   onEdit,
   onDelete,
   onToggle,
@@ -77,6 +79,7 @@ export default function SortableStageRow({
         <span style={{ minWidth: 60, textAlign: 'center' }}>{stage.order}</span>
         <Switch
           checked={stage.is_active}
+          loading={loading}
           onChange={(checked) => onToggle(stage.id, checked)}
           size="small"
         />
