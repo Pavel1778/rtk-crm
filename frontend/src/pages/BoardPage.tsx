@@ -313,24 +313,26 @@ export default function BoardPage() {
 
       {!loading && columns.length > 0 && (
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div
-            className="kanban-board"
-            style={{
-              display: 'flex',
-              gap: 12,
-              overflowX: 'auto',
-              paddingBottom: 8,
-              alignItems: 'flex-start',
-            }}
-          >
-            {visibleColumns.map((column) => (
-              <KanbanColumn
-                key={column.stage.id}
-                stage={column.stage}
-                cards={column.interactions}
-                onOpen={setOpenCard}
-              />
-            ))}
+          <div className="scroll-box">
+            <div
+              className="kanban-board"
+              style={{
+                display: 'flex',
+                gap: 12,
+                overflowX: 'auto',
+                paddingBottom: 8,
+                alignItems: 'flex-start',
+              }}
+            >
+              {visibleColumns.map((column) => (
+                <KanbanColumn
+                  key={column.stage.id}
+                  stage={column.stage}
+                  cards={column.interactions}
+                  onOpen={setOpenCard}
+                />
+              ))}
+            </div>
           </div>
           <DragOverlay>
             {activeCard && (
