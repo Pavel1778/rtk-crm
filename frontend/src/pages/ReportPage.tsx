@@ -1,5 +1,5 @@
 import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
-import { App as AntApp, Button, Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd';
+import { App as AntApp, Button, Card, Col, Row, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 import {
@@ -31,7 +31,6 @@ export default function ReportPage() {
   const { message } = AntApp.useApp();
   const device = useDevice();
   const isMobile = device === 'mobile';
-  const isTablet = device === 'tablet';
   const [data, setData] = useState<ReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -160,7 +159,7 @@ export default function ReportPage() {
         style={{ border: '1px solid #EEEEF2' }}
       >
         {data.stage_progress.length === 0 && (
-          <Empty description="Нет активных взаимодействий" />
+          <EmptyState title="Нет активных взаимодействий" />
         )}
         <div className="chart-container scroll-box">
           <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
@@ -271,6 +270,6 @@ export default function ReportPage() {
           </Card>
         </Col>
       </Row>
-    </Space>
+    </div>
   );
 }
