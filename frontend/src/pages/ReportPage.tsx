@@ -1,5 +1,5 @@
 import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
-import { App as AntApp, Button, Card, Col, Empty, Grid, Row, Space, Spin, Statistic } from 'antd';
+import { App as AntApp, Button, Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 import {
@@ -20,6 +20,7 @@ import {
 
 import { exportPdf, exportXls, exportXlsx, getReport } from '../api/endpoints';
 import type { ReportResponse } from '../types';
+import { useDevice } from '../hooks/useDevice';
 
 /**
  * Отчёт: ключевые показатели и распределение взаимодействий по этапам.
@@ -27,8 +28,9 @@ import type { ReportResponse } from '../types';
  */
 export default function ReportPage() {
   const { message } = AntApp.useApp();
-  const screens = Grid.useBreakpoint();
-  const isMobile = !screens.md;
+  const device = useDevice();
+  const isMobile = device === 'mobile';
+  const isTablet = device === 'tablet';
   const [data, setData] = useState<ReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,23 +163,40 @@ export default function ReportPage() {
         )}
         <div className="chart-container scroll-box">
           <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
-            <BarChart data={stageData} layout="vertical" margin={{ left: 200, right: 20, top: 20, bottom: 20 }}>
+            <BarChart data={stageData} layout="vertical" margin={{ left: isMobile ? 180 : 200, right: 20, top: 20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 type="number" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: isMobile ? 10 : 12 }}
                 allowDecimals={false}
               />
-              <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 12 }} />
+              <YAxis 
+                dataKey="name" 
+                type="category" 
+                width={isMobile ? 180 : 200} 
+                tick={{ fontSize: isMobile ? 10 : 12 }}
+                tickFormatter={(v: string) => v.length > 15 ? v.slice(0, 12) + '…' : v}
+              />
               <Tooltip 
                 contentStyle={{ 
                   borderRadius: 8,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   border: '1px solid #EEEEF2',
+                  fontSize: isMobile ? 11 : 13,
                 }}
+                wrapperStyle={{ zIndex: 1000 }}
               />
-              <Legend />
-              <Bar dataKey="count" fill="#6E41F2" radius={[0, 4, 4, 0]} />
+              <Legend 
+                verticalAlign={isMobile ? 'bottom' : 'top'}
+                height={isMobile ? 60 : 36}
+                wrapperStyle={{ fontSize: isMobile ? 10 : 12 }}
+              />
+              <Bar 
+                dataKey="count" 
+                fill="#6E41F2" 
+                radius={[0, 4, 4, 0]}
+                maxBarSize={isMobile ? 24 : 48}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -191,20 +210,24 @@ export default function ReportPage() {
                 <PieChart>
                   <Pie
                     data={productData}
+                    dataKey="value"
+                    nameKey="name"
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
+                    innerRadius={isMobile ? 40 : 60}
+                    outerRadius={isMobile ? 70 : 100}
+                    label={isMobile ? false : ({ name, percent }: any) => 
+                      `${name} ${(percent * 100).toFixed(0)}%`}
                   >
                     {productData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
+                  <Legend 
+                    verticalAlign="bottom"
+                    wrapperStyle={{ fontSize: isMobile ? 10 : 12 }}
+                  />
                   <Tooltip />
-                  <Legend verticalAlign="bottom" layout={isMobile ? "horizontal" : "vertical"} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -216,11 +239,31 @@ export default function ReportPage() {
               <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
                 <LineChart data={lineData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" layout={isMobile ? "horizontal" : "vertical"} />
-                  <Line type="monotone" dataKey="interactions" stroke="#6E41F2" strokeWidth={2} />
+                  <XAxis 
+                    dataKey="day"
+                    tick={{ fontSize: isMobile ? 9 : 12 }}
+                    tickFormatter={(v: string) => isMobile ? v.slice(5) : v}
+                    interval={isMobile ? Math.floor(lineData.length / 5) : 0}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: isMobile ? 10 : 12 }} 
+                    width={isMobile ? 40 : 60}
+                  />
+                  <Tooltip 
+                    contentStyle={{ fontSize: isMobile ? 11 : 13 }}
+                    wrapperStyle={{ zIndex: 1000 }}
+                  />
+                  <Legend 
+                    verticalAlign={isMobile ? 'bottom' : 'top'}
+                    wrapperStyle={{ fontSize: isMobile ? 10 : 12 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="interactions" 
+                    stroke="#6E41F2"
+                    dot={!isMobile}
+                    strokeWidth={isMobile ? 1.5 : 2}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
