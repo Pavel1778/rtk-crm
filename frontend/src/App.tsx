@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import ReportPage from './pages/ReportPage';
 import DirectoryPage from './pages/DirectoryPage';
 import SettingsPage from './pages/SettingsPage';
+import HelpPage from './pages/HelpPage';
 
 export default function App() {
   const user = useAuthStore((s) => s.user);
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/reports" element={<ReportPage />} />
           <Route path="/directories" element={<DirectoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/help" element={<HelpPage />} />
         </Route>
       ) : (
         <Route path="*" element={<Navigate to="/login" replace />} />
