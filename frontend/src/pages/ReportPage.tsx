@@ -1,5 +1,5 @@
 import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
-import { Button, Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd';
+import { App as AntApp, Button, Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 import {
@@ -18,7 +18,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-import { errorMessage } from '../api/client';
 import { exportPdf, exportXls, exportXlsx, getReport } from '../api/endpoints';
 import type { ReportResponse } from '../types';
 
@@ -27,6 +26,7 @@ import type { ReportResponse } from '../types';
  * Графики с recharts.
  */
 export default function ReportPage() {
+  const { message } = AntApp.useApp();
   const [data, setData] = useState<ReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,9 +49,10 @@ export default function ReportPage() {
         filename = `interactions_${new Date().toISOString().slice(0, 10)}.pdf`;
       }
 
-      saveAs(blob, filename);
+      saveAs(new Blob([blob]), filename);
+      message.success(`Файл ${filename} успешно скачан`);
     } catch (err) {
-      errorMessage(err, 'Не удалось экспортировать отчёт');
+      message.error('Не удалось экспортировать отчёт');
     } finally {
       setExporting(null);
     }
@@ -85,7 +86,7 @@ export default function ReportPage() {
   useEffect(() => {
     getReport()
       .then(setData)
-      .catch((err) => setError(errorMessage(err, 'Не удалось загрузить отчёт')))
+      .catch((err) => setError('Не удалось загрузить отчёт'))
       .finally(() => setLoading(false));
   }, []);
 
