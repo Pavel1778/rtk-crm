@@ -53,6 +53,7 @@ import type {
 import { useRole } from '../stores/authStore';
 import InteractionDrawer from '../components/interaction/InteractionDrawer';
 import MobileStageFilter from '../components/kanban/MobileStageFilter';
+import EmptyState from '../components/EmptyState';
 
 interface DragData {
   card: InteractionCard;
@@ -311,7 +312,10 @@ export default function BoardPage() {
       )}
 
       {!loading && columns.length === 0 && (
-        <Empty description="Воркфлоу не настроен. Добавьте этапы в разделе «Настройки»." />
+        <EmptyState 
+          title="Воркфлоу не настроен"
+          description="Добавьте этапы в разделе «Настройки»"
+        />
       )}
 
       {!loading && columns.length > 0 && (

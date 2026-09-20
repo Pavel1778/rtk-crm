@@ -21,6 +21,7 @@ import {
 import { exportPdf, exportXls, exportXlsx, getReport } from '../api/endpoints';
 import type { ReportResponse } from '../types';
 import { useDevice } from '../hooks/useDevice';
+import EmptyState from '../components/EmptyState';
 
 /**
  * Отчёт: ключевые показатели и распределение взаимодействий по этапам.
@@ -103,7 +104,7 @@ export default function ReportPage() {
   }
 
   if (error || !data) {
-    return <Empty description={error ?? 'Нет данных'} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+    return <EmptyState title={error ?? 'Нет данных'} />;
   }
 
   return (
