@@ -5,6 +5,7 @@ import {
   Drawer,
   Empty,
   Form,
+  Grid,
   Input,
   Select,
   Space,
@@ -61,6 +62,8 @@ interface DrawerProps {
 export default function InteractionDrawer({ card, onClose, onChanged }: DrawerProps) {
   const { message, modal } = AntApp.useApp();
   const user = useAuthStore((s) => s.user);
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [full, setFull] = useState<Interaction | null>(null);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -211,7 +214,7 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
 
   return (
     <Drawer
-      width={520}
+      width={isMobile ? '100%' : 520}
       open={card !== null}
       onClose={onClose}
       title={

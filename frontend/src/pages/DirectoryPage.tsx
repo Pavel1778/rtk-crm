@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Empty,
+  Grid,
   Input,
   Popconfirm,
   Select,
@@ -44,6 +45,7 @@ export default function DirectoryPage() {
 function UniversitiesTab() {
   const { message } = AntApp.useApp();
   const role = useRole();
+  const screens = Grid.useBreakpoint();
   const [rows, setRows] = useState<University[]>([]);
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
@@ -100,7 +102,7 @@ function UniversitiesTab() {
           <Table<University>
             rowKey="id"
             dataSource={rows}
-            size="small"
+            size={screens.md ? 'middle' : 'small'}
             scroll={{ x: 'max-content' }}
             pagination={{ pageSize: 10 }}
             columns={[
@@ -136,6 +138,7 @@ function UniversitiesTab() {
 function DirectionsTab() {
   const { message } = AntApp.useApp();
   const role = useRole();
+  const screens = Grid.useBreakpoint();
   const [rows, setRows] = useState<ITDirection[]>([]);
   const [name, setName] = useState('');
 
@@ -181,7 +184,7 @@ function DirectionsTab() {
           <Table<ITDirection>
             rowKey="id"
             dataSource={rows}
-            size="small"
+            size={screens.md ? 'middle' : 'small'}
             scroll={{ x: 'max-content' }}
             pagination={false}
             columns={[
@@ -216,6 +219,7 @@ function DirectionsTab() {
 function ProductsTab() {
   const { message } = AntApp.useApp();
   const role = useRole();
+  const screens = Grid.useBreakpoint();
   const [rows, setRows] = useState<ITProduct[]>([]);
   const [directions, setDirections] = useState<ITDirection[]>([]);
   const [name, setName] = useState('');
@@ -277,7 +281,7 @@ function ProductsTab() {
           <Table<ITProduct>
             rowKey="id"
             dataSource={rows}
-            size="small"
+            size={screens.md ? 'middle' : 'small'}
             scroll={{ x: 'max-content' }}
             pagination={false}
             columns={[

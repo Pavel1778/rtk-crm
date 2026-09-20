@@ -31,10 +31,29 @@ img, svg, video {
     flex-direction: column !important;
     overflow-x: hidden !important;
     overflow-y: auto;
+    height: auto;
   }
   .kanban-column {
     min-width: 100% !important;
+    max-width: 100% !important;
     max-height: none !important;
+  }
+
+  /* Скрыть пустые колонки */
+  .kanban-column:has(.empty-column) {
+    display: none;
+  }
+
+  /* Модалки на всю ширину */
+  .ant-modal {
+    max-width: 100% !important;
+    margin: 0 !important;
+    top: 0 !important;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .ant-table-wrapper {
+    overflow-x: auto;
   }
 
   /* Минимальный размер текста для телефонов */
@@ -46,6 +65,11 @@ img, svg, video {
   .ant-btn {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Расстояние между кнопками минимум 8px */
+  .ant-space {
+    gap: 8px;
   }
 }
 

@@ -177,12 +177,14 @@ function KanbanColumn({
           <KanbanCard key={card.id} card={card} onOpen={onOpen} />
         ))}
         {cards.length === 0 && (
-          <Typography.Text
-            type="secondary"
-            style={{ textAlign: 'center', padding: 16, fontSize: 12 }}
-          >
-            Нет взаимодействий
-          </Typography.Text>
+          <div className="empty-column">
+            <Typography.Text
+              type="secondary"
+              style={{ textAlign: 'center', padding: 16, fontSize: 12 }}
+            >
+              Нет взаимодействий
+            </Typography.Text>
+          </div>
         )}
       </div>
     </div>
