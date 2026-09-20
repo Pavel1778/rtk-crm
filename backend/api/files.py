@@ -10,10 +10,10 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.security import get_current_user
-from backend.db.session import get_db
-from backend.models.entities import AttachedFile, Interaction, User
-from backend.schemas.entities import AttachedFileRead
+from app.auth.security import get_current_user
+from app.db.session import get_db
+from app.models.entities import AttachedFile, Interaction, User
+from app.schemas.entities import AttachedFileRead
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 

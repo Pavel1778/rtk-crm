@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.security import get_current_user
-from backend.db.session import get_db
-from backend.models.entities import ITDirection, ITProduct, University, User
-from backend.schemas.entities import ITProductCreate, UniversityCreate
-from backend.services.excel_import import parse_catalog_file, CatalogImportResult
+from app.auth.security import get_current_user
+from app.db.session import get_db
+from app.models.entities import ITDirection, ITProduct, University, User
+from app.schemas.entities import ITProductCreate, UniversityCreate
+from app.services.excel_import import parse_catalog_file, CatalogImportResult
 
 router = APIRouter(prefix="/api/catalogs", tags=["catalogs"])
 

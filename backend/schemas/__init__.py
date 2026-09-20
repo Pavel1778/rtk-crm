@@ -1,6 +1,6 @@
 """Схемы запросов/ответов API (Pydantic)."""
 
-from backend.schemas.entities import (
+from app.schemas.entities import (
     ActionCreate,
     ActionRead,
     ActionUpdate,

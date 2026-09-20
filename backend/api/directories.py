@@ -2,15 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.security import get_current_user
-from backend.db.session import get_db
-from backend.models.entities import (
+from app.auth.security import get_current_user
+from app.db.session import get_db
+from app.models.entities import (
     Interaction,
     ITDirection,
     ITProduct,
     User,
 )
-from backend.schemas.entities import (
+from app.schemas.entities import (
     ITDirectionCreate,
     ITDirectionRead,
     ITProductCreate,

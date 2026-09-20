@@ -3,9 +3,9 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.security import hash_password
-from backend.models.enums import UserRole
-from backend.models.entities import (
+from app.auth.security import hash_password
+from app.models.enums import UserRole
+from app.models.entities import (
 
     Action,
     Comment,

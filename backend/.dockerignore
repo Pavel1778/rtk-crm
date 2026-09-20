@@ -1,0 +1,53 @@
+# Python
+.venv/
+.venv*/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Кэши и тесты
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Окружение и секреты
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Логи и мусор
+*.log
+logs/
+npm-debug.log*
+
+# Локальная статика (загруженные файлы)
+static/uploads/
+static/tmp/
+
+# Документация (не нужна в образе)
+*.md
+!README.md
+docs/
