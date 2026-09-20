@@ -94,13 +94,7 @@ export default function StageEditor({ open, stage, onCancel, onSave }: StageEdit
           />
         </Form.Item>
         <Form.Item name="color" label="Цвет" initialValue="#6E41F2">
-          <ColorPicker 
-            id="stage-color"
-            name="color"
-            showText 
-            format="hex"
-            autoComplete="off"
-          />
+          <ColorPicker showText format="hex" />
         </Form.Item>
       </Form>
     </Modal>
