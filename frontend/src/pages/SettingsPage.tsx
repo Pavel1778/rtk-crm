@@ -4,6 +4,7 @@ import {
   Card,
   ColorPicker,
   Form,
+  Grid,
   Input,
   InputNumber,
   Popconfirm,
@@ -32,8 +33,11 @@ import { useRole } from '../stores/authStore';
 export default function SettingsPage() {
   const { message } = AntApp.useApp();
   const role = useRole();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [stages, setStages] = useState<WorkflowStage[]>([]);
   const [saving, setSaving] = useState(false);
+  const [togglingStageId, setTogglingStageId] = useState<number | null>(null);
   const [form] = Form.useForm();
 
   if (role !== 'admin') {
@@ -50,6 +54,19 @@ export default function SettingsPage() {
       .catch((e) => message.error(errorMessage(e)));
   };
   useEffect(load, []);
+
+  const toggleStage = async (id: number, checked: boolean) => {
+    setTogglingStageId(id);
+    try {
+      await updateStage(id, { is_active: checked });
+      message.success('Этап обновлён');
+      load();
+    } catch (e) {
+      message.error(errorMessage(e));
+    } finally {
+      setTogglingStageId(null);
+    }
+  };
 
   const addStage = async () => {
     const values = await form.validateFields();
@@ -76,30 +93,30 @@ export default function SettingsPage() {
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Card title="Новый этап" style={{ border: '1px solid #EEEEF2' }}>
-        <Form form={form} layout="inline">
+        <Form form={form} layout={isMobile ? 'vertical' : 'inline'}>
           <Form.Item
             name="code"
             rules={[{ required: true, message: 'Код обязателен' }]}
           >
-            <Input placeholder="Код (например, pilot)" style={{ width: 160 }} />
+            <Input placeholder="Код (например, pilot)" style={{ width: isMobile ? '100%' : 160 }} />
           </Form.Item>
           <Form.Item
             name="name"
             rules={[{ required: true, message: 'Название обязательно' }]}
           >
-            <Input placeholder="Название этапа" style={{ width: 200 }} />
+            <Input placeholder="Название этапа" style={{ width: isMobile ? '100%' : 200 }} />
           </Form.Item>
           <Form.Item
             name="order"
             rules={[{ required: true, message: 'Порядок обязателен' }]}
           >
-            <InputNumber placeholder="Порядок" min={1} style={{ width: 100 }} />
+            <InputNumber placeholder="Порядок" min={1} style={{ width: isMobile ? '100%' : 100 }} />
           </Form.Item>
           <Form.Item name="color" initialValue="#6E41F2">
             <ColorPicker showText format="hex" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={addStage} loading={saving}>
+            <Button type="primary" onClick={addStage} loading={saving} block={isMobile}>
               Добавить
             </Button>
           </Form.Item>
@@ -160,11 +177,8 @@ export default function SettingsPage() {
                 render: (active: boolean, record) => (
                   <Switch
                     checked={active}
-                    onChange={(checked) =>
-                      updateStage(record.id, { is_active: checked })
-                        .then(load)
-                        .catch((e) => message.error(errorMessage(e)))
-                    }
+                    loading={togglingStageId === record.id}
+                    onChange={(checked) => toggleStage(record.id, checked)}
                   />
                 ),
               },
