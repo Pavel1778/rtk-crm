@@ -1,4 +1,4 @@
-import { Card, Typography } from 'antd';
+import { Typography } from 'antd';
 import type { ReactNode } from 'react';
 
 const { Text } = Typography;
@@ -11,62 +11,86 @@ interface Props {
   hint?: string;
 }
 
-export default function MetricCard({ label, value, icon, color, hint }: Props) {
+export default function MetricCard({
+  label,
+  value,
+  icon,
+  color,
+  hint,
+}: Props) {
   return (
-    <Card
-      styles={{ body: { padding: '16px 20px' } }}
+    <div
       style={{
-        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        background: '#fff',
+        border: '1px solid #EEEEF2',
         borderRadius: 12,
-        border: '1px solid var(--atmr-border-soft, #EEEEF2)',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        padding: '16px 20px',
+        minHeight: 100,
+        height: '100%',
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Text
-            style={{
-              fontSize: 12,
-              color: 'var(--atmr-fg-muted, #6B6B72)',
-              display: 'block',
-              marginBottom: 8,
-              textTransform: 'uppercase',
-              letterSpacing: 0.3,
-              fontWeight: 500,
-            }}
-          >
-            {label}
-          </Text>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              color: color || 'var(--atmr-fg-default, #1C1D22)',
-              lineHeight: 1.1,
-              marginBottom: hint ? 4 : 0,
-            }}
-          >
-            {value}
-          </div>
-          {hint && (
-            <Text style={{ fontSize: 11, color: 'var(--atmr-fg-muted, #6B6B72)' }}>
-              {hint}
-            </Text>
-          )}
-        </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 12,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#6B6B72',
+            textTransform: 'uppercase',
+            letterSpacing: 0.3,
+            lineHeight: 1.3,
+          }}
+        >
+          {label}
+        </Text>
         {icon && (
-          <div
+          <span
             style={{
-              fontSize: 24,
-              color: 'var(--atmr-accent-default, #6E41F2)',
-              opacity: 0.6,
-              marginLeft: 12,
+              fontSize: 20,
+              color: '#6E41F2',
+              opacity: 0.7,
+              flexShrink: 0,
             }}
           >
             {icon}
-          </div>
+          </span>
         )}
       </div>
-    </Card>
+
+      <div style={{ marginTop: 12 }}>
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: 700,
+            lineHeight: 1.1,
+            color: color || '#1C1D22',
+          }}
+        >
+          {value}
+        </div>
+        {hint && (
+          <Text
+            style={{
+              fontSize: 11,
+              color: '#6B6B72',
+              marginTop: 4,
+              display: 'block',
+            }}
+          >
+            {hint}
+          </Text>
+        )}
+      </div>
+    </div>
   );
 }
