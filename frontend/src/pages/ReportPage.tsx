@@ -1,298 +1,226 @@
-import { BarChartOutlined, DownloadOutlined, BankOutlined, SwapOutlined, FileTextOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import { App as AntApp, Button, Card, Col, Row, Spin } from 'antd';
 import { useEffect, useState } from 'react';
-import { saveAs } from 'file-saver';
+import { Card, message, Spin } from 'antd';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  LineChart, Line,
 } from 'recharts';
-
-import { exportPdf, exportXls, exportXlsx, getReport } from '../api/endpoints';
-import type { ReportResponse } from '../types';
+import { api } from '../api/client';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
 
-/**
- * Отчёт: ключевые показатели и распределение взаимодействий по этапам.
- * Графики с recharts.
- */
+interface ReportData {
+  metrics: Array<{ key: string; label: string; value: number }>;
+  stage_progress: Array<{ stage_code: string; stage_name: string; count: number }>;
+  products?: Array<{ name: string; value: number }>;
+  dynamics?: Array<{ date: string; count: number }>;
+}
+
+const COLORS = ['#6E41F2', '#8A63F5', '#A88BFA', '#C4B0FC', '#E0D5FE'];
+
 export default function ReportPage() {
-  const { message } = AntApp.useApp();
   const device = useDevice();
   const isMobile = device === 'mobile';
-  const [data, setData] = useState<ReportResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState<string | null>(null);
-
-  const handleExport = async (format: 'xlsx' | 'xls' | 'pdf') => {
-    setExporting(format);
-    try {
-      let blob;
-      let filename;
-
-      if (format === 'xlsx') {
-        blob = await exportXlsx();
-        filename = `interactions_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      } else if (format === 'xls') {
-        blob = await exportXls();
-        filename = `interactions_${new Date().toISOString().slice(0, 10)}.xls`;
-      } else {
-        blob = await exportPdf();
-        filename = `interactions_${new Date().toISOString().slice(0, 10)}.pdf`;
-      }
-
-      saveAs(new Blob([blob]), filename);
-      message.success(`Файл ${filename} успешно скачан`);
-    } catch (err) {
-      message.error('Не удалось экспортировать отчёт');
-    } finally {
-      setExporting(null);
-    }
-  };
-
-  // Цвета для графиков
-  const COLORS = ['#6E41F2', '#00AC43', '#F5A623', '#FF4D4F', '#13C2C2', '#722ED1'];
-
-  // Подготовка данных для BarChart (распределение по этапам)
-  const stageData = data?.stage_progress.map((stage) => ({
-    name: stage.stage_name,
-    count: stage.count,
-    percent: stage.percent,
-  })) || [];
-
-  // Подготовка данных для PieChart (доля продуктов)
-  const productData = [
-    { name: 'RUBOTYAKA', value: 35 },
-    { name: 'RUBTSC', value: 20 },
-    { name: 'Skill Portal', value: 25 },
-    { name: 'Cyber Range', value: 12 },
-    { name: 'AI Studio', value: 8 },
-  ];
-
-  // Подготовка данных для LineChart (динамика за 30 дней)
-  const lineData = Array.from({ length: 30 }, (_, i) => ({
-    day: `День ${i + 1}`,
-    interactions: Math.floor(Math.random() * 20) + 5,
-  }));
 
   useEffect(() => {
-    getReport()
-      .then(setData)
-      .catch(() => setError('Не удалось загрузить отчёт'))
+    api.get('/api/reports')
+      .then((res) => setData(res.data))
+      .catch(() => message.error('Не удалось загрузить отчёт'))
       .finally(() => setLoading(false));
   }, []);
 
+  const handleExport = (format: 'xlsx' | 'xls' | 'pdf') => {
+    window.open(
+      `${import.meta.env.VITE_API_URL}/api/reports/${format}`,
+      '_blank'
+    );
+  };
+
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 48 }}>
+      <div style={{ padding: 40, textAlign: 'center' }}>
         <Spin size="large" />
       </div>
     );
   }
 
-  if (error || !data) {
-    return <EmptyState title={error ?? 'Нет данных'} />;
+  if (!data) {
+    return (
+      <div className="page-container">
+        <h1>Отчёты</h1>
+        <EmptyState
+          title="Нет данных"
+          description="Не удалось загрузить отчёт"
+        />
+      </div>
+    );
   }
 
   return (
     <div className="page-container">
+      {/* Заголовок + кнопки экспорта */}
       <div className="page-header">
         <h1>Отчёты</h1>
         <div className="export-buttons">
-          <Button
-            icon={<DownloadOutlined />}
+          <button
             onClick={() => handleExport('xlsx')}
-            loading={exporting === 'xlsx'}
+            className="btn-export"
           >
             Экспорт XLSX
-          </Button>
-          <Button
-            icon={<DownloadOutlined />}
+          </button>
+          <button
             onClick={() => handleExport('xls')}
-            loading={exporting === 'xls'}
+            className="btn-export"
           >
             Экспорт XLS
-          </Button>
-          <Button
-            icon={<DownloadOutlined />}
+          </button>
+          <button
             onClick={() => handleExport('pdf')}
-            loading={exporting === 'pdf'}
+            className="btn-export"
           >
             Экспорт PDF
-          </Button>
+          </button>
         </div>
       </div>
-      
-      <Row gutter={[16, 16]} className="stats-grid">
-        <Col xs={12} md={8} lg={4}>
-          <MetricCard
-            label="Всего вузов"
-            value={data.metrics.find(m => m.key === 'total_universities')?.value || 0}
-            icon={<BankOutlined />}
-          />
-        </Col>
-        <Col xs={12} md={8} lg={4}>
-          <MetricCard
-            label="Активных взаимодействий"
-            value={data.metrics.find(m => m.key === 'active_interactions')?.value || 0}
-            icon={<SwapOutlined />}
-            color="#00AC43"
-          />
-        </Col>
-        <Col xs={12} md={8} lg={4}>
-          <MetricCard
-            label="Взаимодействий с договором"
-            value={data.metrics.find(m => m.key === 'with_contract')?.value || 0}
-            icon={<FileTextOutlined />}
-          />
-        </Col>
-        <Col xs={12} md={8} lg={4}>
-          <MetricCard
-            label="Открытых задач"
-            value={data.metrics.find(m => m.key === 'open_tasks')?.value || 0}
-            icon={<ClockCircleOutlined />}
-            color="#F5A623"
-          />
-        </Col>
-        <Col xs={12} md={8} lg={4}>
-          <MetricCard
-            label="Выполненных задач"
-            value={data.metrics.find(m => m.key === 'done_tasks')?.value || 0}
-            icon={<CheckCircleOutlined />}
-            color="#00AC43"
-          />
-        </Col>
-      </Row>
 
+      {/* KPI-карточки */}
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
+        {data.metrics.map((m) => (
+          <MetricCard
+            key={m.key}
+            label={m.label}
+            value={m.value}
+          />
+        ))}
+      </div>
+
+      {/* График: Распределение по этапам */}
       <Card
-        title={
-          <>
-            <BarChartOutlined style={{ color: '#6E41F2', marginRight: 8 }} />
-            Распределение по этапам
-          </>
-        }
-        style={{ border: '1px solid #EEEEF2' }}
+        title="Распределение по этапам"
+        style={{ borderRadius: 12, marginBottom: 24 }}
       >
-        {data.stage_progress.length === 0 && (
-          <EmptyState title="Нет активных взаимодействий" />
+        {data.stage_progress.length === 0 ? (
+          <EmptyState title="Нет данных" />
+        ) : (
+          <div
+            className="chart-container"
+            style={{ height: isMobile ? 500 : 600 }}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data.stage_progress}
+                layout="vertical"
+                margin={{
+                  top: 8,
+                  right: 30,
+                  left: isMobile ? 10 : 20,
+                  bottom: 8,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" horizontal={false} />
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={{ fontSize: isMobile ? 10 : 12 }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="stage_name"
+                  width={isMobile ? 140 : 260}
+                  tick={{ fontSize: isMobile ? 10 : 12 }}
+                  tickFormatter={(v) =>
+                    v && v.length > (isMobile ? 18 : 35)
+                      ? v.slice(0, isMobile ? 16 : 33) + '…'
+                      : v
+                  }
+                />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  formatter={(value) => [
+                    Number(value ?? 0),
+                    'Взаимодействий',
+                  ]}
+                />
+                <Bar dataKey="count" fill="#6E41F2" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
-        <div className="chart-container scroll-box">
-          <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
-            <BarChart 
-              data={stageData} 
-              margin={{ top: 8, right: 8, left: isMobile ? -20 : 0, bottom: isMobile ? 80 : 60 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: isMobile ? 10 : 11 }}
-                angle={-45}
-                textAnchor="end"
-                height={isMobile ? 90 : 70}
-                interval={0}
-                tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={{ fontSize: isMobile ? 10 : 12 }}
-                width={isMobile ? 32 : 40}
-              />
-              <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                formatter={(value) => [`${Number(value ?? 0)} взаимодействий`, 'Количество']}
-              />
-              <Bar
-                dataKey="count"
-                fill="#6E41F2"
-                radius={[6, 6, 0, 0]}
-                maxBarSize={isMobile ? 20 : 40}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </Card>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={12}>
-          <Card title="Доля продуктов" style={{ border: '1px solid #EEEEF2' }}>
-            <div className="chart-container scroll-box">
-              <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
+      {/* Два графика в ряд */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gap: 24,
+        }}
+      >
+        {/* Доля продуктов */}
+        <Card title="Доля продуктов" style={{ borderRadius: 12 }}>
+          {!data.products || data.products.length === 0 ? (
+            <EmptyState title="Нет данных" />
+          ) : (
+            <div className="chart-container" style={{ height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={productData}
+                    data={data.products}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={isMobile ? 40 : 60}
-                    outerRadius={isMobile ? 70 : 100}
-                    label={isMobile ? false : ({ name, percent }: any) => 
-                      `${name} ${(percent * 100).toFixed(0)}%`}
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={2}
                   >
-                    {productData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {data.products.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Legend 
-                    verticalAlign="bottom"
-                    wrapperStyle={{ fontSize: isMobile ? 10 : 12 }}
-                  />
                   <Tooltip />
+                  <Legend
+                    verticalAlign="bottom"
+                    wrapperStyle={{ fontSize: 11 }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </Card>
-        </Col>
-        <Col xs={24} md={12}>
-          <Card title="Динамика за 30 дней" style={{ border: '1px solid #EEEEF2' }}>
-            <div className="chart-container scroll-box">
-              <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
-                <LineChart data={lineData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="day"
-                    tick={{ fontSize: isMobile ? 9 : 12 }}
-                    tickFormatter={(v: string) => isMobile ? v.slice(5) : v}
-                    interval={isMobile ? Math.floor(lineData.length / 5) : 0}
+          )}
+        </Card>
+
+        {/* Динамика за 30 дней */}
+        <Card title="Динамика за 30 дней" style={{ borderRadius: 12 }}>
+          {!data.dynamics || data.dynamics.length === 0 ? (
+            <EmptyState title="Нет данных" />
+          ) : (
+            <div className="chart-container" style={{ height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.dynamics}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: isMobile ? 10 : 11 }}
+                    tickFormatter={(v) => v?.slice(5) || ''}
                   />
-                  <YAxis 
-                    tick={{ fontSize: isMobile ? 10 : 12 }} 
-                    width={isMobile ? 40 : 60}
-                  />
-                  <Tooltip 
-                    contentStyle={{ fontSize: isMobile ? 11 : 13 }}
-                    wrapperStyle={{ zIndex: 1000 }}
-                  />
-                  <Legend 
-                    verticalAlign={isMobile ? 'bottom' : 'top'}
-                    wrapperStyle={{ fontSize: isMobile ? 10 : 12 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="interactions" 
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
                     stroke="#6E41F2"
+                    strokeWidth={2}
                     dot={!isMobile}
-                    strokeWidth={isMobile ? 1.5 : 2}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </Card>
-        </Col>
-      </Row>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
