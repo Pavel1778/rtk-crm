@@ -161,6 +161,8 @@ export const exportXlsx = (params?: {
   stage_id?: number;
   university_id?: number;
   product_id?: number;
+  date_from?: string;
+  date_to?: string;
 }) =>
   api.get('/api/reports/xlsx', {
     params,
@@ -171,6 +173,8 @@ export const exportXls = (params?: {
   stage_id?: number;
   university_id?: number;
   product_id?: number;
+  date_from?: string;
+  date_to?: string;
 }) =>
   api.get('/api/reports/xls', {
     params,
@@ -181,6 +185,8 @@ export const exportPdf = (params?: {
   stage_id?: number;
   university_id?: number;
   product_id?: number;
+  date_from?: string;
+  date_to?: string;
 }) =>
   api.get('/api/reports/pdf', {
     params,

@@ -10,6 +10,7 @@ from backend.db.session import get_db
 from backend.models.entities import (
     Action,
     Interaction,
+    ITDirection,
     ITProduct,
     University,
     User,
@@ -120,6 +121,8 @@ async def _build_interaction_data(
     stage_id: int | None = None,
     university_id: int | None = None,
     product_id: int | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ) -> list[dict]:
     """Построение данных взаимодействий для экспорта."""
     filters: list = [Interaction.is_active.is_(True)]
@@ -129,13 +132,13 @@ async def _build_interaction_data(
         filters.append(Interaction.university_id == university_id)
     if product_id is not None:
         filters.append(Interaction.product_id == product_id)
-    
+
     interactions = list(
         await db.scalars(
             select(Interaction).where(*filters).order_by(Interaction.id)
         )
     )
-    
+
     data = []
     for interaction in interactions:
         university = await db.get(University, interaction.university_id)
@@ -143,9 +146,16 @@ async def _build_interaction_data(
         stage = await db.get(WorkflowStageRef, interaction.stage_id)
         assigned_kam = await db.get(User, interaction.assigned_kam_id) if interaction.assigned_kam_id else None
 
+        # Get direction name from product
+        direction_name = None
+        if product:
+            direction = await db.get(ITDirection, product.direction_id) if product.direction_id else None
+            direction_name = direction.name if direction else None
+
         data.append({
             "id": interaction.id,
             "university_name": university.name if university else None,
+            "direction_name": direction_name,
             "product_name": product.name if product else None,
             "stage_name": stage.name if stage else None,
             "contract_number": interaction.contract_number,
@@ -155,7 +165,7 @@ async def _build_interaction_data(
             "notes": interaction.notes,
             "is_active": interaction.is_active,
         })
-    
+
     return data
 
 
@@ -174,11 +184,13 @@ async def export_xlsx(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Экспорт взаимодействий в XLSX формате."""
-    data = await _build_interaction_data(db, stage_id, university_id, product_id)
+    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
     xlsx_data = generate_xlsx(data)
 
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -209,11 +221,13 @@ async def export_xls(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Экспорт взаимодействий в XLS формате."""
-    data = await _build_interaction_data(db, stage_id, university_id, product_id)
+    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
     xls_data = generate_xls(data)
 
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xls"
@@ -244,11 +258,13 @@ async def export_pdf(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Экспорт взаимодействий в PDF формате."""
-    data = await _build_interaction_data(db, stage_id, university_id, product_id)
+    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
     pdf_data = generate_pdf(data)
 
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
@@ -262,3 +278,22 @@ async def export_pdf(
         media_type="application/pdf",
         headers=headers
     )
+
+
+@router.get("/json")
+async def export_json(
+    stage_id: int | None = Query(default=None),
+    university_id: int | None = Query(default=None),
+    product_id: int | None = Query(default=None),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Экспорт взаимодействий в JSON формате для LMS интеграции."""
+    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "total": len(data),
+        "interactions": data,
+    }
