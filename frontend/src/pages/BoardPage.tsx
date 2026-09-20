@@ -255,10 +255,22 @@ export default function BoardPage() {
       : columns;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Row gutter={[12, 12]} align="middle">
-        <Col flex="auto">
-          <Space wrap size={12}>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>Доска взаимодействий</h1>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setCreating(true)}
+          disabled={role === 'user'}
+        >
+          Создать взаимодействие
+        </Button>
+      </div>
+      
+      <div className="page-filters">
+        <Row gutter={[12, 12]} align="middle" style={{ width: '100%' }}>
+          <Col flex="auto">
             <Input.Search
               id="board-search"
               name="search"
@@ -271,6 +283,8 @@ export default function BoardPage() {
                 setTimeout(load, 0);
               }}
             />
+          </Col>
+          <Col>
             <Select
               id="board-product-filter"
               name="product"
@@ -285,30 +299,31 @@ export default function BoardPage() {
               options={products.map((p) => ({ value: p.id, label: p.name }))}
               autoComplete="off"
             />
-            <Button icon={<ReloadOutlined />} onClick={load}>
-              Обновить
-            </Button>
-          </Space>
-        </Col>
-        <Col>
-          <Space>
+          </Col>
+          <Col>
             <MobileStageFilter
               columns={columns}
               value={mobileStage}
               onChange={setMobileStage}
             />
-            {role !== 'user' && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setCreating(true)}
-              >
-                Создать взаимодействие
-              </Button>
-            )}
-          </Space>
-        </Col>
-      </Row>
+          </Col>
+          <Col>
+            <Button icon={<ReloadOutlined />} onClick={load}>
+              Обновить
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCreating(true)}
+              disabled={role === 'user'}
+            >
+              Создать взаимодействие
+            </Button>
+          </Col>
+        </Row>
+      </div>
 
       {loading && (
         <div style={{ textAlign: 'center', padding: 48 }}>
@@ -324,38 +339,40 @@ export default function BoardPage() {
       )}
 
       {!loading && columns.length > 0 && (
-        <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div className="scroll-box">
-            <div
-              className="kanban-board"
-              style={{
-                display: 'flex',
-                gap: 12,
-                overflowX: 'auto',
-                paddingBottom: 8,
-                alignItems: 'flex-start',
-              }}
-            >
-              {visibleColumns.map((column) => (
-                <KanbanColumn
-                  key={column.stage.id}
-                  stage={column.stage}
-                  cards={column.interactions}
-                  onOpen={setOpenCard}
-                />
-              ))}
+        <div className="page-content">
+          <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+            <div className="scroll-box">
+              <div
+                className="kanban-board"
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  overflowX: 'auto',
+                  paddingBottom: 8,
+                  alignItems: 'flex-start',
+                }}
+              >
+                {visibleColumns.map((column) => (
+                  <KanbanColumn
+                    key={column.stage.id}
+                    stage={column.stage}
+                    cards={column.interactions}
+                    onOpen={setOpenCard}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-          <DragOverlay>
-            {activeCard && (
-              <Card size="small" style={{ width: 260, border: '1px solid #6E41F2' }}>
-                <Typography.Text strong>
-                  {activeCard.university_name ?? 'Без вуза'}
-                </Typography.Text>
-              </Card>
-            )}
-          </DragOverlay>
-        </DndContext>
+            <DragOverlay>
+              {activeCard && (
+                <Card size="small" style={{ width: 260, border: '1px solid #6E41F2' }}>
+                  <Typography.Text strong>
+                    {activeCard.university_name ?? 'Без вуза'}
+                  </Typography.Text>
+                </Card>
+              )}
+            </DragOverlay>
+          </DndContext>
+        </div>
       )}
 
       <CreateInteractionModal
