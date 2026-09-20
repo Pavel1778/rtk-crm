@@ -260,15 +260,20 @@ export default function BoardPage() {
         <Col flex="auto">
           <Space wrap size={12}>
             <Input.Search
+              id="board-search"
+              name="search"
               placeholder="Поиск по вузу"
               allowClear
               style={{ width: 220 }}
+              autoComplete="off"
               onSearch={(value) => {
                 setSearch(value);
                 setTimeout(load, 0);
               }}
             />
             <Select
+              id="board-product-filter"
+              name="product"
               placeholder="Продукт"
               allowClear
               style={{ width: 180 }}
@@ -278,6 +283,7 @@ export default function BoardPage() {
                 setTimeout(load, 0);
               }}
               options={products.map((p) => ({ value: p.id, label: p.name }))}
+              autoComplete="off"
             />
             <Button icon={<ReloadOutlined />} onClick={load}>
               Обновить
@@ -444,6 +450,8 @@ function CreateInteractionModal({
     >
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
         <Select
+          id="drawer-university"
+          name="university"
           showSearch
           placeholder="Вуз"
           style={{ width: '100%' }}
@@ -451,8 +459,11 @@ function CreateInteractionModal({
           onChange={setUniversityId}
           optionFilterProp="label"
           options={universities.map((u) => ({ value: u.id, label: u.name }))}
+          autoComplete="off"
         />
         <Select
+          id="drawer-product"
+          name="product"
           showSearch
           allowClear
           placeholder="Продукт"
@@ -461,6 +472,7 @@ function CreateInteractionModal({
           onChange={(value) => setProductId(value ?? null)}
           optionFilterProp="label"
           options={products.map((p) => ({ value: p.id, label: p.name }))}
+          autoComplete="off"
         />
         <Button type="primary" block loading={saving} onClick={submit}>
           Создать

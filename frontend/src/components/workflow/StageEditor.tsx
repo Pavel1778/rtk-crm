@@ -61,24 +61,46 @@ export default function StageEditor({ open, stage, onCancel, onSave }: StageEdit
           label="Код"
           rules={[{ required: true, message: 'Код обязателен' }]}
         >
-          <Input placeholder="Например: pilot" />
+          <Input 
+            id="stage-code"
+            name="code"
+            placeholder="Например: pilot"
+            autoComplete="off"
+          />
         </Form.Item>
         <Form.Item
           name="name"
           label="Название"
           rules={[{ required: true, message: 'Название обязательно' }]}
         >
-          <Input placeholder="Например: Пилотный проект" />
+          <Input 
+            id="stage-name"
+            name="name"
+            placeholder="Например: Пилотный проект"
+            autoComplete="off"
+          />
         </Form.Item>
         <Form.Item
           name="order"
           label="Порядок"
           rules={[{ required: true, message: 'Порядок обязателен' }]}
         >
-          <InputNumber min={1} style={{ width: '100%' }} />
+          <InputNumber 
+            id="stage-order"
+            name="order"
+            min={1} 
+            style={{ width: '100%' }}
+            autoComplete="off"
+          />
         </Form.Item>
         <Form.Item name="color" label="Цвет" initialValue="#6E41F2">
-          <ColorPicker showText format="hex" />
+          <ColorPicker 
+            id="stage-color"
+            name="color"
+            showText 
+            format="hex"
+            autoComplete="off"
+          />
         </Form.Item>
       </Form>
     </Modal>

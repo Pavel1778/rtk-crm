@@ -98,22 +98,47 @@ export default function SettingsPage() {
             name="code"
             rules={[{ required: true, message: 'Код обязателен' }]}
           >
-            <Input placeholder="Код (например, pilot)" style={{ width: isMobile ? '100%' : 160 }} />
+            <Input 
+              id="settings-stage-code"
+              name="code"
+              placeholder="Код (например, pilot)" 
+              style={{ width: isMobile ? '100%' : 160 }}
+              autoComplete="off"
+            />
           </Form.Item>
           <Form.Item
             name="name"
             rules={[{ required: true, message: 'Название обязательно' }]}
           >
-            <Input placeholder="Название этапа" style={{ width: isMobile ? '100%' : 200 }} />
+            <Input 
+              id="settings-stage-name"
+              name="name"
+              placeholder="Название этапа" 
+              style={{ width: isMobile ? '100%' : 200 }}
+              autoComplete="off"
+            />
           </Form.Item>
           <Form.Item
             name="order"
             rules={[{ required: true, message: 'Порядок обязателен' }]}
           >
-            <InputNumber placeholder="Порядок" min={1} style={{ width: isMobile ? '100%' : 100 }} />
+            <InputNumber 
+              id="settings-stage-order"
+              name="order"
+              placeholder="Порядок" 
+              min={1} 
+              style={{ width: isMobile ? '100%' : 100 }}
+              autoComplete="off"
+            />
           </Form.Item>
           <Form.Item name="color" initialValue="#6E41F2">
-            <ColorPicker showText format="hex" />
+            <ColorPicker 
+              id="settings-stage-color"
+              name="color"
+              showText 
+              format="hex"
+              autoComplete="off"
+            />
           </Form.Item>
           <Form.Item>
             <Button type="primary" onClick={addStage} loading={saving} block={isMobile}>
