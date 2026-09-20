@@ -161,11 +161,20 @@ export default function ReportPage() {
           <ResponsiveContainer width="100%" height={400} aspect={undefined}>
             <BarChart data={stageData} layout="vertical" margin={{ left: 200, right: 20, top: 20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
+              <XAxis 
+                type="number" 
+                tick={{ fontSize: 12 }}
+                allowDecimals={false}
+              />
               <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <Tooltip 
+                formatter={(value: number, name: string, props: any) => {
+                  const percent = props.payload.percent;
+                  return [`${value} (${percent}%)`, name];
+                }}
+              />
               <Legend />
-              <Bar dataKey="count" fill="#6E41F2" />
+              <Bar dataKey="count" fill="#6E41F2" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
