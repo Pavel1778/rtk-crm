@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +16,10 @@ from backend.schemas.entities import (
     WorkflowStageRead,
     WorkflowStageUpdate,
 )
+
+
+class StageReorderRequest(BaseModel):
+    stages: list[dict[str, int]]
 
 router = APIRouter(prefix="/api/stages", tags=["workflow"])
 
@@ -98,10 +103,13 @@ async def update_stage(
 @router.delete("/{stage_id}", status_code=204)
 async def delete_stage(
     stage_id: int,
+    target_stage_id: int | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> None:
-    """Удаление этапа. Запрещено, если на нём есть взаимодействия. Только для admin."""
+    """Удаление этапа. Только для admin.
+    Если target_stage_id указан, взаимодействия переносятся на другой этап.
+    """
     if current.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=403, detail="Только администраторы могут редактировать этапы"
@@ -109,15 +117,50 @@ async def delete_stage(
     stage = await db.get(WorkflowStageRef, stage_id)
     if stage is None:
         raise HTTPException(status_code=404, detail="Этап не найден")
+
     linked = await db.scalar(
         select(func.count(Interaction.id)).where(
             Interaction.stage_id == stage_id
         )
     )
+
     if linked:
-        raise HTTPException(
-            status_code=409,
-            detail=f"На этапе {linked} взаимодействий. Сначала переместите их.",
+        if target_stage_id is None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"На этапе {linked} взаимодействий. Укажите target_stage_id для переноса.",
+            )
+        target_stage = await db.get(WorkflowStageRef, target_stage_id)
+        if target_stage is None:
+            raise HTTPException(status_code=404, detail="Целевой этап не найден")
+
+        interactions = list(
+            await db.scalars(
+                select(Interaction).where(Interaction.stage_id == stage_id)
+            )
         )
+        for interaction in interactions:
+            interaction.stage_id = target_stage_id
+        await db.commit()
+
     await db.delete(stage)
     await db.commit()
+
+
+@router.post("/reorder", status_code=200)
+async def reorder_stages(
+    payload: StageReorderRequest,
+    db: AsyncSession = Depends(get_db),
+    current: User = Depends(get_current_user),
+) -> list[WorkflowStageRead]:
+    """Пересортировка этапов. Только для admin."""
+    if current.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403, detail="Только администраторы могут редактировать этапы"
+        )
+    for item in payload.stages:
+        stage = await db.get(WorkflowStageRef, item["id"])
+        if stage:
+            stage.order = item["order"]
+    await db.commit()
+    return await list_stages(False, db, current)

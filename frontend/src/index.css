@@ -83,3 +83,17 @@ img, svg, video {
     overflow-x: auto;
   }
 }
+
+/* Сортируемые строки для конструктора воркфлоу */
+.sortable-stage-row {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: grab;
+  transition: box-shadow 0.2s ease;
+}
+
+.sortable-stage-row:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}

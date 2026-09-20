@@ -19,6 +19,7 @@ const MENU_ITEMS = [
   { key: '/', icon: <AppstoreOutlined />, label: 'Доска' },
   { key: '/reports', icon: <BarChartOutlined />, label: 'Отчёты' },
   { key: '/directories', icon: <DatabaseOutlined />, label: 'Справочники' },
+  { key: '/workflow', icon: <SettingOutlined />, label: 'Воркфлоу' },
   { key: '/help', icon: <QuestionCircleOutlined />, label: 'Помощь' },
 ];
 
