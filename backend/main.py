@@ -49,12 +49,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS должен быть добавлен до include_router и до остальных middleware,
+# чтобы preflight OPTIONS обрабатывался до входа в обработчики.
+# allow_credentials=False обязателен: с credentials браузер отклоняет
+# wildcard-ответ, а origin сверяется по точному совпадению из env.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["Content-Disposition", "Content-Length"],
+    max_age=3600,
 )
 
 # Middleware для аудита (152-ФЗ)
@@ -105,3 +111,12 @@ async def health() -> HealthResponse:
 async def health_compat() -> dict[str, str]:
     """Алиас для Render-проверки: /health -> {"status":"ok"}."""
     return {"status": "ok"}
+
+
+@app.get("/api/debug/cors", tags=["system"])
+async def debug_cors() -> dict[str, object]:
+    """Диагностика CORS: дошла ли CORS_ORIGINS из окружения до контейнера."""
+    return {
+        "cors_origins_setting": settings.cors_origins,
+        "cors_origins_list": settings.cors_origins_list,
+    }
