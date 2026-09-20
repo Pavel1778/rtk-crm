@@ -88,7 +88,7 @@ export default function ReportPage() {
   useEffect(() => {
     getReport()
       .then(setData)
-      .catch((err) => setError('Не удалось загрузить отчёт'))
+      .catch(() => setError('Не удалось загрузить отчёт'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -167,12 +167,7 @@ export default function ReportPage() {
                 allowDecimals={false}
               />
               <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 12 }} />
-              <Tooltip 
-                formatter={(value: number, name: string, props: any) => {
-                  const percent = props.payload.percent;
-                  return [`${value} (${percent}%)`, name];
-                }}
-              />
+              <Tooltip />
               <Legend />
               <Bar dataKey="count" fill="#6E41F2" radius={[0, 4, 4, 0]} />
             </BarChart>
