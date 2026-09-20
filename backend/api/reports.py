@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -142,8 +142,7 @@ async def _build_interaction_data(
         product = await db.get(ITProduct, interaction.product_id) if interaction.product_id else None
         stage = await db.get(WorkflowStageRef, interaction.stage_id)
         assigned_kam = await db.get(User, interaction.assigned_kam_id) if interaction.assigned_kam_id else None
-        assigned_kam = await db.get(User, interaction.assigned_kam_id) if interaction.assigned_kam_id else None
-        
+
         data.append({
             "id": interaction.id,
             "university_name": university.name if university else None,
@@ -151,7 +150,6 @@ async def _build_interaction_data(
             "stage_name": stage.name if stage else None,
             "contract_number": interaction.contract_number,
             "contract_date": interaction.contract_date,
-            "rkn_specialist_name": rkn_specialist.full_name if rkn_specialist else None,
             "assigned_kam_name": assigned_kam.full_name if assigned_kam else None,
             "university_specialist": interaction.university_specialist,
             "notes": interaction.notes,
@@ -159,6 +157,16 @@ async def _build_interaction_data(
         })
     
     return data
+
+
+@router.options("/xlsx")
+async def xlsx_preflight():
+    """CORS preflight для XLSX экспорта."""
+    return Response(headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+    })
 
 
 @router.get("/xlsx")
@@ -172,13 +180,28 @@ async def export_xlsx(
     """Экспорт взаимодействий в XLSX формате."""
     data = await _build_interaction_data(db, stage_id, university_id, product_id)
     xlsx_data = generate_xlsx(data)
-    
+
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Content-Disposition",
+    }
     return StreamingResponse(
         xlsx_data,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers=headers
     )
+
+
+@router.options("/xls")
+async def xls_preflight():
+    """CORS preflight для XLS экспорта."""
+    return Response(headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+    })
 
 
 @router.get("/xls")
@@ -192,13 +215,28 @@ async def export_xls(
     """Экспорт взаимодействий в XLS формате."""
     data = await _build_interaction_data(db, stage_id, university_id, product_id)
     xls_data = generate_xls(data)
-    
+
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xls"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Content-Disposition",
+    }
     return StreamingResponse(
         xls_data,
         media_type="application/vnd.ms-excel",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers=headers
     )
+
+
+@router.options("/pdf")
+async def pdf_preflight():
+    """CORS preflight для PDF экспорта."""
+    return Response(headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+    })
 
 
 @router.get("/pdf")
@@ -212,10 +250,15 @@ async def export_pdf(
     """Экспорт взаимодействий в PDF формате."""
     data = await _build_interaction_data(db, stage_id, university_id, product_id)
     pdf_data = generate_pdf(data)
-    
+
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Content-Disposition",
+    }
     return StreamingResponse(
         pdf_data,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers=headers
     )
