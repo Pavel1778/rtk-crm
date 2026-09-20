@@ -167,7 +167,13 @@ export default function ReportPage() {
                 allowDecimals={false}
               />
               <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <Tooltip 
+                contentStyle={{ 
+                  borderRadius: 8,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  border: '1px solid #EEEEF2',
+                }}
+              />
               <Legend />
               <Bar dataKey="count" fill="#6E41F2" radius={[0, 4, 4, 0]} />
             </BarChart>
