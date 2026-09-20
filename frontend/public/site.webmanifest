@@ -1,0 +1,11 @@
+{
+  "name": "RTK CRM",
+  "short_name": "RTK",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "theme_color": "#6E41F2",
+  "background_color": "#FFFFFF",
+  "display": "standalone",
+  "start_url": "/"
+}
