@@ -1,5 +1,5 @@
-import { BarChartOutlined, DownloadOutlined } from '@ant-design/icons';
-import { App as AntApp, Button, Card, Col, Row, Spin, Statistic } from 'antd';
+import { BarChartOutlined, DownloadOutlined, BankOutlined, SwapOutlined, FileTextOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { App as AntApp, Button, Card, Col, Row, Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 import {
@@ -22,6 +22,7 @@ import { exportPdf, exportXls, exportXlsx, getReport } from '../api/endpoints';
 import type { ReportResponse } from '../types';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
+import MetricCard from '../components/dashboard/MetricCard';
 
 /**
  * Отчёт: ключевые показатели и распределение взаимодействий по этапам.
@@ -136,17 +137,44 @@ export default function ReportPage() {
       </div>
       
       <Row gutter={[16, 16]} className="stats-grid">
-        {data.metrics.map((metric) => (
-          <Col key={metric.key} xs={12} md={8} lg={4}>
-            <Card className="stat-card" style={{ border: '1px solid #EEEEF2', textAlign: 'center' }}>
-              <Statistic
-                title={metric.label}
-                value={metric.value}
-                valueStyle={{ color: '#6E41F2', fontSize: 28, fontWeight: 600 }}
-              />
-            </Card>
-          </Col>
-        ))}
+        <Col xs={12} md={8} lg={4}>
+          <MetricCard
+            label="Всего вузов"
+            value={data.metrics.find(m => m.key === 'total_universities')?.value || 0}
+            icon={<BankOutlined />}
+          />
+        </Col>
+        <Col xs={12} md={8} lg={4}>
+          <MetricCard
+            label="Активных взаимодействий"
+            value={data.metrics.find(m => m.key === 'active_interactions')?.value || 0}
+            icon={<SwapOutlined />}
+            color="#00AC43"
+          />
+        </Col>
+        <Col xs={12} md={8} lg={4}>
+          <MetricCard
+            label="Взаимодействий с договором"
+            value={data.metrics.find(m => m.key === 'with_contract')?.value || 0}
+            icon={<FileTextOutlined />}
+          />
+        </Col>
+        <Col xs={12} md={8} lg={4}>
+          <MetricCard
+            label="Открытых задач"
+            value={data.metrics.find(m => m.key === 'open_tasks')?.value || 0}
+            icon={<ClockCircleOutlined />}
+            color="#F5A623"
+          />
+        </Col>
+        <Col xs={12} md={8} lg={4}>
+          <MetricCard
+            label="Выполненных задач"
+            value={data.metrics.find(m => m.key === 'done_tasks')?.value || 0}
+            icon={<CheckCircleOutlined />}
+            color="#00AC43"
+          />
+        </Col>
       </Row>
 
       <Card
@@ -163,39 +191,34 @@ export default function ReportPage() {
         )}
         <div className="chart-container scroll-box">
           <ResponsiveContainer width="100%" height="100%" aspect={undefined}>
-            <BarChart data={stageData} layout="vertical" margin={{ left: isMobile ? 180 : 200, right: 20, top: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                type="number" 
-                tick={{ fontSize: isMobile ? 10 : 12 }}
+            <BarChart 
+              data={stageData} 
+              margin={{ top: 8, right: 8, left: isMobile ? -20 : 0, bottom: isMobile ? 80 : 60 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: isMobile ? 10 : 11 }}
+                angle={-45}
+                textAnchor="end"
+                height={isMobile ? 90 : 70}
+                interval={0}
+                tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v}
+              />
+              <YAxis
                 allowDecimals={false}
-              />
-              <YAxis 
-                dataKey="name" 
-                type="category" 
-                width={isMobile ? 180 : 200} 
                 tick={{ fontSize: isMobile ? 10 : 12 }}
-                tickFormatter={(v: string) => v.length > 15 ? v.slice(0, 12) + '…' : v}
+                width={isMobile ? 32 : 40}
               />
-              <Tooltip 
-                contentStyle={{ 
-                  borderRadius: 8,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  border: '1px solid #EEEEF2',
-                  fontSize: isMobile ? 11 : 13,
-                }}
-                wrapperStyle={{ zIndex: 1000 }}
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                formatter={(value: number) => [`${value} взаимодействий`, 'Количество']}
               />
-              <Legend 
-                verticalAlign={isMobile ? 'bottom' : 'top'}
-                height={isMobile ? 60 : 36}
-                wrapperStyle={{ fontSize: isMobile ? 10 : 12 }}
-              />
-              <Bar 
-                dataKey="count" 
-                fill="#6E41F2" 
-                radius={[0, 4, 4, 0]}
-                maxBarSize={isMobile ? 24 : 48}
+              <Bar
+                dataKey="count"
+                fill="#6E41F2"
+                radius={[6, 6, 0, 0]}
+                maxBarSize={isMobile ? 20 : 40}
               />
             </BarChart>
           </ResponsiveContainer>
