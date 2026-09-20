@@ -133,6 +133,7 @@ class WorkflowStageUpdate(BaseModel):
     order: int | None = None
     color: str | None = None
     is_active: bool | None = None
+    is_active: bool | None = None
 
 
 class WorkflowStageRead(ORMModel, WorkflowStageBase):

@@ -1,5 +1,5 @@
 import { App as AntApp, Button, Card, Space, Spin } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, UndoOutlined } from '@ant-design/icons';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useEffect, useState } from 'react';
@@ -83,6 +83,19 @@ export default function WorkflowPage() {
     }
   };
 
+  const handleRestoreAll = async () => {
+    try {
+      const inactiveStages = stages.filter(s => !s.is_active);
+      for (const stage of inactiveStages) {
+        await updateStage(stage.id, { is_active: true });
+      }
+      message.success(`Восстановлено ${inactiveStages.length} этапов`);
+      load();
+    } catch (e) {
+      message.error(errorMessage(e));
+    }
+  };
+
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
@@ -114,13 +127,23 @@ export default function WorkflowPage() {
     <div className="page-container">
       <div className="page-header">
         <h1>Конструктор воркфлоу</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setEditorOpen(true)}
-        >
-          Добавить этап
-        </Button>
+        <Space>
+          {stages.some(s => !s.is_active) && (
+            <Button
+              onClick={handleRestoreAll}
+              icon={<UndoOutlined />}
+            >
+              Восстановить все
+            </Button>
+          )}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setEditorOpen(true)}
+          >
+            Добавить этап
+          </Button>
+        </Space>
       </div>
 
       {loading && (

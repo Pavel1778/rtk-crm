@@ -112,31 +112,52 @@ export default function ReportPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={data.stage_progress}
-                layout="vertical"
+                layout={isMobile ? "horizontal" : "vertical"}
                 margin={{
                   top: 8,
                   right: 30,
                   left: isMobile ? 10 : 20,
-                  bottom: 8,
+                  bottom: isMobile ? 60 : 8,
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" horizontal={false} />
-                <XAxis
-                  type="number"
-                  allowDecimals={false}
-                  tick={{ fontSize: isMobile ? 10 : 12 }}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="stage_name"
-                  width={isMobile ? 140 : 260}
-                  tick={{ fontSize: isMobile ? 10 : 12 }}
-                  tickFormatter={(v) =>
-                    v && v.length > (isMobile ? 18 : 35)
-                      ? v.slice(0, isMobile ? 16 : 33) + '…'
-                      : v
-                  }
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" horizontal={isMobile} vertical={!isMobile} />
+                {isMobile ? (
+                  <>
+                    <XAxis
+                      dataKey="stage_name"
+                      tick={{ fontSize: 10 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={70}
+                      interval={0}
+                      tickFormatter={(v) =>
+                        v && v.length > 18 ? v.slice(0, 16) + '…' : v
+                      }
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 10 }}
+                      width={32}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="stage_name"
+                      width={260}
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(v) =>
+                        v && v.length > 35 ? v.slice(0, 33) + '…' : v
+                      }
+                    />
+                  </>
+                )}
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
                   formatter={(value) => [
@@ -144,7 +165,11 @@ export default function ReportPage() {
                     'Взаимодействий',
                   ]}
                 />
-                <Bar dataKey="count" fill="#6E41F2" radius={[0, 6, 6, 0]} />
+                <Bar 
+                  dataKey="count" 
+                  fill="#6E41F2" 
+                  radius={isMobile ? [6, 6, 0, 0] : [0, 6, 6, 0]} 
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
