@@ -30,15 +30,20 @@ import EmptyState from '../components/EmptyState';
 
 export default function DirectoryPage() {
   return (
-    <Card style={{ border: '1px solid #EEEEF2' }}>
-      <Tabs
-        items={[
-          { key: 'universities', label: 'Вузы', children: <UniversitiesTab /> },
-          { key: 'products', label: 'Продукты', children: <ProductsTab /> },
-          { key: 'directions', label: 'Направления', children: <DirectionsTab /> },
-        ]}
-      />
-    </Card>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>Справочники</h1>
+      </div>
+      <div className="page-content">
+        <Tabs
+          items={[
+            { key: 'universities', label: 'Вузы', children: <UniversitiesTab /> },
+            { key: 'products', label: 'Продукты', children: <ProductsTab /> },
+            { key: 'directions', label: 'Направления', children: <DirectionsTab /> },
+          ]}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -104,7 +109,7 @@ function UniversitiesTab() {
       {rows.length === 0 ? (
         <EmptyState title="Нет вузов" />
       ) : (
-        <div className="scroll-box">
+        <div className="table-wrapper">
           <Table<University>
             rowKey="id"
             dataSource={rows}
@@ -189,7 +194,7 @@ function DirectionsTab() {
       {rows.length === 0 ? (
         <EmptyState title="Нет направлений" />
       ) : (
-        <div className="scroll-box">
+        <div className="table-wrapper">
           <Table<ITDirection>
             rowKey="id"
             dataSource={rows}
@@ -292,7 +297,7 @@ function ProductsTab() {
       {rows.length === 0 ? (
         <EmptyState title="Нет продуктов" />
       ) : (
-        <div className="scroll-box">
+        <div className="table-wrapper">
           <Table<ITProduct>
             rowKey="id"
             dataSource={rows}

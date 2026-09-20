@@ -112,30 +112,51 @@ export default function WorkflowPage() {
   }
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2}>Конструктор воркфлоу</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditorOpen(true)}>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>Конструктор воркфлоу</h1>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setEditorOpen(true)}
+        >
           Добавить этап
         </Button>
       </div>
 
-      <Card style={{ border: '1px solid #EEEEF2' }}>
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={stages.map(s => ({ id: s.id }))} strategy={verticalListSortingStrategy}>
-            <Space direction="vertical" size={8} style={{ width: '100%' }}>
-              {stages.map((stage) => (
-                <SortableStageRow
-                  key={stage.id}
-                  stage={stage}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </Space>
-          </SortableContext>
-        </DndContext>
-      </Card>
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 48 }}>
+          <Spin size="large" />
+        </div>
+      )}
+
+      {!loading && stages.length === 0 && (
+        <EmptyState 
+          title="Этапы не настроены"
+          description="Добавьте хотя бы один этап для начала работы"
+          actionLabel="Добавить этап"
+          onAction={() => setEditorOpen(true)}
+        />
+      )}
+
+      {!loading && stages.length > 0 && (
+        <Card style={{ border: '1px solid #EEEEF2' }}>
+          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={stages.map(s => ({ id: s.id }))} strategy={verticalListSortingStrategy}>
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                {stages.map((stage) => (
+                  <SortableStageRow
+                    key={stage.id}
+                    stage={stage}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </Space>
+            </SortableContext>
+          </DndContext>
+        </Card>
+      )}
 
       <StageEditor
         open={editorOpen}
@@ -162,6 +183,6 @@ export default function WorkflowPage() {
         onConfirm={handleDeleteConfirm}
         stages={stages.filter((s) => s.id !== deletingStage?.id)}
       />
-    </Space>
+    </div>
   );
 }
