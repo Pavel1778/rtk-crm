@@ -158,12 +158,19 @@ def generate_xls(interactions: list[dict]) -> BytesIO:
 
 
 def generate_pdf(interactions: list[dict]) -> BytesIO:
-    """Генерация PDF отчёта по взаимодействиям."""
+    """Генерация PDF отчёта по взаимодействиям с улучшенной кириллицей."""
     if not REPORTLAB_AVAILABLE:
         raise ImportError("reportlab не установлен. Установите: pip install reportlab")
 
     output = BytesIO()
-    doc = SimpleDocTemplate(output, pagesize=letter)
+    doc = SimpleDocTemplate(
+        output, 
+        pagesize=letter,
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=30
+    )
 
     # Регистрация шрифта с кириллицей
     from reportlab.pdfbase import pdfmetrics
@@ -171,18 +178,36 @@ def generate_pdf(interactions: list[dict]) -> BytesIO:
     import os
 
     FONT_PATH = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+    BOLD_FONT_PATH = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+    
     if os.path.exists(FONT_PATH):
         pdfmetrics.registerFont(TTFont('DejaVu', FONT_PATH))
         font_name = 'DejaVu'
+        if os.path.exists(BOLD_FONT_PATH):
+            pdfmetrics.registerFont(TTFont('DejaVu-Bold', BOLD_FONT_PATH))
+            font_bold = 'DejaVu-Bold'
+        else:
+            font_bold = 'DejaVu'
     else:
         font_name = 'Helvetica'
+        font_bold = 'Helvetica-Bold'
 
-    # Стиль для заголовков
+    # Стили
     styles = getSampleStyleSheet()
+    
+    # Заголовок документа
     title_style = styles["Title"]
     title_style.alignment = 1
-    title_style.fontName = font_name
-
+    title_style.fontName = font_bold
+    title_style.fontSize = 18
+    title_style.textColor = colors.HexColor('#6E41F2')
+    
+    # Стиль метаинформации
+    meta_style = styles["Normal"]
+    meta_style.fontName = font_name
+    meta_style.fontSize = 10
+    meta_style.textColor = colors.HexColor('#6B6B72')
+    
     # Данные для таблицы по ТЗ
     headers = [
         "Наименование ВУЗа",
@@ -197,13 +222,13 @@ def generate_pdf(interactions: list[dict]) -> BytesIO:
 
     for interaction in interactions:
         row = [
-            interaction.get("university_name", ""),
-            interaction.get("direction_name", ""),
-            interaction.get("product_name", ""),
-            interaction.get("stage_name", ""),
-            interaction.get("assigned_kam_name", ""),
-            interaction.get("contract_number", ""),
-            interaction.get("contract_date", ""),
+            interaction.get("university_name", "—"),
+            interaction.get("direction_name", "—"),
+            interaction.get("product_name", "—"),
+            interaction.get("stage_name", "—"),
+            interaction.get("assigned_kam_name", "—"),
+            interaction.get("contract_number", "—"),
+            interaction.get("contract_date", "—"),
         ]
         data.append(row)
 
@@ -212,24 +237,49 @@ def generate_pdf(interactions: list[dict]) -> BytesIO:
 
     # Стиль таблицы
     table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.dark_blue),
+        # Заголовок
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6E41F2')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), font_name),
-        ('FONTNAME', (0, 1), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('FONTNAME', (0, 0), (-1, 0), font_bold),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        
+        # Тело таблицы
+        ('FONTNAME', (0, 1), (-1, -1), font_name),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+        
+        # Чередование строк
+        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#F9F5FC')),
+        ('BACKGROUND', (0, 2), (-1, 2), colors.white),
+        
+        # Сетка
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E5')),
+        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.HexColor('#5A31D9')),
     ])
     table.setStyle(table_style)
-
+    
     # Заголовок документа
-    title = Paragraph(f"Отчёт по взаимодействиям ({datetime.now().strftime('%d.%m.%Y %H:%M')})", title_style)
+    title = Paragraph("Отчёт по взаимодействиям с ВУЗами", title_style)
+    
+    # Метаинформация
+    date_str = datetime.now().strftime('%d.%m.%Y %H:%M')
+    meta_text = Paragraph(
+        f"Сформирован: {date_str} | Всего записей: {len(interactions)}",
+        meta_style
+    )
+    
+    # Разделитель
+    spacer = Paragraph("<br/><br/>", styles["Normal"])
 
     # Построение документа
-    elements = [title, table]
+    elements = [title, meta_text, spacer, table]
     doc.build(elements)
 
     output.seek(0)
