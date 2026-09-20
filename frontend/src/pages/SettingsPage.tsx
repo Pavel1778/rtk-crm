@@ -112,8 +112,9 @@ export default function SettingsPage() {
           dataSource={stages}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
           columns={[
-            { title: 'Порядок', dataIndex: 'order', width: 90 },
+            { title: 'Порядок', dataIndex: 'order', width: 80 },
             {
               title: 'Этап',
               dataIndex: 'name',
@@ -143,13 +144,13 @@ export default function SettingsPage() {
             {
               title: 'Код',
               dataIndex: 'code',
-              width: 180,
+              width: 150,
               render: (code: string) => <Tag>{code}</Tag>,
             },
             {
               title: 'Взаимодействий',
               dataIndex: 'interaction_count',
-              width: 140,
+              width: 120,
             },
             {
               title: 'Активен',
@@ -168,7 +169,7 @@ export default function SettingsPage() {
             },
             {
               title: '',
-              width: 90,
+              width: 80,
               render: (_, record) => (
                 <Popconfirm
                   title="Удалить этап?"
