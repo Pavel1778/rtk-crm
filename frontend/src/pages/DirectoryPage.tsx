@@ -100,6 +100,7 @@ function UniversitiesTab() {
           rowKey="id"
           dataSource={rows}
           size="small"
+          scroll={{ x: 'max-content' }}
           pagination={{ pageSize: 10 }}
           columns={[
             { title: 'Название', dataIndex: 'name' },
@@ -178,6 +179,7 @@ function DirectionsTab() {
           rowKey="id"
           dataSource={rows}
           size="small"
+          scroll={{ x: 'max-content' }}
           pagination={false}
           columns={[
             { title: 'Направление', dataIndex: 'name' },
@@ -271,6 +273,7 @@ function ProductsTab() {
           rowKey="id"
           dataSource={rows}
           size="small"
+          scroll={{ x: 'max-content' }}
           pagination={false}
           columns={[
             { title: 'Продукт', dataIndex: 'name' },

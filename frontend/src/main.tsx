@@ -5,6 +5,7 @@ import { App as AntApp, ConfigProvider } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ruRU from 'antd/locale/ru_RU';
 import 'dayjs/locale/ru';
+import './index.css';
 
 import App from './App';
 import { antTheme } from './theme/theme';
