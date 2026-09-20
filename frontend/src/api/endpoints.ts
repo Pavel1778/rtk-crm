@@ -150,8 +150,8 @@ export const createStage = (payload: Record<string, unknown>) =>
 export const updateStage = (id: number, payload: Record<string, unknown>) =>
   api.patch<WorkflowStage>(`/api/stages/${id}`, payload).then((r) => r.data);
 
-export const deleteStage = (id: number) =>
-  api.delete(`/api/stages/${id}`);
+export const deleteStage = (id: number, targetStageId?: number) =>
+  api.delete(`/api/stages/${id}`, { params: targetStageId ? { target_stage_id: targetStageId } : undefined });
 
 // --- Отчёты ---
 export const getReport = () =>
