@@ -331,6 +331,11 @@ async def move_interaction(
         raise HTTPException(status_code=404, detail="Этап не найден")
     if not stage.is_active:
         raise HTTPException(status_code=409, detail="Этап отключён")
+    
+    # Идемпотентность: если уже на этом этапе, возвращаем текущее состояние
+    if interaction.stage_id == stage_id:
+        return await _read(db, interaction)
+    
     interaction.stage_id = stage_id
     await db.commit()
     await db.refresh(interaction)
