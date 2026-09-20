@@ -3,6 +3,7 @@ import {
   App as AntApp,
   Button,
   Card,
+  Empty,
   Input,
   Popconfirm,
   Select,
@@ -92,35 +93,39 @@ function UniversitiesTab() {
           </Button>
         </Space>
       )}
-      <Table<University>
-        rowKey="id"
-        dataSource={rows}
-        size="small"
-        pagination={{ pageSize: 10 }}
-        columns={[
-          { title: 'Название', dataIndex: 'name' },
-          { title: 'Город', dataIndex: 'city', width: 140 },
-          { title: 'Контакт', dataIndex: 'contact_person', width: 180 },
-          role !== 'user' ? {
-            title: '',
-            width: 90,
-            render: (_, r) => (
-              <Popconfirm
-                title="Удалить вуз?"
-                onConfirm={() =>
-                  deleteUniversity(r.id)
-                    .then(load)
-                    .catch((e) => message.error(errorMessage(e)))
-                }
-              >
-                <Button type="text" size="small" danger>
-                  Удалить
-                </Button>
-              </Popconfirm>
-            ),
-          } : { title: '', width: 0, render: () => null },
-        ]}
-      />
+      {rows.length === 0 ? (
+        <Empty description="Нет вузов" />
+      ) : (
+        <Table<University>
+          rowKey="id"
+          dataSource={rows}
+          size="small"
+          pagination={{ pageSize: 10 }}
+          columns={[
+            { title: 'Название', dataIndex: 'name' },
+            { title: 'Город', dataIndex: 'city', width: 140 },
+            { title: 'Контакт', dataIndex: 'contact_person', width: 180 },
+            role !== 'user' ? {
+              title: '',
+              width: 90,
+              render: (_, r) => (
+                <Popconfirm
+                  title="Удалить вуз?"
+                  onConfirm={() =>
+                    deleteUniversity(r.id)
+                      .then(load)
+                      .catch((e) => message.error(errorMessage(e)))
+                  }
+                >
+                  <Button type="text" size="small" danger>
+                    Удалить
+                  </Button>
+                </Popconfirm>
+              ),
+            } : { title: '', width: 0, render: () => null },
+          ]}
+        />
+      )}
     </Space>
   );
 }
@@ -166,34 +171,38 @@ function DirectionsTab() {
           </Button>
         </Space>
       )}
-      <Table<ITDirection>
-        rowKey="id"
-        dataSource={rows}
-        size="small"
-        pagination={false}
-        columns={[
-          { title: 'Направление', dataIndex: 'name' },
-          role !== 'user' ? {
-            title: '',
-            width: 90,
-            render: (_, r) => (
-              <Popconfirm
-                title="Удалить направление?"
-                description="Связанные продукты также будут удалены"
-                onConfirm={() =>
-                  deleteDirection(r.id)
-                    .then(load)
-                    .catch((e) => message.error(errorMessage(e)))
-                }
-              >
-                <Button type="text" size="small" danger>
-                  Удалить
-                </Button>
-              </Popconfirm>
-            ),
-          } : { title: '', width: 0, render: () => null },
-        ]}
-      />
+      {rows.length === 0 ? (
+        <Empty description="Нет направлений" />
+      ) : (
+        <Table<ITDirection>
+          rowKey="id"
+          dataSource={rows}
+          size="small"
+          pagination={false}
+          columns={[
+            { title: 'Направление', dataIndex: 'name' },
+            role !== 'user' ? {
+              title: '',
+              width: 90,
+              render: (_, r) => (
+                <Popconfirm
+                  title="Удалить направление?"
+                  description="Связанные продукты также будут удалены"
+                  onConfirm={() =>
+                    deleteDirection(r.id)
+                      .then(load)
+                      .catch((e) => message.error(errorMessage(e)))
+                  }
+                >
+                  <Button type="text" size="small" danger>
+                    Удалить
+                  </Button>
+                </Popconfirm>
+              ),
+            } : { title: '', width: 0, render: () => null },
+          ]}
+        />
+      )}
     </Space>
   );
 }
@@ -255,34 +264,38 @@ function ProductsTab() {
           </Button>
         </Space>
       )}
-      <Table<ITProduct>
-        rowKey="id"
-        dataSource={rows}
-        size="small"
-        pagination={false}
-        columns={[
-          { title: 'Продукт', dataIndex: 'name' },
-          { title: 'Направление', dataIndex: 'direction_name', width: 240 },
-          role !== 'user' ? {
-            title: '',
-            width: 90,
-            render: (_, r) => (
-              <Popconfirm
-                title="Удалить продукт?"
-                onConfirm={() =>
-                  deleteProduct(r.id)
-                    .then(load)
-                    .catch((e) => message.error(errorMessage(e)))
-                }
-              >
-                <Button type="text" size="small" danger>
-                  Удалить
-                </Button>
-              </Popconfirm>
-            ),
-          } : { title: '', width: 0, render: () => null },
-        ]}
-      />
+      {rows.length === 0 ? (
+        <Empty description="Нет продуктов" />
+      ) : (
+        <Table<ITProduct>
+          rowKey="id"
+          dataSource={rows}
+          size="small"
+          pagination={false}
+          columns={[
+            { title: 'Продукт', dataIndex: 'name' },
+            { title: 'Направление', dataIndex: 'direction_name', width: 240 },
+            role !== 'user' ? {
+              title: '',
+              width: 90,
+              render: (_, r) => (
+                <Popconfirm
+                  title="Удалить продукт?"
+                  onConfirm={() =>
+                    deleteProduct(r.id)
+                      .then(load)
+                      .catch((e) => message.error(errorMessage(e)))
+                  }
+                >
+                  <Button type="text" size="small" danger>
+                    Удалить
+                  </Button>
+                </Popconfirm>
+              ),
+            } : { title: '', width: 0, render: () => null },
+          ]}
+        />
+      )}
     </Space>
   );
 }
