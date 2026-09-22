@@ -56,6 +56,7 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
 | `SECRET_KEY` | уникальная строка не менее 32 символов |
 | `CORS_ORIGINS` | `https://rtk-crm-nx4r.vercel.app,http://localhost:5173` |
 | `SEED_DEMO_DATA` | `true` |
+| `MOCK_MODE` | `true` |
 
 ### Как это работает при старте
 
@@ -67,6 +68,17 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
    - запускает `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`.
 3. Если `SEED_DEMO_DATA=true`, приложение при старте дополнительно
    заполняет демо-вузы/взаимодействия (только для пустой базы).
+
+### Режимы аутентификации
+
+| Режим | `MOCK_MODE` | Что нужно | Использование |
+|---|---:|---|---|
+| JWT + БД | `true` | Только БД и `SECRET_KEY` | Текущий хакатонный и Render-контур |
+| Keycloak | `false` | Keycloak, realm, клиент и адаптер токенов | Планируемый закрытый контур |
+
+В текущей версии API реализует JWT-аутентификацию через
+`POST /api/auth/login`. Значение `false` зарезервировано для будущей
+интеграции Keycloak и не переключает backend автоматически.
 
 ### Проверка
 
