@@ -72,6 +72,61 @@ locust -f tests/load/locustfile.py ReportsUser \
 записываются после проверки доступности тестового backend; синтетические
 цифры в репозиторий не добавляются.
 
+## Write-операции и тяжёлые экспорты
+
+Профиль `RTKUser` дополнительно покрывает создание взаимодействия, переход
+между этапами, комментарии, загрузку PNG-файла и XLS/XLSX/PDF. Профиль
+`StageAdminUser` отдельно проверяет выключение и включение этапа через
+`PATCH /api/stages/{id}`. Для создания взаимодействия ожидаемый `409` при
+конфликте уникальности «вуз + продукт» помечается как успешный бизнес-ответ,
+а не как инфраструктурная ошибка.
+
+Команды:
+
+```bash
+locust -f tests/load/locustfile.py RTKUser \
+  --headless -u 50 -r 5 -t 3m \
+  --host=http://localhost:8000 \
+  --html=tests/load/reports/full-profile-YYYYMMDD.html
+
+locust -f tests/load/locustfile.py RTKUser --tags export \
+  --headless -u 10 -r 2 -t 1m \
+  --host=http://localhost:8000 \
+  --html=tests/load/reports/exports-YYYYMMDD.html
+
+locust -f tests/load/locustfile.py StageAdminUser \
+  --headless -u 10 -r 2 -t 30s \
+  --host=http://localhost:8000 \
+  --html=tests/load/reports/stage-admin-YYYYMMDD.html
+```
+
+### Фактический write/export прогон 22.09.2026
+
+Локальный SQLite backend, 50 пользователей, 3 минуты:
+
+- 4673 запроса, 0 ошибок;
+- `POST /api/interactions`: p95 32 мс;
+- `POST /api/interactions/{id}/move`: p95 43 мс;
+- `POST /api/interactions/{id}/comments`: p95 45 мс;
+- `POST /api/files/interactions/{id}/upload`: p95 33 мс;
+- `GET /api/reports/xlsx`: p95 48 мс;
+- `GET /api/reports/xls`: p95 76 мс;
+- `GET /api/reports/pdf`: p95 210 мс;
+- агрегированный p95: 110 мс.
+
+Экспорт-only, 10 пользователей, 1 минута:
+
+- XLSX p95 37 мс, XLS p95 60 мс, PDF p95 180 мс;
+- 308 запросов, 0 ошибок, агрегированный p95 120 мс.
+
+Toggle этапа, 10 администраторов, 30 секунд:
+
+- disable p95 17 мс, enable p95 16 мс;
+- 308 запросов, 0 ошибок.
+
+HTML-отчёты находятся в `tests/load/reports/`. Все цифры получены
+фактическим запуском и относятся к локальному SQLite, а не к production.
+
 ## Локальный прогон 22.09.2026
 
 Реальный headless-запуск выполнен на локальном SQLite backend:
