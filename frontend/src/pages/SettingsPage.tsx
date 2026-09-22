@@ -49,7 +49,7 @@ export default function SettingsPage() {
   }
 
   const load = () => {
-    listStages()
+    listStages(true)
       .then(setStages)
       .catch((e) => message.error(errorMessage(e)));
   };

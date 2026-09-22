@@ -47,6 +47,14 @@ export interface WorkflowStage {
   interaction_count: number;
 }
 
+export interface StageImpact {
+  stage_id: number;
+  name: string;
+  active_count: number;
+  total_count: number;
+  transfer_options: Array<{ id: number; name: string }>;
+}
+
 export interface Interaction {
   id: number;
   university_id: number;

@@ -7,6 +7,7 @@ import type {
   ITProduct,
   Interaction,
   ReportResponse,
+  StageImpact,
   Token,
   University,
   User,
@@ -141,8 +142,15 @@ export const deleteProduct = (id: number) =>
   api.delete(`/api/products/${id}`);
 
 // --- Воркфлоу ---
-export const listStages = () =>
-  api.get<WorkflowStage[]>('/api/stages').then((r) => r.data);
+export const listStages = (includeInactive = false) =>
+  api
+    .get<WorkflowStage[]>('/api/stages', {
+      params: includeInactive ? { include_inactive: true } : undefined,
+    })
+    .then((r) => r.data);
+
+export const stageImpact = (id: number) =>
+  api.get<StageImpact>(`/api/stages/${id}/impact`).then((r) => r.data);
 
 export const createStage = (payload: Record<string, unknown>) =>
   api.post<WorkflowStage>('/api/stages', payload).then((r) => r.data);

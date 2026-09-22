@@ -1,6 +1,6 @@
-import { Switch, App } from 'antd';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../api/client';
+import { Switch, Tooltip } from 'antd';
+
+import { useToggleStage } from '../../hooks/useStages';
 
 interface Props {
   stageId: number;
@@ -9,40 +9,17 @@ interface Props {
 }
 
 export default function StageToggle({ stageId, isActive, disabled }: Props) {
-  const { message } = App.useApp();
-  const qc = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: async (next: boolean) => {
-      const res = await api.patch(`/api/stages/${stageId}`, { is_active: next });
-      return res.data;
-    },
-    onMutate: async (next) => {
-      await qc.cancelQueries({ queryKey: ['stages'] });
-      const prev = qc.getQueryData<any[]>(['stages']);
-      qc.setQueryData<any[]>(['stages'], old =>
-        (old ?? []).map(s => s.id === stageId ? { ...s, is_active: next } : s)
-      );
-      return { prev };
-    },
-    onError: (err, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['stages'], ctx.prev);
-      message.error('Не удалось изменить этап: ' + 
-        (err instanceof Error ? err.message : 'Ошибка'));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['stages'] });
-      qc.invalidateQueries({ queryKey: ['board'] });
-    },
-  });
+  const toggle = useToggleStage('all');
 
   return (
-    <Switch
-      checked={isActive}
-      loading={mutation.isPending}
-      disabled={disabled}
-      onChange={(next) => mutation.mutate(next)}
-      aria-label={`Этап ${stageId}: ${isActive ? 'активен' : 'неактивен'}`}
-    />
+    <Tooltip title={isActive ? 'Выключить этап' : 'Включить этап'}>
+      <Switch
+        checked={isActive}
+        loading={toggle.isPending}
+        disabled={disabled}
+        onChange={(next) => toggle.mutate({ id: stageId, isActive: next })}
+        aria-label={`Этап ${stageId}: ${isActive ? 'активен' : 'неактивен'}`}
+      />
+    </Tooltip>
   );
 }
