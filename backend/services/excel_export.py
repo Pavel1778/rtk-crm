@@ -18,7 +18,7 @@ except ImportError:
 
 try:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.pagesizes import landscape, letter
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.units import inch
@@ -165,7 +165,7 @@ def generate_pdf(interactions: list[dict]) -> BytesIO:
     output = BytesIO()
     doc = SimpleDocTemplate(
         output, 
-        pagesize=letter,
+        pagesize=landscape(letter),
         rightMargin=30,
         leftMargin=30,
         topMargin=30,
@@ -233,7 +233,19 @@ def generate_pdf(interactions: list[dict]) -> BytesIO:
         data.append(row)
 
     # Создание таблицы
-    table = Table(data, colWidths=[1.5*inch, 1.2*inch, 1.2*inch, 1.2*inch, 1*inch, 1*inch, 1*inch])
+    table = Table(
+        data,
+        colWidths=[
+            1.7 * inch,
+            1.35 * inch,
+            1.35 * inch,
+            1.45 * inch,
+            1.2 * inch,
+            1.15 * inch,
+            1.15 * inch,
+        ],
+        repeatRows=1,
+    )
 
     # Стиль таблицы
     table_style = TableStyle([
