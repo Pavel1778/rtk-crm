@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import CookieConsentBanner from './components/CookieConsentBanner';
 import MainLayout from './components/MainLayout';
 import { useAuthStore } from './stores/authStore';
 import BoardPage from './pages/BoardPage';
@@ -10,6 +11,8 @@ import DirectoryPage from './pages/DirectoryPage';
 import SettingsPage from './pages/SettingsPage';
 import HelpPage from './pages/HelpPage';
 import WorkflowPage from './pages/WorkflowPage';
+import CookiePolicyPage from './pages/CookiePolicyPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 export default function App() {
   const user = useAuthStore((s) => s.user);
@@ -25,8 +28,11 @@ export default function App() {
   }
 
   return (
+    <>
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/cookie-policy" element={<CookiePolicyPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
       {user ? (
         <Route element={<MainLayout />}>
           <Route path="/" element={<BoardPage />} />
@@ -40,5 +46,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       )}
     </Routes>
+    <CookieConsentBanner />
+    </>
   );
 }
