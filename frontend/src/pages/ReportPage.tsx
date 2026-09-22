@@ -6,20 +6,19 @@ import {
   LineChart, Line,
 } from 'recharts';
 import { downloadBlob, errorMessage } from '../api/client';
-import { downloadReport } from '../api/endpoints';
+import { downloadReport, getReport, type ReportFilters } from '../api/endpoints';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
 import type { ReportResponse } from '../types';
-import { getReport, type ReportFilters } from '../api/endpoints';
 
 const COLORS = [
   'var(--atmr-accent-default)',
   'var(--atmr-success-default)',
   'var(--atmr-warning-default)',
   'var(--atmr-error-default)',
-  '#3B82F6',
-  '#8B5CF6',
+  'var(--atmr-info-default)',
+  'var(--atmr-accent-muted)',
 ];
 
 export default function ReportPage() {
@@ -191,7 +190,7 @@ export default function ReportPage() {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#EEEEF2"
+                  stroke="var(--atmr-border-default)"
                   horizontal
                   vertical={false}
                 />
@@ -217,7 +216,7 @@ export default function ReportPage() {
                 />
                 <Bar 
                   dataKey="count" 
-                  fill="#6E41F2" 
+                  fill="var(--atmr-accent-default)"
                   radius={isMobile ? [6, 6, 0, 0] : [0, 6, 6, 0]} 
                 />
               </BarChart>
@@ -276,7 +275,7 @@ export default function ReportPage() {
             <div className="chart-container" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.dynamics} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--atmr-border-default)" />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: isMobile ? 10 : 11 }}
