@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
@@ -18,7 +18,10 @@ from app.models.entities import (
 )
 from app.schemas.entities import (
     ReportMetric,
+    ReportDynamicsPoint,
+    ReportProduct,
     ReportResponse,
+    ReportStage,
     StageProgress,
     UniversityRead,
 )
@@ -99,9 +102,72 @@ async def get_report(
         for stage in stages
     ]
 
+    product_rows = (
+        await db.execute(
+            select(
+                ITProduct.id,
+                ITProduct.name,
+                func.count(Interaction.id).label("count"),
+            )
+            .join(Interaction, Interaction.product_id == ITProduct.id)
+            .where(active)
+            .group_by(ITProduct.id, ITProduct.name)
+            .having(func.count(Interaction.id) > 0)
+            .order_by(func.count(Interaction.id).desc(), ITProduct.name)
+        )
+    ).all()
+    by_product = [
+        ReportProduct(product_id=row.id, name=row.name, count=row.count)
+        for row in product_rows
+    ]
+
+    stage_rows = [
+        ReportStage(
+            stage_id=stage.id,
+            name=stage.name,
+            order=stage.order,
+            count=counts.get(stage.id, 0),
+        )
+        for stage in stages
+    ]
+
+    today = datetime.now(timezone.utc).date()
+    start_date = today - timedelta(days=29)
+    dynamics_rows = (
+        await db.execute(
+            select(
+                func.date(Interaction.created_at).label("date"),
+                func.count(Interaction.id).label("count"),
+            )
+            .where(
+                active,
+                Interaction.created_at >= datetime.combine(
+                    start_date, datetime.min.time(), tzinfo=timezone.utc
+                ),
+            )
+            .group_by(func.date(Interaction.created_at))
+        )
+    ).all()
+    dynamics_by_date = {row.date: row.count for row in dynamics_rows}
+    dynamics = [
+        ReportDynamicsPoint(
+            date=(start_date + timedelta(days=offset)).isoformat(),
+            count=dynamics_by_date.get(start_date + timedelta(days=offset), 0),
+        )
+        for offset in range(30)
+    ]
+
     return ReportResponse(
         metrics=metrics,
         stage_progress=stage_progress,
+        by_stage=stage_rows,
+        by_product=by_product,
+        dynamics=dynamics,
+        totals={
+            "interactions": total_interactions,
+            "products": len(by_product),
+            "stages": len(stages),
+        },
         generated_at=datetime.now(timezone.utc),
     )
 
@@ -196,13 +262,12 @@ async def export_xlsx(
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
-        "Access-Control-Allow-Origin": "*",
         "Access-Control-Expose-Headers": "Content-Disposition",
     }
     return StreamingResponse(
         xlsx_data,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers=headers
+        headers=headers,
     )
 
 
@@ -233,13 +298,12 @@ async def export_xls(
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xls"
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
-        "Access-Control-Allow-Origin": "*",
         "Access-Control-Expose-Headers": "Content-Disposition",
     }
     return StreamingResponse(
         xls_data,
         media_type="application/vnd.ms-excel",
-        headers=headers
+        headers=headers,
     )
 
 
@@ -270,13 +334,12 @@ async def export_pdf(
     filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
-        "Access-Control-Allow-Origin": "*",
         "Access-Control-Expose-Headers": "Content-Disposition",
     }
     return StreamingResponse(
         pdf_data,
         media_type="application/pdf",
-        headers=headers
+        headers=headers,
     )
 
 

@@ -56,21 +56,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS должен быть добавлен до include_router и до остальных middleware,
-# чтобы preflight OPTIONS обрабатывался до входа в обработчики.
-# allow_credentials=True нужен для Authorization header.
+# Аудит добавляется первым, чтобы CORS оставался внешним middleware и
+# добавлял заголовки также к ответам с ошибками и потоковым файлам.
+app.middleware("http")(audit_middleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=["Content-Disposition", "Content-Type", "Content-Length"],
     max_age=3600,
 )
-
-# Middleware для аудита (152-ФЗ)
-app.middleware("http")(audit_middleware)
 
 
 @app.exception_handler(RequestValidationError)

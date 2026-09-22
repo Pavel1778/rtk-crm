@@ -133,9 +133,31 @@ export interface StageProgress {
   percent: number;
 }
 
+export interface ReportStage {
+  stage_id: number;
+  name: string;
+  order: number;
+  count: number;
+}
+
+export interface ReportProduct {
+  product_id: number;
+  name: string;
+  count: number;
+}
+
+export interface ReportDynamicsPoint {
+  date: string;
+  count: number;
+}
+
 export interface ReportResponse {
   metrics: ReportMetric[];
   stage_progress: StageProgress[];
+  by_stage: ReportStage[];
+  by_product: ReportProduct[];
+  dynamics: ReportDynamicsPoint[];
+  totals: Record<string, number>;
   generated_at: string;
 }
 
