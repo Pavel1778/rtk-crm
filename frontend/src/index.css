@@ -1,3 +1,28 @@
+:root {
+  --atmr-accent-default: #6E41F2;
+  --atmr-bg-page: #F5F5F7;
+  --atmr-bg-container: #FFFFFF;
+  --atmr-fg-default: #1C1D22;
+  --atmr-fg-muted: #6B6B72;
+  --atmr-border-default: #E0E0E5;
+  --atmr-success-default: #00AC43;
+  --atmr-warning-default: #F5A623;
+  --atmr-error-default: #E5484D;
+}
+
+.Theme_root_rtk_purple_light {
+  color-scheme: light;
+}
+
+.Theme_root_rtk_purple_dark {
+  color-scheme: dark;
+  --atmr-bg-page: #1C1D22;
+  --atmr-bg-container: #2A2B31;
+  --atmr-fg-default: #FFFFFF;
+  --atmr-fg-muted: #B8B8C0;
+  --atmr-border-default: #474850;
+}
+
 /* Базовая адаптивность для всех устройств */
 
 /* Изображения и графика - запрет на вылет из сетки */
@@ -197,17 +222,17 @@ img, svg, canvas, video, table { max-width: 100%; }
 .btn-export {
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid var(--atmr-border-default, #E0E0E5);
-  background: #fff;
-  color: var(--atmr-fg-default, #1C1D22);
+  border: 1px solid var(--atmr-border-default);
+  background: var(--atmr-bg-container);
+  color: var(--atmr-fg-default);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .btn-export:hover {
-  border-color: var(--atmr-accent-default, #6E41F2);
-  color: var(--atmr-accent-default, #6E41F2);
+  border-color: var(--atmr-accent-default);
+  color: var(--atmr-accent-default);
 }
 .btn-export:disabled {
   cursor: wait;
