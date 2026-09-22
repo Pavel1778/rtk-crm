@@ -1,12 +1,14 @@
 import { App as AntApp, Button, Card, Space, Spin } from 'antd';
 import { PlusOutlined, UndoOutlined } from '@ant-design/icons';
-import { DndContext, closestCenter } from '@dnd-kit/core';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { errorMessage } from '../api/client';
-import { createStage, deleteStage, listStages, updateStage } from '../api/endpoints';
+import { createStage, updateStage } from '../api/endpoints';
 import type { WorkflowStage } from '../types';
+import { stagesKey, useDeleteStage, useStages } from '../hooks/useStages';
 import { useRole } from '../stores/authStore';
 import StageEditor from '../components/workflow/StageEditor';
 import DeleteStageModal from '../components/workflow/DeleteStageModal';
@@ -16,12 +18,17 @@ import EmptyState from '../components/EmptyState';
 export default function WorkflowPage() {
   const { message } = AntApp.useApp();
   const role = useRole();
-  const [stages, setStages] = useState<WorkflowStage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const { data: stages = [], isLoading } = useStages('all');
+  const deleteStageMutation = useDeleteStage();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<WorkflowStage | undefined>();
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingStage, setDeletingStage] = useState<WorkflowStage | undefined>();
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ['stages'] });
+    void qc.invalidateQueries({ queryKey: ['board'] });
+  };
 
   if (role !== 'admin') {
     return (
@@ -31,19 +38,12 @@ export default function WorkflowPage() {
     );
   }
 
-  const load = () => {
-    setLoading(true);
-    listStages()
-      .then(setStages)
-      .catch((e) => message.error(errorMessage(e)))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const handleSaveStage = async (data: { code: string; name: string; order: number; color: string }) => {
+  const handleSaveStage = async (data: {
+    code: string;
+    name: string;
+    order: number;
+    color: string;
+  }) => {
     try {
       if (editingStage?.id) {
         await updateStage(editingStage.id, data);
@@ -54,7 +54,7 @@ export default function WorkflowPage() {
       }
       setEditorOpen(false);
       setEditingStage(undefined);
-      load();
+      refresh();
     } catch (e) {
       message.error(errorMessage(e));
     }
@@ -65,74 +65,64 @@ export default function WorkflowPage() {
     setEditorOpen(true);
   };
 
-  const handleDelete = (stage: WorkflowStage) => {
-    setDeletingStage(stage);
-    setDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = async (targetStageId: number) => {
+  const handleDeleteConfirm = async (targetStageId?: number) => {
     if (!deletingStage) return;
     try {
-      await deleteStage(deletingStage.id, targetStageId);
-      message.success('Этап удалён');
-      setDeleteModalOpen(false);
+      await deleteStageMutation.mutateAsync({
+        id: deletingStage.id,
+        targetStageId,
+      });
       setDeletingStage(undefined);
-      load();
-    } catch (e) {
-      message.error(errorMessage(e));
+    } catch {
+      // сообщение об ошибке показывает мутация
     }
   };
 
   const handleRestoreAll = async () => {
+    const inactiveStages = stages.filter((s) => !s.is_active);
     try {
-      const inactiveStages = stages.filter(s => !s.is_active);
       for (const stage of inactiveStages) {
         await updateStage(stage.id, { is_active: true });
       }
       message.success(`Восстановлено ${inactiveStages.length} этапов`);
-      load();
     } catch (e) {
       message.error(errorMessage(e));
+    } finally {
+      refresh();
     }
   };
 
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    if (active.id !== over?.id) {
-      const oldIndex = stages.findIndex((i) => i.id === active.id);
-      const newIndex = stages.findIndex((i) => i.id === over.id);
-      const reordered = arrayMove(stages, oldIndex, newIndex);
-      const updated = reordered.map((s, idx) => ({ ...s, order: idx + 1 }));
-      setStages(updated);
+    if (!over || active.id === over.id) {
+      return;
+    }
+    const oldIndex = stages.findIndex((i) => i.id === active.id);
+    const newIndex = stages.findIndex((i) => i.id === over.id);
+    const reordered = arrayMove(stages, oldIndex, newIndex).map((s, idx) => ({
+      ...s,
+      order: idx + 1,
+    }));
+    qc.setQueryData(stagesKey('all'), reordered);
 
-      for (const stage of updated) {
-        try {
-          await updateStage(stage.id, { order: stage.order });
-        } catch (e) {
-          message.error(errorMessage(e));
-        }
+    try {
+      for (const stage of reordered) {
+        await updateStage(stage.id, { order: stage.order });
       }
+    } catch (e) {
+      message.error(errorMessage(e));
+    } finally {
+      refresh();
     }
   };
-
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 48 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
 
   return (
     <div className="page-container">
       <div className="page-header">
         <h1>Конструктор воркфлоу</h1>
         <Space>
-          {stages.some(s => !s.is_active) && (
-            <Button
-              onClick={handleRestoreAll}
-              icon={<UndoOutlined />}
-            >
+          {stages.some((s) => !s.is_active) && (
+            <Button onClick={handleRestoreAll} icon={<UndoOutlined />}>
               Восстановить все
             </Button>
           )}
@@ -146,14 +136,14 @@ export default function WorkflowPage() {
         </Space>
       </div>
 
-      {loading && (
+      {isLoading && (
         <div style={{ textAlign: 'center', padding: 48 }}>
           <Spin size="large" />
         </div>
       )}
 
-      {!loading && stages.length === 0 && (
-        <EmptyState 
+      {!isLoading && stages.length === 0 && (
+        <EmptyState
           title="Этапы не настроены"
           description="Добавьте хотя бы один этап для начала работы"
           actionLabel="Добавить этап"
@@ -161,17 +151,20 @@ export default function WorkflowPage() {
         />
       )}
 
-      {!loading && stages.length > 0 && (
+      {!isLoading && stages.length > 0 && (
         <Card style={{ border: '1px solid #EEEEF2' }}>
           <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={stages.map(s => ({ id: s.id }))} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={stages.map((s) => s.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <Space direction="vertical" size={8} style={{ width: '100%' }}>
                 {stages.map((stage) => (
                   <SortableStageRow
                     key={stage.id}
                     stage={stage}
                     onEdit={handleEdit}
-                    onDelete={handleDelete}
+                    onDelete={setDeletingStage}
                   />
                 ))}
               </Space>
@@ -197,13 +190,11 @@ export default function WorkflowPage() {
       />
 
       <DeleteStageModal
-        open={deleteModalOpen}
-        onCancel={() => {
-          setDeleteModalOpen(false);
-          setDeletingStage(undefined);
-        }}
+        open={Boolean(deletingStage)}
+        stageId={deletingStage?.id ?? null}
+        onCancel={() => setDeletingStage(undefined)}
         onConfirm={handleDeleteConfirm}
-        stages={stages.filter((s) => s.id !== deletingStage?.id)}
+        confirmLoading={deleteStageMutation.isPending}
       />
     </div>
   );

@@ -1,0 +1,39 @@
+# Оверлей для запуска с локальным PostgreSQL вместо Supabase (вариант Yandex Cloud).
+#
+#   docker compose up -d                                        # текущая конфигурация (Supabase)
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d   # свой Postgres
+#
+# Полноценный прод-стек для ВМ Yandex Cloud (nginx + TLS + бэкапы):
+#   docker compose -f infra/yandex-cloud/docker-compose.prod.yml --env-file .env up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rtk_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rtk_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rtk_password}
+      POSTGRES_DB: ${POSTGRES_DB:-rtk_crm}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rtk_user} -d ${POSTGRES_DB:-rtk_crm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - rtk_network
+
+  backend:
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://rtk_user:rtk_password@postgres:5432/rtk_crm}
+      SECRET_KEY: ${SECRET_KEY:-change-me-32-chars-minimum}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      PYTHONPATH: "/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

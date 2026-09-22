@@ -21,7 +21,30 @@ from app.schemas.entities import (
 class StageReorderRequest(BaseModel):
     stages: list[dict[str, int]]
 
+
+class StageTransferOption(BaseModel):
+    id: int
+    name: str
+
+
+class StageImpact(BaseModel):
+    stage_id: int
+    name: str
+    active_count: int
+    total_count: int
+    transfer_options: list[StageTransferOption]
+
+
 router = APIRouter(prefix="/api/stages", tags=["workflow"])
+
+
+async def _active_count(db: AsyncSession, stage_id: int) -> int:
+    count = await db.scalar(
+        select(func.count(Interaction.id)).where(
+            Interaction.stage_id == stage_id, Interaction.is_active.is_(True)
+        )
+    )
+    return count or 0
 
 
 async def _with_counts(
@@ -93,14 +116,57 @@ async def update_stage(
     stage = await db.get(WorkflowStageRef, stage_id)
     if stage is None:
         raise HTTPException(status_code=404, detail="Этап не найден")
-    
+
     update_data = payload.model_dump(exclude_unset=True)
+    if update_data.get("is_active") is False and stage.is_active:
+        active = await _active_count(db, stage_id)
+        if active:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"В этапе «{stage.name}» {active} активных взаимодействий. "
+                    "Перенесите их или удалите этап с переносом."
+                ),
+            )
+
     for field, value in update_data.items():
         setattr(stage, field, value)
     
     await db.commit()
     await db.refresh(stage)
     return await _with_counts(db, stage)
+
+
+@router.get("/{stage_id}/impact", response_model=StageImpact)
+async def stage_impact(
+    stage_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> StageImpact:
+    """Предпросмотр последствий выключения или удаления этапа."""
+    stage = await db.get(WorkflowStageRef, stage_id)
+    if stage is None:
+        raise HTTPException(status_code=404, detail="Этап не найден")
+
+    total = await db.scalar(
+        select(func.count(Interaction.id)).where(Interaction.stage_id == stage_id)
+    )
+    options = list(
+        await db.scalars(
+            select(WorkflowStageRef)
+            .where(WorkflowStageRef.id != stage_id)
+            .order_by(WorkflowStageRef.order)
+        )
+    )
+    return StageImpact(
+        stage_id=stage.id,
+        name=stage.name,
+        active_count=await _active_count(db, stage_id),
+        total_count=total or 0,
+        transfer_options=[
+            StageTransferOption(id=option.id, name=option.name) for option in options
+        ],
+    )
 
 
 @router.delete("/{stage_id}", status_code=204)
