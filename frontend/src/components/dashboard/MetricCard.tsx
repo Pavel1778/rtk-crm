@@ -26,7 +26,7 @@ export default function MetricCard({
         flexDirection: 'column',
         justifyContent: 'space-between',
         background: '#fff',
-        border: '1px solid #EEEEF2',
+        border: '1px solid var(--atmr-border-soft)',
         borderRadius: 12,
         padding: 'clamp(12px, 2vw, 20px)',
         minHeight: 100,
@@ -46,7 +46,7 @@ export default function MetricCard({
           style={{
             fontSize: 12,
             fontWeight: 500,
-            color: '#6B6B72',
+            color: 'var(--atmr-fg-muted)',
             textTransform: 'uppercase',
             letterSpacing: 0.3,
             lineHeight: 1.3,
@@ -58,7 +58,7 @@ export default function MetricCard({
           <span
             style={{
               fontSize: 20,
-              color: '#6E41F2',
+              color: 'var(--atmr-accent-default)',
               opacity: 0.7,
               flexShrink: 0,
             }}
@@ -74,7 +74,7 @@ export default function MetricCard({
             fontSize: 28,
             fontWeight: 700,
             lineHeight: 1.1,
-            color: color || '#1C1D22',
+            color: color || 'var(--atmr-fg-default)',
           }}
         >
           {value}
@@ -83,7 +83,7 @@ export default function MetricCard({
           <Text
             style={{
               fontSize: 11,
-              color: '#6B6B72',
+            color: 'var(--atmr-fg-muted)',
               marginTop: 4,
               display: 'block',
             }}

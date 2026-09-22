@@ -15,12 +15,12 @@ export default function EmptyState({
   return (
     <div style={{
       textAlign: 'center', padding: '60px 20px',
-      color: 'var(--atmr-fg-muted, #6B6B72)',
+      color: 'var(--atmr-fg-muted)',
     }}>
       <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.4 }}>
         {icon || <InboxOutlined />}
       </div>
-      <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--atmr-fg-default, #1C1D22)' }}>
+      <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--atmr-fg-default)' }}>
         {title}
       </h3>
       {description && (

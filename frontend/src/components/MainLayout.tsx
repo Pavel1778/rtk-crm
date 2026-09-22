@@ -51,7 +51,7 @@ export default function MainLayout() {
           alignItems: 'center',
           gap: 16,
           padding: screens.md ? '0 24px' : '0 12px',
-          borderBottom: '1px solid #EEEEF2',
+          borderBottom: '1px solid var(--atmr-border-soft)',
           position: 'sticky',
           top: 0,
           zIndex: 100,
@@ -66,7 +66,7 @@ export default function MainLayout() {
         <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
           <Typography.Text
             strong
-            style={{ fontSize: 18, color: '#6E41F2', whiteSpace: 'nowrap' }}
+            style={{ fontSize: 18, color: 'var(--atmr-accent-default)', whiteSpace: 'nowrap' }}
           >
             RTK CRM
           </Typography.Text>
