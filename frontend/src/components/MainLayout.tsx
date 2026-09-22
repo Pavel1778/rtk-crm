@@ -112,7 +112,7 @@ export default function MainLayout() {
           }}
         />
       </Drawer>
-      <Content style={{ padding: screens.md ? 24 : 12 }}>
+      <Content className="main-content" style={{ padding: screens.md ? 24 : 12 }}>
         <Outlet />
       </Content>
       <AppFooter />

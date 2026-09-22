@@ -81,7 +81,7 @@ function UniversitiesTab() {
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
       {role !== 'user' && (
-        <Space wrap>
+        <Space wrap className="responsive-form">
           <Input
             id="university-name"
             name="university_name"
@@ -174,7 +174,7 @@ function DirectionsTab() {
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
       {role !== 'user' && (
-        <Space>
+        <Space className="responsive-form">
           <Input
             id="direction-name"
             name="direction_name"
@@ -267,7 +267,7 @@ function ProductsTab() {
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
       {role !== 'user' && (
-        <Space wrap>
+        <Space wrap className="responsive-form">
           <Input
             id="product-name"
             name="product_name"

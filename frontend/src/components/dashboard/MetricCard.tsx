@@ -20,6 +20,7 @@ export default function MetricCard({
 }: Props) {
   return (
     <div
+      className="stat-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -27,7 +28,7 @@ export default function MetricCard({
         background: '#fff',
         border: '1px solid #EEEEF2',
         borderRadius: 12,
-        padding: '16px 20px',
+        padding: 'clamp(12px, 2vw, 20px)',
         minHeight: 100,
         height: '100%',
         boxSizing: 'border-box',

@@ -93,7 +93,7 @@ export default function SettingsPage() {
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Card title="Новый этап" style={{ border: '1px solid #EEEEF2' }}>
-        <Form form={form} layout={isMobile ? 'vertical' : 'inline'}>
+        <Form form={form} layout={isMobile ? 'vertical' : 'inline'} className="responsive-form">
           <Form.Item
             name="code"
             rules={[{ required: true, message: 'Код обязателен' }]}
