@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { useIsFetching, useIsMutating } from '@tanstack/react-query';
 
 import CookieConsentBanner from './components/CookieConsentBanner';
 import MainLayout from './components/MainLayout';
@@ -15,6 +16,8 @@ import CookiePolicyPage from './pages/CookiePolicyPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 export default function App() {
+  const isFetching = useIsFetching();
+  const isMutating = useIsMutating();
   const user = useAuthStore((s) => s.user);
   const initialized = useAuthStore((s) => s.initialized);
   const restore = useAuthStore((s) => s.restore);
@@ -29,6 +32,7 @@ export default function App() {
 
   return (
     <>
+    {(isFetching > 0 || isMutating > 0) && <div className="global-progress-bar" />}
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route path="/cookie-policy" element={<CookiePolicyPage />} />

@@ -219,6 +219,21 @@ img, svg, canvas, video, table { max-width: 100%; }
   .main-content { padding-bottom: 88px; }
 }
 
+.global-progress-bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1200;
+  height: 3px;
+  background: linear-gradient(90deg, #6E41F2, #A88BFA, #6E41F2);
+  background-size: 200% 100%;
+  animation: global-progress 1.2s linear infinite;
+}
+
+@keyframes global-progress {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 @media (max-width: 767px) {
   .responsive-form .ant-form-item {
     width: 100%;

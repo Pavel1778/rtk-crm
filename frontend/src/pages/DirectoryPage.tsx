@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import {
   App as AntApp,
   Button,
+  Empty,
   Grid,
   Input,
   Popconfirm,
   Select,
   Space,
+  Spin,
   Table,
   Tabs,
 } from 'antd';
@@ -25,7 +27,6 @@ import {
 } from '../api/endpoints';
 import type { ITDirection, ITProduct, University } from '../types';
 import { useRole } from '../stores/authStore';
-import EmptyState from '../components/EmptyState';
 
 export default function DirectoryPage() {
   return (
@@ -54,13 +55,24 @@ function UniversitiesTab() {
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingRows, setLoadingRows] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  const load = () => {
-    listUniversities()
-      .then(setRows)
-      .catch((e) => message.error(errorMessage(e)));
+  const load = async () => {
+    setLoadingRows(true);
+    setLoadError(false);
+    try {
+      setRows(await listUniversities());
+    } catch (e) {
+      setLoadError(true);
+      message.error(errorMessage(e));
+    } finally {
+      setLoadingRows(false);
+    }
   };
-  useEffect(load, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const add = async () => {
     if (!name.trim()) return;
@@ -105,8 +117,12 @@ function UniversitiesTab() {
           </Button>
         </Space>
       )}
-      {rows.length === 0 ? (
-        <EmptyState title="Нет вузов" />
+      {loadingRows ? (
+        <Spin tip="Загрузка вузов..." />
+      ) : loadError ? (
+        <Empty description="Не удалось загрузить вузы" />
+      ) : rows.length === 0 ? (
+        <Empty description="Вузов пока нет" />
       ) : (
         <div className="table-wrapper">
           <Table<University>
@@ -151,13 +167,24 @@ function DirectionsTab() {
   const screens = Grid.useBreakpoint();
   const [rows, setRows] = useState<ITDirection[]>([]);
   const [name, setName] = useState('');
+  const [loadingRows, setLoadingRows] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  const load = () => {
-    listDirections()
-      .then(setRows)
-      .catch((e) => message.error(errorMessage(e)));
+  const load = async () => {
+    setLoadingRows(true);
+    setLoadError(false);
+    try {
+      setRows(await listDirections());
+    } catch (e) {
+      setLoadError(true);
+      message.error(errorMessage(e));
+    } finally {
+      setLoadingRows(false);
+    }
   };
-  useEffect(load, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const add = async () => {
     if (!name.trim()) return;
@@ -190,8 +217,12 @@ function DirectionsTab() {
           </Button>
         </Space>
       )}
-      {rows.length === 0 ? (
-        <EmptyState title="Нет направлений" />
+      {loadingRows ? (
+        <Spin tip="Загрузка направлений..." />
+      ) : loadError ? (
+        <Empty description="Не удалось загрузить направления" />
+      ) : rows.length === 0 ? (
+        <Empty description="Направлений пока нет" />
       ) : (
         <div className="table-wrapper">
           <Table<ITDirection>
@@ -237,16 +268,29 @@ function ProductsTab() {
   const [directions, setDirections] = useState<ITDirection[]>([]);
   const [name, setName] = useState('');
   const [directionId, setDirectionId] = useState<number | undefined>();
+  const [loadingRows, setLoadingRows] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  const load = () => {
-    listProducts()
-      .then(setRows)
-      .catch((e) => message.error(errorMessage(e)));
-    listDirections()
-      .then(setDirections)
-      .catch(() => undefined);
+  const load = async () => {
+    setLoadingRows(true);
+    setLoadError(false);
+    try {
+      const [products, availableDirections] = await Promise.all([
+        listProducts(),
+        listDirections(),
+      ]);
+      setRows(products);
+      setDirections(availableDirections);
+    } catch (e) {
+      setLoadError(true);
+      message.error(errorMessage(e));
+    } finally {
+      setLoadingRows(false);
+    }
   };
-  useEffect(load, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const add = async () => {
     if (!name.trim()) return;
@@ -291,8 +335,12 @@ function ProductsTab() {
           </Button>
         </Space>
       )}
-      {rows.length === 0 ? (
-        <EmptyState title="Нет продуктов" />
+      {loadingRows ? (
+        <Spin tip="Загрузка продуктов..." />
+      ) : loadError ? (
+        <Empty description="Не удалось загрузить продукты" />
+      ) : rows.length === 0 ? (
+        <Empty description="Продуктов пока нет" />
       ) : (
         <div className="table-wrapper">
           <Table<ITProduct>
