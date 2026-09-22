@@ -71,7 +71,7 @@ export default function SortableStageRow({
               width: 12,
               height: 12,
               borderRadius: 6,
-              background: stage.color ?? '#6E41F2',
+              background: stage.color ?? 'var(--atmr-accent-default)',
               display: 'inline-block',
               flexShrink: 0,
             }}

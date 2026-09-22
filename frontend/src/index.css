@@ -5,6 +5,13 @@
   --atmr-fg-default: #1C1D22;
   --atmr-fg-muted: #6B6B72;
   --atmr-border-default: #E0E0E5;
+  --atmr-border-soft: #EEEEF2;
+  --atmr-border-muted: #E5E7EB;
+  --atmr-bg-soft: #F5F5F7;
+  --atmr-bg-dropzone: #F3E5F5;
+  --atmr-fg-subtle: #3D3D46;
+  --atmr-accent-gradient-start: #6E41F2;
+  --atmr-accent-gradient-mid: #A88BFA;
   --atmr-success-default: #00AC43;
   --atmr-warning-default: #F5A623;
   --atmr-error-default: #E5484D;
@@ -202,7 +209,7 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 
 .report-stage-chart .recharts-yAxis .recharts-cartesian-axis-tick-value {
-  fill: #3d3d46;
+  fill: var(--atmr-fg-subtle);
 }
 
 .report-stage-chart .recharts-bar-rectangle {
@@ -276,7 +283,12 @@ img, svg, canvas, video, table { max-width: 100%; }
   inset: 0 0 auto;
   z-index: 1200;
   height: 3px;
-  background: linear-gradient(90deg, #6E41F2, #A88BFA, #6E41F2);
+  background: linear-gradient(
+    90deg,
+    var(--atmr-accent-gradient-start),
+    var(--atmr-accent-gradient-mid),
+    var(--atmr-accent-gradient-start)
+  );
   background-size: 200% 100%;
   animation: global-progress 1.2s linear infinite;
 }
@@ -387,7 +399,7 @@ img, svg, canvas, video, table { max-width: 100%; }
 .sortable-stage-row {
   padding: 12px;
   background: #fff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--atmr-border-muted);
   border-radius: 8px;
   cursor: grab;
   transition: box-shadow 0.2s ease;
@@ -400,7 +412,7 @@ img, svg, canvas, video, table { max-width: 100%; }
 /* Выключенный этап в конструкторе воркфлоу */
 .workflow-row--disabled {
   opacity: 0.55;
-  background: #f5f5f7;
+  background: var(--atmr-bg-soft);
 }
 
 /* Баннер согласия на cookie */
@@ -417,7 +429,7 @@ img, svg, canvas, video, table { max-width: 100%; }
   gap: 16px;
   padding: 16px clamp(12px, 3vw, 32px);
   background: #fff;
-  border-top: 1px solid #eeeef2;
+  border-top: 1px solid var(--atmr-border-soft);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
 }
 

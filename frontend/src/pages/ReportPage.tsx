@@ -285,7 +285,7 @@ export default function ReportPage() {
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#6E41F2"
+                    stroke="var(--atmr-accent-default)"
                     strokeWidth={2}
                     dot={false}
                   />

@@ -83,7 +83,7 @@ function KanbanCard({
         touchAction: 'none',
       }}
     >
-      <Card size="small" style={{ border: '1px solid #E0E0E5' }}>
+      <Card size="small" style={{ border: '1px solid var(--atmr-border-default)' }}>
         <Typography.Text strong style={{ fontSize: 13 }}>
           {card.university_name ?? 'Без вуза'}
         </Typography.Text>
@@ -112,7 +112,7 @@ function KanbanCard({
             <Badge
               count={card.actions_open}
               showZero
-              color={card.actions_open > 0 ? '#F5A623' : '#00AC43'}
+              color={card.actions_open > 0 ? 'var(--atmr-warning-default)' : 'var(--atmr-success-default)'}
               title="Открытые задачи"
             />
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -146,9 +146,9 @@ function KanbanColumn({
       style={{
         width: 280,
         flexShrink: 0,
-        background: isOver ? '#F3E5F5' : '#F5F5F7',
-        border: '1px solid #EEEEF2',
-        borderRight: '2px solid #E0E0E5',
+                background: isOver ? 'var(--atmr-bg-dropzone)' : 'var(--atmr-bg-soft)',
+                border: '1px solid var(--atmr-border-soft)',
+                borderRight: '2px solid var(--atmr-border-default)',
         borderRadius: 12,
         padding: 12,
         display: 'flex',
@@ -165,12 +165,12 @@ function KanbanColumn({
               width: 8,
               height: 8,
               borderRadius: 4,
-              background: stage.color ?? '#6E41F2',
+              background: stage.color ?? 'var(--atmr-accent-default)',
               display: 'inline-block',
             }}
           />
           <Typography.Text strong>{stage.name}</Typography.Text>
-          <Badge count={cards.length} color="#6E41F2" showZero />
+          <Badge count={cards.length} color="var(--atmr-accent-default)" showZero />
         </Space>
       </Space>
       <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -352,7 +352,7 @@ export default function BoardPage() {
             </div>
             <DragOverlay>
               {activeCard && (
-                <Card size="small" style={{ width: 260, border: '1px solid #6E41F2' }}>
+                <Card size="small" style={{ width: 260, border: '1px solid var(--atmr-accent-default)' }}>
                   <Typography.Text strong>
                     {activeCard.university_name ?? 'Без вуза'}
                   </Typography.Text>

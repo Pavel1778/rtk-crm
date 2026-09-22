@@ -92,7 +92,7 @@ export default function SettingsPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Card title="Новый этап" style={{ border: '1px solid #EEEEF2' }}>
+        <Card title="Новый этап" style={{ border: '1px solid var(--atmr-border-soft)' }}>
         <Form form={form} layout={isMobile ? 'vertical' : 'inline'} className="responsive-form">
           <Form.Item
             name="code"
@@ -142,7 +142,7 @@ export default function SettingsPage() {
         </Form>
       </Card>
 
-      <Card title="Этапы воркфлоу" style={{ border: '1px solid #EEEEF2' }}>
+        <Card title="Этапы воркфлоу" style={{ border: '1px solid var(--atmr-border-soft)' }}>
         <div className="scroll-box">
           <Table<WorkflowStage>
             rowKey="id"
@@ -162,7 +162,7 @@ export default function SettingsPage() {
                         width: 10,
                         height: 10,
                         borderRadius: 5,
-                        background: record.color ?? '#6E41F2',
+                        background: record.color ?? 'var(--atmr-accent-default)',
                         display: 'inline-block',
                       }}
                     />
