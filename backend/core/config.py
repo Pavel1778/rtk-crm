@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = False
     database_url: str = ""
+    redis_url: str = ""
     secret_key: str = "development-only-change-me-32-chars"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440

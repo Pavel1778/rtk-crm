@@ -26,6 +26,7 @@ from app.schemas.entities import (
     UniversityRead,
 )
 from app.services.excel_export import generate_xlsx, generate_xls, generate_pdf
+from app.services.report_cache import get_report_cache, set_report_cache
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -89,6 +90,15 @@ async def get_report(
             status_code=400,
             detail="Дата начала не может быть позже даты окончания",
         )
+    cache_key = (
+        "reports:v1:"
+        f"{stage_id}:{university_id}:{product_id}:{direction_id}:"
+        f"{assigned_kam_id}:{date_from}:{date_to}"
+    )
+    cached = await get_report_cache(cache_key)
+    if cached is not None:
+        return ReportResponse.model_validate_json(cached)
+
     filters = _report_filters(
         stage_id,
         university_id,
@@ -241,7 +251,7 @@ async def get_report(
         for offset in range((dynamics_end - dynamics_start).days + 1)
     ]
 
-    return ReportResponse(
+    response = ReportResponse(
         metrics=metrics,
         stage_progress=stage_progress,
         by_stage=stage_rows,
@@ -254,6 +264,8 @@ async def get_report(
         },
         generated_at=datetime.now(timezone.utc),
     )
+    await set_report_cache(cache_key, response.model_dump_json())
+    return response
 
 
 @router.get("/universities", response_model=list[UniversityRead])
@@ -287,34 +299,37 @@ async def _build_interaction_data(
         date_to,
     )
 
-    interactions = list(
-        await db.scalars(
-            select(Interaction).where(*filters).order_by(Interaction.id)
+    rows = (
+        await db.execute(
+            select(
+                Interaction,
+                University.name,
+                ITDirection.name,
+                ITProduct.name,
+                WorkflowStageRef.name,
+                User.full_name,
+            )
+            .join(University, Interaction.university_id == University.id)
+            .outerjoin(ITProduct, Interaction.product_id == ITProduct.id)
+            .outerjoin(ITDirection, ITProduct.direction_id == ITDirection.id)
+            .join(WorkflowStageRef, Interaction.stage_id == WorkflowStageRef.id)
+            .outerjoin(User, Interaction.assigned_kam_id == User.id)
+            .where(*filters)
+            .order_by(Interaction.id)
         )
-    )
+    ).all()
 
     data = []
-    for interaction in interactions:
-        university = await db.get(University, interaction.university_id)
-        product = await db.get(ITProduct, interaction.product_id) if interaction.product_id else None
-        stage = await db.get(WorkflowStageRef, interaction.stage_id)
-        assigned_kam = await db.get(User, interaction.assigned_kam_id) if interaction.assigned_kam_id else None
-
-        # Get direction name from product
-        direction_name = None
-        if product:
-            direction = await db.get(ITDirection, product.direction_id) if product.direction_id else None
-            direction_name = direction.name if direction else None
-
+    for interaction, university_name, direction_name, product_name, stage_name, assigned_kam_name in rows:
         data.append({
             "id": interaction.id,
-            "university_name": university.name if university else None,
+            "university_name": university_name,
             "direction_name": direction_name,
-            "product_name": product.name if product else None,
-            "stage_name": stage.name if stage else None,
+            "product_name": product_name,
+            "stage_name": stage_name,
             "contract_number": interaction.contract_number,
             "contract_date": interaction.contract_date,
-            "assigned_kam_name": assigned_kam.full_name if assigned_kam else None,
+            "assigned_kam_name": assigned_kam_name,
             "university_specialist": interaction.university_specialist,
             "notes": interaction.notes,
             "is_active": interaction.is_active,

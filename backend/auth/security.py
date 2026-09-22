@@ -12,7 +12,11 @@ from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.entities import User
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=10,
+)
 bearer_scheme = HTTPBearer(auto_error=False)
 
 CREDENTIALS_ERROR = HTTPException(
