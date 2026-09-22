@@ -45,7 +45,7 @@ async def preview_catalog_import(
         from io import BytesIO
         file_bytes = BytesIO(content)
         
-        result = parse_catalog_file(file_bytes, catalog_type)
+        result = parse_catalog_file(file_bytes, catalog_type, file.filename)
         return result.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {str(e)}")
@@ -84,7 +84,7 @@ async def execute_catalog_import(
         from io import BytesIO
         file_bytes = BytesIO(content)
         
-        result = parse_catalog_file(file_bytes, catalog_type)
+        result = parse_catalog_file(file_bytes, catalog_type, file.filename)
         
         if not result.success:
             return result.to_dict()
