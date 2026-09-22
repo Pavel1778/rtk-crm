@@ -29,6 +29,7 @@ from app.schemas.entities import (
     InteractionRead,
     InteractionUpdate,
 )
+from app.services.report_cache import invalidate_report_cache
 
 router = APIRouter(prefix="/api/interactions", tags=["interactions"])
 
@@ -277,6 +278,7 @@ async def create_interaction(
     )
     db.add(interaction)
     await db.commit()
+    await invalidate_report_cache()
     await db.refresh(interaction)
     return await _read(db, interaction)
 
@@ -305,6 +307,7 @@ async def update_interaction(
     for field, value in data.items():
         setattr(interaction, field, value)
     await db.commit()
+    await invalidate_report_cache()
     await db.refresh(interaction)
     return await _read(db, interaction)
 
@@ -318,6 +321,7 @@ async def delete_interaction(
     interaction = await _get_or_404(db, interaction_id)
     await db.delete(interaction)
     await db.commit()
+    await invalidate_report_cache()
 
 
 # ---------- Перемещение по этапам ----------
@@ -342,6 +346,7 @@ async def move_interaction(
     
     interaction.stage_id = stage_id
     await db.commit()
+    await invalidate_report_cache()
     await db.refresh(interaction)
     return await _read(db, interaction)
 
@@ -391,6 +396,7 @@ async def create_action(
     )
     db.add(action)
     await db.commit()
+    await invalidate_report_cache()
     await db.refresh(action)
     return ActionRead(
         id=action.id,
@@ -440,6 +446,7 @@ async def delete_action(
         raise HTTPException(status_code=404, detail="Задача не найдена")
     await db.delete(action)
     await db.commit()
+    await invalidate_report_cache()
 
 
 # ---------- Комментарии ----------
@@ -485,6 +492,7 @@ async def create_comment(
     )
     db.add(comment)
     await db.commit()
+    await invalidate_report_cache()
     await db.refresh(comment)
     return CommentRead(
         id=comment.id,
@@ -510,3 +518,4 @@ async def delete_comment(
         )
     await db.delete(comment)
     await db.commit()
+    await invalidate_report_cache()

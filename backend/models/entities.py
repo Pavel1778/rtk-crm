@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Enum, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -105,6 +105,17 @@ class Interaction(Base, TimestampMixin):
     """Взаимодействие: пара [вуз + продукт], движется по этапам воркфлоу."""
 
     __tablename__ = "interactions"
+    __table_args__ = (
+        Index(
+            "ix_interactions_stage_active",
+            "stage_id",
+            postgresql_where=text("is_active = true"),
+        ),
+        Index("ix_interactions_created_at", "created_at"),
+        Index("ix_interactions_product", "product_id"),
+        Index("ix_interactions_assigned_kam", "assigned_kam_id"),
+        Index("ix_interactions_stage_created", "stage_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     university_id: Mapped[int] = mapped_column(

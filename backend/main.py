@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal, create_tables, engine
 from app.middleware.audit import audit_middleware
 from app.schemas.entities import HealthResponse
+from app.services.report_cache import close_report_cache
 
 
 @asynccontextmanager
@@ -44,6 +45,7 @@ async def lifespan(app: FastAPI):
             logger.error(f"Ошибка загрузки демо-данных: {exc}")
 
     yield
+    await close_report_cache()
     await engine.dispose()
 
 
