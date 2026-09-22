@@ -76,7 +76,7 @@ class RTKUser(HttpUser):
     @task(2)
     @tag("write")
     def create_interaction(self) -> None:
-        response = self.client.post(
+        with self.client.post(
             "/api/interactions",
             json={
                 "university_id": random.randint(1, 5),
@@ -84,9 +84,12 @@ class RTKUser(HttpUser):
                 "stage_id": random.randint(1, 14),
             },
             name="POST /api/interactions",
-        )
-        if response.status_code == 201:
-            self.interaction_id = response.json().get("id")
+            catch_response=True,
+        ) as response:
+            if response.status_code == 201:
+                self.interaction_id = response.json().get("id")
+            elif response.status_code == 409:
+                response.success()
 
     @task(3)
     @tag("write")
