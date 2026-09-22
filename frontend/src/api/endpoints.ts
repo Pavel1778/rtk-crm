@@ -162,40 +162,32 @@ export const deleteStage = (id: number, targetStageId?: number) =>
   api.delete(`/api/stages/${id}`, { params: targetStageId ? { target_stage_id: targetStageId } : undefined });
 
 // --- Отчёты ---
-export const getReport = () =>
-  api.get<ReportResponse>('/api/reports').then((r) => r.data);
-
-export const exportXlsx = (params?: {
+export type ReportFilters = {
   stage_id?: number;
   university_id?: number;
   product_id?: number;
+  direction_id?: number;
+  assigned_kam_id?: number;
   date_from?: string;
   date_to?: string;
-}) =>
+};
+
+export const getReport = (params?: ReportFilters) =>
+  api.get<ReportResponse>('/api/reports', { params }).then((r) => r.data);
+
+export const exportXlsx = (params?: ReportFilters) =>
   api.get('/api/reports/xlsx', {
     params,
     responseType: 'blob',
   }).then((r) => r.data);
 
-export const exportXls = (params?: {
-  stage_id?: number;
-  university_id?: number;
-  product_id?: number;
-  date_from?: string;
-  date_to?: string;
-}) =>
+export const exportXls = (params?: ReportFilters) =>
   api.get('/api/reports/xls', {
     params,
     responseType: 'blob',
   }).then((r) => r.data);
 
-export const exportPdf = (params?: {
-  stage_id?: number;
-  university_id?: number;
-  product_id?: number;
-  date_from?: string;
-  date_to?: string;
-}) =>
+export const exportPdf = (params?: ReportFilters) =>
   api.get('/api/reports/pdf', {
     params,
     responseType: 'blob',

@@ -1,6 +1,6 @@
 from datetime import date, datetime, time, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,21 +34,80 @@ def _report_filename(extension: str) -> str:
     return f"rtk-report-{datetime.now(timezone.utc):%Y%m%d}.{extension}"
 
 
+def _report_filters(
+    stage_id: int | None,
+    university_id: int | None,
+    product_id: int | None,
+    direction_id: int | None,
+    assigned_kam_id: int | None,
+    date_from: date | None,
+    date_to: date | None,
+) -> list:
+    filters: list = [Interaction.is_active.is_(True)]
+    if stage_id is not None:
+        filters.append(Interaction.stage_id == stage_id)
+    if university_id is not None:
+        filters.append(Interaction.university_id == university_id)
+    if product_id is not None:
+        filters.append(Interaction.product_id == product_id)
+    if direction_id is not None:
+        filters.append(Interaction.product.has(ITProduct.direction_id == direction_id))
+    if assigned_kam_id is not None:
+        filters.append(Interaction.assigned_kam_id == assigned_kam_id)
+    if date_from is not None:
+        filters.append(
+            Interaction.created_at
+            >= datetime.combine(date_from, time.min, tzinfo=timezone.utc)
+        )
+    if date_to is not None:
+        filters.append(
+            Interaction.created_at
+            < datetime.combine(
+                date_to + timedelta(days=1),
+                time.min,
+                tzinfo=timezone.utc,
+            )
+        )
+    return filters
+
+
 @router.get("", response_model=ReportResponse)
 async def get_report(
+    stage_id: int | None = Query(default=None),
+    university_id: int | None = Query(default=None),
+    product_id: int | None = Query(default=None),
+    direction_id: int | None = Query(default=None),
+    assigned_kam_id: int | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> ReportResponse:
     """Сводка: ключевые показатели и распределение по этапам воркфлоу."""
-    active = Interaction.is_active.is_(True)
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(
+            status_code=400,
+            detail="Дата начала не может быть позже даты окончания",
+        )
+    filters = _report_filters(
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        date_from,
+        date_to,
+    )
 
-    total_universities = await db.scalar(select(func.count(University.id))) or 0
+    total_universities = await db.scalar(
+        select(func.count(func.distinct(Interaction.university_id))).where(*filters)
+    ) or 0
     total_interactions = await db.scalar(
-        select(func.count(Interaction.id)).where(active)
+        select(func.count(Interaction.id)).where(*filters)
     ) or 0
     with_contract = await db.scalar(
         select(func.count(Interaction.id)).where(
-            active, Interaction.contract_number.isnot(None)
+            *filters, Interaction.contract_number.isnot(None)
         )
     ) or 0
     open_actions = await db.scalar(
@@ -89,7 +148,7 @@ async def get_report(
         (
             await db.execute(
                 select(Interaction.stage_id, func.count(Interaction.id))
-                .where(active)
+                .where(*filters)
                 .group_by(Interaction.stage_id)
             )
         ).all()
@@ -115,7 +174,7 @@ async def get_report(
             )
             .select_from(Interaction)
             .outerjoin(ITProduct, Interaction.product_id == ITProduct.id)
-            .where(active)
+            .where(*filters)
             .group_by(ITProduct.id, ITProduct.name)
             .having(func.count(Interaction.id) > 0)
             .order_by(func.count(Interaction.id).desc(), ITProduct.name.nulls_last())
@@ -141,19 +200,29 @@ async def get_report(
     ]
 
     today = datetime.now(timezone.utc).date()
-    start_date = today - timedelta(days=29)
+    dynamics_end = date_to or today
+    dynamics_start = date_from or dynamics_end - timedelta(days=29)
+    if dynamics_start > dynamics_end:
+        raise HTTPException(
+            status_code=400,
+            detail="Период отчёта не может начинаться в будущем",
+        )
+    dynamics_filters = _report_filters(
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        dynamics_start,
+        dynamics_end,
+    )
     dynamics_rows = (
         await db.execute(
             select(
                 func.date(Interaction.created_at).label("date"),
                 func.count(Interaction.id).label("count"),
             )
-            .where(
-                active,
-                Interaction.created_at >= datetime.combine(
-                    start_date, datetime.min.time(), tzinfo=timezone.utc
-                ),
-            )
+            .where(*dynamics_filters)
             .group_by(func.date(Interaction.created_at))
         )
     ).all()
@@ -163,13 +232,13 @@ async def get_report(
     }
     dynamics = [
         ReportDynamicsPoint(
-            date=(start_date + timedelta(days=offset)).isoformat(),
+            date=(dynamics_start + timedelta(days=offset)).isoformat(),
             count=dynamics_by_date.get(
-                (start_date + timedelta(days=offset)).isoformat(),
+                (dynamics_start + timedelta(days=offset)).isoformat(),
                 0,
             ),
         )
-        for offset in range(30)
+        for offset in range((dynamics_end - dynamics_start).days + 1)
     ]
 
     return ReportResponse(
@@ -202,31 +271,21 @@ async def _build_interaction_data(
     stage_id: int | None = None,
     university_id: int | None = None,
     product_id: int | None = None,
+    direction_id: int | None = None,
+    assigned_kam_id: int | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> list[dict]:
     """Построение данных взаимодействий для экспорта."""
-    filters: list = [Interaction.is_active.is_(True)]
-    if stage_id is not None:
-        filters.append(Interaction.stage_id == stage_id)
-    if university_id is not None:
-        filters.append(Interaction.university_id == university_id)
-    if product_id is not None:
-        filters.append(Interaction.product_id == product_id)
-    if date_from is not None:
-        filters.append(
-            Interaction.created_at
-            >= datetime.combine(date_from, time.min, tzinfo=timezone.utc)
-        )
-    if date_to is not None:
-        filters.append(
-            Interaction.created_at
-            < datetime.combine(
-                date_to + timedelta(days=1),
-                time.min,
-                tzinfo=timezone.utc,
-            )
-        )
+    filters = _report_filters(
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        date_from,
+        date_to,
+    )
 
     interactions = list(
         await db.scalars(
@@ -269,13 +328,24 @@ async def export_xlsx(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
+    direction_id: int | None = Query(default=None),
+    assigned_kam_id: int | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Экспорт взаимодействий в XLSX формате."""
-    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
+    data = await _build_interaction_data(
+        db,
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        date_from,
+        date_to,
+    )
     xlsx_data = generate_xlsx(data)
 
     filename = _report_filename("xlsx")
@@ -295,13 +365,24 @@ async def export_xls(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
+    direction_id: int | None = Query(default=None),
+    assigned_kam_id: int | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Экспорт взаимодействий в XLS формате."""
-    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
+    data = await _build_interaction_data(
+        db,
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        date_from,
+        date_to,
+    )
     xls_data = generate_xls(data)
 
     filename = _report_filename("xls")
@@ -321,13 +402,24 @@ async def export_pdf(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
+    direction_id: int | None = Query(default=None),
+    assigned_kam_id: int | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Экспорт взаимодействий в PDF формате."""
-    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
+    data = await _build_interaction_data(
+        db,
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        date_from,
+        date_to,
+    )
     pdf_data = generate_pdf(data)
 
     filename = _report_filename("pdf")
@@ -347,13 +439,24 @@ async def export_json(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
+    direction_id: int | None = Query(default=None),
+    assigned_kam_id: int | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Экспорт взаимодействий в JSON формате для LMS интеграции."""
-    data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
+    data = await _build_interaction_data(
+        db,
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        date_from,
+        date_to,
+    )
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": len(data),
