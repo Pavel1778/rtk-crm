@@ -8,6 +8,8 @@
   --atmr-success-default: #00AC43;
   --atmr-warning-default: #F5A623;
   --atmr-error-default: #E5484D;
+  --atmr-info-default: #3B82F6;
+  --atmr-accent-muted: #8B5CF6;
 }
 
 .Theme_root_rtk_purple_light {
