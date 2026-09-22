@@ -10,14 +10,16 @@
 
 ## 🏗 Архитектура
 
-Система построена по микросервисной архитектуре с использованием следующих компонентов:
+Текущий контур — SPA и один FastAPI-сервис с PostgreSQL:
 
 - **Frontend**: React 18 + TypeScript + Vite + Ant Design
 - **Backend**: FastAPI (Python 3.11) + SQLAlchemy 2.0 (async)
-- **Database**: PostgreSQL 16 (основное хранилище)
-- **Cache**: Redis 7 (кеширование, сессии)
-- **Auth**: Keycloak (OAuth2/OIDC)
-- **Web Server**: Nginx (reverse proxy, статика)
+- **Database**: PostgreSQL/Supabase (основное хранилище)
+- **Auth**: JWT + bcrypt с RBAC
+- **Deploy**: Render (backend) + Vercel (frontend)
+
+Keycloak, Redis и Nginx описаны только как варианты будущего целевого
+контура Yandex Cloud, а не как обязательные зависимости текущей сборки.
 
 ## 🚀 Быстрый старт
 
@@ -26,8 +28,8 @@
 git clone https://github.com/Pavel1778/rtk-crm.git
 cd rtk-crm
 
-# Запустить все сервисы
-docker-compose up -d
+# Backend запускается по инструкции в корневом README
+pip install -r backend/requirements.txt
 
 # Инициализировать БД тестовыми данными
 docker exec rtk_backend python seed.py
@@ -41,7 +43,7 @@ docker-compose ps
 ```
 rtk-crm/
 ├── backend/           # FastAPI приложение
-│   ├── app/
+│   ├── api/
 │   │   ├── models/   # SQLAlchemy модели
 │   │   ├── schemas/  # Pydantic схемы
 │   │   ├── api/      # API роутеры

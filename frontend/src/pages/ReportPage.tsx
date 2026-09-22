@@ -12,7 +12,14 @@ import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
 import type { ReportResponse } from '../types';
 
-const COLORS = ['#6E41F2', '#00AC43', '#F5A623', '#E5484D', '#3B82F6', '#8B5CF6'];
+const COLORS = [
+  'var(--atmr-accent-default)',
+  'var(--atmr-success-default)',
+  'var(--atmr-warning-default)',
+  'var(--atmr-error-default)',
+  '#3B82F6',
+  '#8B5CF6',
+];
 
 export default function ReportPage() {
   const device = useDevice();
@@ -151,7 +158,7 @@ export default function ReportPage() {
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={isMobile ? 185 : 280}
+                  width={240}
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: string) =>
                     value.length > (isMobile ? 25 : 42)
@@ -161,6 +168,7 @@ export default function ReportPage() {
                 />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  labelFormatter={(label) => String(label)}
                   formatter={(value) => [
                     Number(value ?? 0),
                     'Взаимодействий',
@@ -195,8 +203,8 @@ export default function ReportPage() {
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
+                    innerRadius={60}
+                    outerRadius={100}
                     paddingAngle={2}
                   >
                     {data.by_product.map((_, i) => (
@@ -205,7 +213,9 @@ export default function ReportPage() {
                   </Pie>
                   <Tooltip formatter={(value) => [value, 'Взаимодействий']} />
                   <Legend
-                    verticalAlign="bottom"
+                    layout={isMobile ? 'horizontal' : 'vertical'}
+                    align={isMobile ? 'center' : 'right'}
+                    verticalAlign={isMobile ? 'bottom' : 'middle'}
                     wrapperStyle={{ fontSize: 11 }}
                     formatter={(value: string) =>
                       value.length > 24 ? `${value.slice(0, 22)}…` : value
@@ -239,7 +249,7 @@ export default function ReportPage() {
                     dataKey="count"
                     stroke="#6E41F2"
                     strokeWidth={2}
-                    dot={!isMobile}
+                    dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
