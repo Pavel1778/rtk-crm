@@ -180,6 +180,7 @@ class StageAdminUser(HttpUser):
     wait_time = between(1, 3)
 
     def on_start(self) -> None:
+        self.stage_id = 14
         response = self.client.post(
             "/api/auth/login",
             json={
@@ -192,14 +193,39 @@ class StageAdminUser(HttpUser):
             token = response.json().get("access_token")
             if token:
                 self.client.headers.update({"Authorization": f"Bearer {token}"})
+                stages = self.client.get(
+                    "/api/stages?include_inactive=true",
+                    name="GET /api/stages (admin write setup)",
+                )
+                if stages.status_code == 200:
+                    empty_stage = next(
+                        (
+                            stage
+                            for stage in stages.json()
+                            if stage.get("is_active")
+                            and stage.get("interaction_count", 0) == 0
+                        ),
+                        None,
+                    )
+                    if empty_stage:
+                        self.stage_id = empty_stage["id"]
 
     @task
     @tag("write")
     def toggle_stage(self) -> None:
+        with self.client.patch(
+            f"/api/stages/{self.stage_id}",
+            json={"is_active": False},
+            name="PATCH /api/stages/{id} disable",
+            catch_response=True,
+        ) as response:
+            if response.status_code == 409:
+                response.success()
+                return
         self.client.patch(
-            "/api/stages/14",
-            json={"color": "#08979c"},
-            name="PATCH /api/stages/{id}",
+            f"/api/stages/{self.stage_id}",
+            json={"is_active": True},
+            name="PATCH /api/stages/{id} enable",
         )
 
 
