@@ -2,10 +2,11 @@
 
 ## 📚 Содержание
 
-1. [Архитектура системы](docs/architecture/ARCHITECTURE.md)
-2. [Руководство пользователя](docs/USER_GUIDE.md)
-3. [Руководство администратора](docs/ADMIN_GUIDE.md)
-4. [API документация](http://localhost:8000/api/docs)
+1. [Архитектура системы](architecture/ARCHITECTURE.md)
+2. [Руководство пользователя](USER_GUIDE.md)
+3. [Руководство администратора](ADMIN_GUIDE.md)
+4. [Диаграммы архитектуры](architecture/README.md)
+5. [API документация](http://localhost:8000/api/docs)
 
 ## 🏗 Архитектура
 
