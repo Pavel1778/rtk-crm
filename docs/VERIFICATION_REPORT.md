@@ -23,8 +23,15 @@ Compose не запускались.
 Фактический локальный прогон на SQLite backend:
 
 - 50 пользователей / 60 секунд: 1613 запросов, 0 ошибок, aggregate p95 93 мс;
-- 10 пользователей `ReportsUser` / 30 секунд: 303 запроса, 0 ошибок,
+- 10 пользователей `ReportsUser` / 30 секунд: 322 запроса, 0 ошибок,
   p95 `/api/reports` 7 мс, aggregate p95 77 мс.
+- 50 пользователей / 3 минуты, смешанный read/write: 4673 запроса, 0 ошибок,
+  p95 create 32 мс, move 43 мс, comments 45 мс, upload 33 мс,
+  XLSX 48 мс, XLS 76 мс, PDF 210 мс, aggregate p95 110 мс;
+- 10 пользователей / 1 минута, exports-only: 308 запросов, 0 ошибок,
+  p95 XLSX 37 мс, XLS 60 мс, PDF 180 мс;
+- 10 администраторов / 30 секунд, toggle этапа: 308 запросов, 0 ошибок,
+  p95 disable 17 мс, enable 16 мс.
 
 Эти значения относятся к локальному SQLite окружению и не являются SLA
 production Render/Supabase.
@@ -128,7 +135,9 @@ production Render/Supabase.
 |---|---|---|
 | Production response target ≤1 s | `⚠️ Warning` | Локальный прогон достиг aggregate p95 93 мс, но production SLA отдельно не подтверждён |
 | 50 concurrent users | `✅ OK` | Реальный локальный прогон: 1613 запросов, 0 ошибок |
-| 10 concurrent report requests | `✅ OK` | Реальный `ReportsUser`: 303 запроса, 0 ошибок, `/api/reports` p95 7 мс |
+| 10 concurrent report requests | `✅ OK` | Реальный `ReportsUser`: 322 запроса, 0 ошибок, `/api/reports` p95 7 мс |
+| Write-профиль интерфейса | `✅ OK` | 4673 запроса за 3 минуты: create/move/comment/upload/export без ошибок |
+| Toggle workflow stage | `✅ OK` | 308 запросов: disable/enable через PATCH без ошибок |
 | SPA и viewport | `✅ OK` | `frontend/index.html:5`; React Router и Vite build |
 | Коды 400/401/403/404/409/422/500 | `✅ OK` | Проверены статически по FastAPI routes/handlers; `422` handler: `backend/main.py:74-89` |
 | USER_GUIDE и ADMIN_GUIDE | `✅ OK` | Файлы присутствуют |
