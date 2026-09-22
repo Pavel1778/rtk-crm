@@ -141,6 +141,51 @@ export const createProduct = (payload: { name: string; direction_id?: number | n
 export const deleteProduct = (id: number) =>
   api.delete(`/api/products/${id}`);
 
+export type CatalogImportResult = {
+  success: boolean;
+  headers: string[];
+  data: Record<string, unknown>[];
+  errors: string[];
+  count: number;
+  created?: number;
+};
+
+export const previewCatalogImport = (
+  catalogType: 'universities' | 'products',
+  file: File,
+  mapping: Record<string, string>,
+  format: 'excel' | 'json' = 'excel',
+) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mapping', JSON.stringify(mapping));
+  return api
+    .post<CatalogImportResult>(
+      `/api/catalogs/import/${format === 'json' ? 'json/' : ''}preview`,
+      formData,
+      { params: { catalog_type: catalogType } },
+    )
+    .then((r) => r.data);
+};
+
+export const executeCatalogImport = (
+  catalogType: 'universities' | 'products',
+  file: File,
+  mapping: Record<string, string>,
+  format: 'excel' | 'json' = 'excel',
+) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mapping', JSON.stringify(mapping));
+  return api
+    .post<CatalogImportResult>(
+      `/api/catalogs/import/${format === 'json' ? 'json/' : ''}execute`,
+      formData,
+      { params: { catalog_type: catalogType } },
+    )
+    .then((r) => r.data);
+};
+
 // --- Воркфлоу ---
 export const listStages = (includeInactive = false) =>
   api

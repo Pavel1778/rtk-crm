@@ -41,6 +41,7 @@ loguru==0.7.3
 
 # Utilities
 python-dateutil==2.9.0
+jsonschema==4.23.0
 
 # Tests
 pytest==8.3.4

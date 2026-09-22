@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,11 @@ try:
     import xlrd
 except ImportError:  # pragma: no cover
     xlrd = None
+
+try:
+    from jsonschema import Draft7Validator
+except ImportError:  # pragma: no cover
+    Draft7Validator = None
 
 try:
     from openpyxl import load_workbook
@@ -46,6 +52,7 @@ def parse_catalog_file(
     file: BytesIO,
     catalog_type: str,
     filename: str | None = None,
+    mapping: dict[str, str] | None = None,
 ) -> CatalogImportResult:
     """Разбирает XLS/XLSX и приводит его к общей структуре строк."""
     if catalog_type not in {"universities", "products"}:
@@ -66,8 +73,58 @@ def parse_catalog_file(
         )
 
     if catalog_type == "universities":
-        return _parse_universities(headers, rows)
-    return _parse_products(headers, rows)
+        return _parse_universities(headers, rows, mapping)
+    return _parse_products(headers, rows, mapping)
+
+
+def parse_catalog_json(
+    content: bytes,
+    catalog_type: str,
+    mapping: dict[str, str] | None = None,
+) -> CatalogImportResult:
+    """Разбирает JSON-массив каталога через ту же нормализацию, что и Excel."""
+    try:
+        payload = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return CatalogImportResult(False, [], [f"Некорректный JSON: {exc}"])
+
+    records = payload.get("data") if isinstance(payload, dict) else payload
+    if Draft7Validator is not None:
+        validation = Draft7Validator({
+            "oneOf": [
+                {"type": "array", "items": {"type": "object"}},
+                {
+                    "type": "object",
+                    "required": ["data"],
+                    "properties": {
+                        "data": {"type": "array", "items": {"type": "object"}},
+                    },
+                },
+            ],
+        })
+        errors = sorted(validation.iter_errors(payload), key=lambda error: list(error.path))
+        if errors:
+            return CatalogImportResult(
+                False,
+                [],
+                [f"Ошибка структуры JSON: {errors[0].message}"],
+            )
+    if not isinstance(records, list) or not all(isinstance(item, dict) for item in records):
+        return CatalogImportResult(
+            False,
+            [],
+            ["JSON должен содержать массив объектов или объект с полем data"],
+        )
+    if not records:
+        return CatalogImportResult(False, [], ["JSON-массив пуст"])
+
+    headers = list(records[0].keys())
+    rows = [[record.get(header) for header in headers] for record in records]
+    if catalog_type == "universities":
+        return _parse_universities(headers, rows, mapping)
+    if catalog_type == "products":
+        return _parse_products(headers, rows, mapping)
+    return CatalogImportResult(False, [], [f"Неизвестный тип каталога: {catalog_type}"])
 
 
 def _read_table(file: BytesIO, suffix: str) -> tuple[list[str], list[list[Any]]]:
@@ -107,6 +164,21 @@ def _column_indices(headers: list[str], aliases: dict[str, str]) -> dict[str, in
     return indices
 
 
+def _mapped_indices(
+    headers: list[str],
+    aliases: dict[str, str],
+    mapping: dict[str, str] | None,
+) -> dict[str, int]:
+    if not mapping:
+        return _column_indices(headers, aliases)
+    header_indices = {header.casefold(): index for index, header in enumerate(headers)}
+    return {
+        field: header_indices[source.casefold()]
+        for field, source in mapping.items()
+        if source.casefold() in header_indices
+    }
+
+
 def _cell(row: list[Any], indices: dict[str, int], field: str) -> Any:
     index = indices.get(field)
     return row[index] if index is not None and index < len(row) else None
@@ -115,6 +187,7 @@ def _cell(row: list[Any], indices: dict[str, int], field: str) -> Any:
 def _parse_universities(
     headers: list[str],
     rows: list[list[Any]],
+    mapping: dict[str, str] | None = None,
 ) -> CatalogImportResult:
     aliases = {
         "название": "name",
@@ -132,7 +205,7 @@ def _parse_universities(
     return _parse_rows(
         headers,
         rows,
-        _column_indices(headers, aliases),
+        _mapped_indices(headers, aliases, mapping),
         fields=("name", "city", "contact_person", "contact_email", "contact_phone"),
         required="name",
         error_label="Название",
@@ -142,6 +215,7 @@ def _parse_universities(
 def _parse_products(
     headers: list[str],
     rows: list[list[Any]],
+    mapping: dict[str, str] | None = None,
 ) -> CatalogImportResult:
     aliases = {
         "название": "name",
@@ -153,7 +227,7 @@ def _parse_products(
     return _parse_rows(
         headers,
         rows,
-        _column_indices(headers, aliases),
+        _mapped_indices(headers, aliases, mapping),
         fields=("name", "direction"),
         required="name",
         error_label="Название",

@@ -4,6 +4,7 @@ import xlwt
 from openpyxl import Workbook
 
 from backend.services.excel_import import parse_catalog_file
+from backend.services.excel_import import parse_catalog_json
 
 
 HEADERS = ["Название", "Город", "Контактное лицо", "Email", "Телефон"]
@@ -66,3 +67,26 @@ def test_optional_columns_do_not_break_xlsx_import() -> None:
     assert result.success is True
     assert result.data[0]["name"] == "СПбГУ"
     assert result.data[0]["city"] is None
+
+
+def test_json_import_supports_explicit_column_mapping() -> None:
+    content = (
+        '[{"Название ВУЗа": "КФУ", "Населенный пункт": "Казань"}]'
+    ).encode()
+
+    result = parse_catalog_json(
+        content,
+        "universities",
+        {"name": "Название ВУЗа", "city": "Населенный пункт"},
+    )
+
+    assert result.success is True
+    assert result.data == [
+        {
+            "name": "КФУ",
+            "city": "Казань",
+            "contact_person": None,
+            "contact_email": None,
+            "contact_phone": None,
+        }
+    ]
