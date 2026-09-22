@@ -30,6 +30,10 @@ from app.services.excel_export import generate_xlsx, generate_xls, generate_pdf
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
+def _report_filename(extension: str) -> str:
+    return f"rtk-report-{datetime.now(timezone.utc):%Y%m%d}.{extension}"
+
+
 @router.get("", response_model=ReportResponse)
 async def get_report(
     db: AsyncSession = Depends(get_db),
@@ -274,7 +278,7 @@ async def export_xlsx(
     data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
     xlsx_data = generate_xlsx(data)
 
-    filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = _report_filename("xlsx")
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
         "Access-Control-Expose-Headers": "Content-Disposition",
@@ -300,7 +304,7 @@ async def export_xls(
     data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
     xls_data = generate_xls(data)
 
-    filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xls"
+    filename = _report_filename("xls")
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
         "Access-Control-Expose-Headers": "Content-Disposition",
@@ -326,7 +330,7 @@ async def export_pdf(
     data = await _build_interaction_data(db, stage_id, university_id, product_id, date_from, date_to)
     pdf_data = generate_pdf(data)
 
-    filename = f"interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    filename = _report_filename("pdf")
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
         "Access-Control-Expose-Headers": "Content-Disposition",
