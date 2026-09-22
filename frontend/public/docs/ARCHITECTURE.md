@@ -253,3 +253,60 @@ RTK CRM — это веб-приложение для управления вз�
 - Mobile приложение (React Native)
 - Интеграция с календарем
 - Автоматические напоминания
+
+## План миграции в Yandex Cloud
+
+### Обоснование
+
+Сейчас контур размещён за пределами РФ: Render (backend), Vercel (frontend),
+Supabase (PostgreSQL, регион us-west-2). Требования 152-ФЗ «О персональных
+данных» к локализации баз данных граждан РФ и приказ ФСТЭК России № 117
+предполагают размещение в российском контуре. Yandex Cloud даёт аттестованную
+инфраструктуру и переносится без изменения кода — весь стек уже контейнеризован.
+
+### Целевая схема
+
+```mermaid
+flowchart LR
+  user([Пользователь]) -->|HTTPS 443| nginx[Nginx + Let's Encrypt]
+  nginx -->|/api/*| backend[FastAPI :8000]
+  nginx -->|/*| frontend[React / nginx :80]
+  backend --> pg[(PostgreSQL 16, volume)]
+  pg --> backup[/backups: pg_dump, 7 дней/]
+```
+
+Всё выполняется на одной ВМ Ubuntu 22.04 (2 vCPU, 4 ГБ RAM, 20 ГБ SSD).
+
+### Пошаговый план
+
+1. Создать ВМ и статический публичный IP.
+2. Выполнить `infra/yandex-cloud/setup-vm.sh` (Docker, certbot, ufw, cron-бэкап).
+3. Заполнить `.env` по шаблону `infra/yandex-cloud/.env.prod.example`.
+4. Направить A-запись домена на IP, выпустить сертификат Let's Encrypt.
+5. Поднять стек: `docker compose -f infra/yandex-cloud/docker-compose.prod.yml --env-file .env up -d --build`.
+6. Перенести данные из Supabase: `pg_dump` → `pg_restore` в контейнер `rtk_postgres`.
+7. Проверить `https://<домен>/api/health`, затем переключить DNS с Vercel.
+
+Подробности и команды — в `infra/yandex-cloud/README.md`.
+
+### Что переносится автоматически, а что вручную
+
+| Автоматически (`docker compose`) | Вручную |
+|---|---|
+| Сборка и запуск backend, frontend, nginx | Создание ВМ и статического IP |
+| Схема БД (создаётся приложением при старте) | Перенос данных (`pg_dump` / `pg_restore`) |
+| Ежедневные бэкапы (cron + `backup.sh`) | A-запись домена и выпуск сертификата |
+| Переменные окружения из `.env` | Заполнение секретов в `.env` |
+
+### Смета
+
+ВМ 2 vCPU / 4 ГБ (~800 ₽) + SSD 20 ГБ (~200 ₽) + статический IP (~150 ₽) +
+трафик (~50 ₽) ≈ **1 200 ₽ в месяц**. Стартовый грант 4 000 ₽ покрывает более
+трёх месяцев работы.
+
+### Обратная совместимость
+
+Текущий деплой не ломается: базовый `docker-compose.yml` не изменялся,
+Yandex-вариант вынесен в отдельные файлы (`docker-compose.prod.yml` в корне —
+оверлей с локальным Postgres, `infra/yandex-cloud/docker-compose.prod.yml` —
+полный прод-стек с nginx и TLS).
