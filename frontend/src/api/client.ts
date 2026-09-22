@@ -32,7 +32,15 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      try {
+        const text = await error.response.data.text();
+        error.response.data = JSON.parse(text);
+      } catch {
+        // Ошибка может быть бинарным ответом без JSON-тела.
+      }
+    }
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       setToken(null);
       if (window.location.pathname !== '/login') {
@@ -54,4 +62,15 @@ export function errorMessage(
     }
   }
   return fallback;
+}
+
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

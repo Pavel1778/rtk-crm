@@ -133,7 +133,6 @@ class WorkflowStageUpdate(BaseModel):
     order: int | None = None
     color: str | None = None
     is_active: bool | None = None
-    is_active: bool | None = None
 
 
 class WorkflowStageRead(ORMModel, WorkflowStageBase):
@@ -285,9 +284,31 @@ class StageProgress(BaseModel):
     percent: float
 
 
+class ReportStage(BaseModel):
+    stage_id: int
+    name: str
+    order: int
+    count: int
+
+
+class ReportProduct(BaseModel):
+    product_id: int
+    name: str
+    count: int
+
+
+class ReportDynamicsPoint(BaseModel):
+    date: str
+    count: int
+
+
 class ReportResponse(BaseModel):
     metrics: list[ReportMetric]
     stage_progress: list[StageProgress]
+    by_stage: list[ReportStage] = []
+    by_product: list[ReportProduct] = []
+    dynamics: list[ReportDynamicsPoint] = []
+    totals: dict[str, int] = {}
     generated_at: datetime
 
 

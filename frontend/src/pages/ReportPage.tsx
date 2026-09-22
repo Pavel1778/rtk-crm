@@ -5,25 +5,21 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
   LineChart, Line,
 } from 'recharts';
-import { api } from '../api/client';
+import { api, downloadBlob, errorMessage } from '../api/client';
+import { downloadReport } from '../api/endpoints';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
+import type { ReportResponse } from '../types';
 
-interface ReportData {
-  metrics: Array<{ key: string; label: string; value: number }>;
-  stage_progress: Array<{ stage_code: string; stage_name: string; count: number }>;
-  products?: Array<{ name: string; value: number }>;
-  dynamics?: Array<{ date: string; count: number }>;
-}
-
-const COLORS = ['#6E41F2', '#8A63F5', '#A88BFA', '#C4B0FC', '#E0D5FE'];
+const COLORS = ['#6E41F2', '#00AC43', '#F5A623', '#E5484D', '#3B82F6', '#8B5CF6'];
 
 export default function ReportPage() {
   const device = useDevice();
   const isMobile = device === 'mobile';
-  const [data, setData] = useState<ReportData | null>(null);
+  const [data, setData] = useState<ReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
     api.get('/api/reports')
@@ -32,11 +28,16 @@ export default function ReportPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleExport = (format: 'xlsx' | 'xls' | 'pdf') => {
-    window.open(
-      `${import.meta.env.VITE_API_URL}/api/reports/${format}`,
-      '_blank'
-    );
+  const handleExport = async (format: 'xlsx' | 'xls' | 'pdf') => {
+    setExporting(format);
+    try {
+      const result = await downloadReport(format);
+      downloadBlob(result.blob, result.filename);
+    } catch (error) {
+      message.error(errorMessage(error, 'Не удалось скачать отчёт'));
+    } finally {
+      setExporting(null);
+    }
   };
 
   if (loading) {
@@ -68,18 +69,21 @@ export default function ReportPage() {
           <button
             onClick={() => handleExport('xlsx')}
             className="btn-export"
+            disabled={exporting !== null}
           >
             Экспорт XLSX
           </button>
           <button
             onClick={() => handleExport('xls')}
             className="btn-export"
+            disabled={exporting !== null}
           >
             Экспорт XLS
           </button>
           <button
             onClick={() => handleExport('pdf')}
             className="btn-export"
+            disabled={exporting !== null}
           >
             Экспорт PDF
           </button>
@@ -102,7 +106,7 @@ export default function ReportPage() {
         title="Распределение по этапам"
         style={{ borderRadius: 12, marginBottom: 24 }}
       >
-        {data.stage_progress.length === 0 ? (
+        {data.by_stage.length === 0 ? (
           <EmptyState title="Нет данных" />
         ) : (
           <div
@@ -111,53 +115,26 @@ export default function ReportPage() {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={data.stage_progress}
-                layout={isMobile ? "horizontal" : "vertical"}
+                data={data.by_stage}
+                layout="vertical"
                 margin={{
                   top: 8,
                   right: 30,
-                  left: isMobile ? 10 : 20,
-                  bottom: isMobile ? 60 : 8,
+                  left: 0,
+                  bottom: 8,
                 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" horizontal={isMobile} vertical={!isMobile} />
-                {isMobile ? (
-                  <>
-                    <XAxis
-                      dataKey="stage_name"
-                      tick={{ fontSize: 10 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={70}
-                      interval={0}
-                      tickFormatter={(v) =>
-                        v && v.length > 18 ? v.slice(0, 16) + '…' : v
-                      }
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      tick={{ fontSize: 10 }}
-                      width={32}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <XAxis
-                      type="number"
-                      allowDecimals={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="stage_name"
-                      width={260}
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(v) =>
-                        v && v.length > 35 ? v.slice(0, 33) + '…' : v
-                      }
-                    />
-                  </>
-                )}
+                <XAxis type="number" allowDecimals={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={isMobile ? 150 : 220}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value: string) =>
+                    value.length > 32 ? `${value.slice(0, 30)}…` : value
+                  }
+                />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
                   formatter={(value) => [
@@ -186,15 +163,15 @@ export default function ReportPage() {
       >
         {/* Доля продуктов */}
         <Card title="Доля продуктов" style={{ borderRadius: 12 }}>
-          {!data.products || data.products.length === 0 ? (
+          {data.by_product.length === 0 ? (
             <EmptyState title="Нет данных" />
           ) : (
             <div className="chart-container" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={data.products}
-                    dataKey="value"
+                    data={data.by_product}
+                    dataKey="count"
                     nameKey="name"
                     cx="50%"
                     cy="50%"
@@ -202,14 +179,17 @@ export default function ReportPage() {
                     outerRadius={90}
                     paddingAngle={2}
                   >
-                    {data.products.map((_, i) => (
+                    {data.by_product.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip formatter={(value) => [value, 'Взаимодействий']} />
                   <Legend
                     verticalAlign="bottom"
                     wrapperStyle={{ fontSize: 11 }}
+                    formatter={(value: string) =>
+                      value.length > 24 ? `${value.slice(0, 22)}…` : value
+                    }
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -219,20 +199,21 @@ export default function ReportPage() {
 
         {/* Динамика за 30 дней */}
         <Card title="Динамика за 30 дней" style={{ borderRadius: 12 }}>
-          {!data.dynamics || data.dynamics.length === 0 ? (
+          {data.dynamics.length === 0 ? (
             <EmptyState title="Нет данных" />
           ) : (
             <div className="chart-container" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.dynamics}>
+                  <LineChart data={data.dynamics} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: isMobile ? 10 : 11 }}
                     tickFormatter={(v) => v?.slice(5) || ''}
+                    minTickGap={24}
                   />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
+                  <Tooltip labelFormatter={(value) => `Дата: ${value}`} />
                   <Line
                     type="monotone"
                     dataKey="count"

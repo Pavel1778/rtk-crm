@@ -200,3 +200,19 @@ export const exportPdf = (params?: {
     params,
     responseType: 'blob',
   }).then((r) => r.data);
+
+export const downloadReport = async (
+  kind: 'xlsx' | 'xls' | 'pdf' | 'json',
+  params: Record<string, string | number | undefined> = {},
+) => {
+  const response = await api.get(`/api/reports/${kind}`, {
+    params,
+    responseType: 'blob',
+    timeout: 60_000,
+  });
+  const disposition = response.headers['content-disposition'] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const extension = kind === 'json' ? 'json' : kind;
+  const filename = match?.[1] ?? `rtk-crm-report-${Date.now()}.${extension}`;
+  return { blob: response.data as Blob, filename };
+};
