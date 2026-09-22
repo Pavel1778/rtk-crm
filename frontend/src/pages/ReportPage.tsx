@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, Empty, Result, Skeleton, message } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -24,28 +25,25 @@ const COLORS = [
 export default function ReportPage() {
   const device = useDevice();
   const isMobile = device === 'mobile';
-  const [data, setData] = useState<ReportResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [draftDates, setDraftDates] = useState({ date_from: '', date_to: '' });
   const [filters, setFilters] = useState<ReportFilters>({});
+
+  const reportQuery = useQuery<ReportResponse>({
+    queryKey: ['report', filters],
+    queryFn: () => getReport(filters),
+  });
+  const { data, isError: error, isLoading: loading } = reportQuery;
   const stageChartHeight = Math.max(
     360,
     data?.by_stage.length ? data.by_stage.length * 42 + 48 : 360,
   );
 
   useEffect(() => {
-    setLoading(true);
-    setError(false);
-    getReport(filters)
-      .then((report) => setData(report))
-      .catch(() => {
-        setError(true);
-        message.error('Не удалось загрузить отчёт');
-      })
-      .finally(() => setLoading(false));
-  }, [filters]);
+    if (error) {
+      message.error('Не удалось загрузить отчёт');
+    }
+  }, [error]);
 
   const handleExport = async (format: 'xlsx' | 'xls' | 'pdf') => {
     setExporting(format);
