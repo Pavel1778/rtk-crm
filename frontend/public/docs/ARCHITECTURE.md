@@ -1,258 +1,238 @@
-# Архитектура RTK CRM
+# 🏗 Архитектура RTK CRM
 
 ## Обзор системы
 
-RTK CRM — это веб-приложение для управления взаимодействиями с вузами-партнёрами, разработанное для хакатона ЛЦТ 2026.
+RTK CRM — это B2B CRM-система для менеджеров Ростелекома, управляющих взаимодействием с вузами. Система реализует полный цикл из 14 этапов воркфлоу.
+
+## Диаграммы
+
+- [C4 Context](c4-context.md)
+- [C4 Components](c4-components.md)
+- [Текущее развёртывание](deployment-current.md)
+- [Целевое развёртывание в Yandex Cloud](deployment-yandex-cloud.md)
+
+## Диаграмма компонентов
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │   Browser   │  │   Mobile    │  │   Admin     │         │
+│  │   (React)   │  │   App       │  │   Panel     │         │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
+└─────────┼────────────────┼────────────────┼────────────────┘
+          │                │                │
+          └────────────────┼────────────────┘
+                           │ HTTPS (443)
+                    ┌──────▼──────┐
+                    │   Nginx     │  ← Reverse Proxy, SSL, Static
+                    └──────┬──────┘
+                           │
+          ┌────────────────┼────────────────┐
+          │                │                │
+   ┌──────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐
+   │  Frontend   │  │   Backend   │  │   Keycloak  │
+   │  (Port 3000)│  │  (Port 8000)│  │  (Port 8080)│
+   │   React     │  │   FastAPI   │  │   OAuth2    │
+   └─────────────┘  └──────┬──────┘  └─────────────┘
+                           │
+                ┌──────────┼──────────┐
+                │          │          │
+         ┌──────▼───┐  ┌──▼────┐  ┌──▼──────┐
+         │ Postgres │  │ Redis │  │  Files  │
+         │  (5432)  │  │(6379) │  │ Storage │
+         └──────────┘  └───────┘  └─────────┘
+```
 
 ## Технологический стек
 
 ### Backend
-
-- **Язык:** Python 3.11
-- **Фреймворк:** FastAPI
-- **ORM:** SQLAlchemy (async)
-- **База данных:** PostgreSQL (Supabase)
-- **Аутентификация:** JWT (python-jose)
-- **Хеширование паролей:** bcrypt (passlib)
-- **Миграции:** Alembic
-- **Асинхронный драйвер:** asyncpg
+- **Язык**: Python 3.11
+- **Фреймворк**: FastAPI 0.104
+- **ORM**: SQLAlchemy 2.0 (AsyncIO)
+- **Валидация**: Pydantic v2
+- **Миграции**: Alembic
+- **Аутентификация**: python-jose, passlib
 
 ### Frontend
+- **Фреймворк**: React 18
+- **Язык**: TypeScript 5.x
+- **Сборка**: Vite
+- **UI Kit**: Ant Design
+- **HTTP клиент**: Axios
 
-- **Язык:** TypeScript
-- **Фреймворк:** React 18
-- **Сборщик:** Vite
-- **UI библиотека:** Ant Design
-- **State management:** Zustand
-- **HTTP клиент:** Axios
-- **Графики:** Recharts
-- **Drag-and-drop:** @dnd-kit
+### Базы данных
+- **Основная**: PostgreSQL 16 (ACID, JSONB, Full-text search)
+- **Кэш**: Redis 7 (Sessions, Cache, Queue)
 
 ### Инфраструктура
+- **Контейнеризация**: Docker, Docker Compose
+- **Web Server**: Nginx (Alpine)
+- **Auth Server**: Keycloak 24.0
 
-- **Backend хостинг:** Render (Docker)
-- **Frontend хостинг:** Vercel
-- **База данных:** Supabase (PostgreSQL)
-- **File storage:** Локальная файловая система
-
-## Архитектура приложения
-
-### Слоистая архитектура
+## Модульная архитектура Backend
 
 ```
-┌─────────────────────────────────────┐
-│         Frontend (React)            │
-│  ┌───────────────────────────────┐  │
-│  │  Components (Ant Design)     │  │
-│  │  State (Zustand)             │  │
-│  │  API Client (Axios)          │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-                 │ HTTP/HTTPS
-                 ▼
-┌─────────────────────────────────────┐
-│         Backend (FastAPI)           │
-│  ┌───────────────────────────────┐  │
-│  │  API Layer (routes)           │  │
-│  │  Services (business logic)    │  │
-│  │  Models (SQLAlchemy)          │  │
-│  │  Schemas (Pydantic)           │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-                 │ asyncpg
-                 ▼
-┌─────────────────────────────────────┐
-│      Database (PostgreSQL)          │
-│  ┌───────────────────────────────┐  │
-│  │  Users                       │  │
-│  │  Universities                 │  │
-│  │  Interactions                │  │
-│  │  Workflow Stages             │  │
-│  │  Files                       │  │
-│  │  Audit Log                   │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
+backend/
+├── app/
+│   ├── main.py              # Точка входа, middleware
+│   ├── database.py          # DB подключение, сессии
+│   ├── config.py            # Настройки (pydantic-settings)
+│   │
+│   ├── models/              # SQLAlchemy модели
+│   │   ├── __init__.py
+│   │   ├── university.py    # Вузы
+│   │   ├── workflow.py      # Этапы воркфлоу
+│   │   ├── user.py          # Пользователи, роли
+│   │   ├── file.py          # Прикрепленные файлы
+│   │   ├── log.py           # Action Log (152-ФЗ)
+│   │   └── comment.py       # Комментарии
+│   │
+│   ├── schemas/             # Pydantic схемы (DTO)
+│   │   ├── __init__.py
+│   │   ├── university.py
+│   │   ├── workflow.py
+│   │   ├── user.py
+│   │   └── auth.py
+│   │
+│   ├── api/                 # API роутеры (REST)
+│   │   ├── __init__.py
+│   │   ├── universities.py  # CRUD вузов
+│   │   ├── workflow.py      # Управление этапами
+│   │   ├── reports.py       # Генерация отчетов
+│   │   ├── files.py         # Загрузка файлов
+│   │   └── auth.py          # Логин, JWT
+│   │
+│   └── services/            # Бизнес-логика
+│       ├── __init__.py
+│       ├── reports.py       # PDF/XLSX генерация
+│       ├── audit_logger.py  # Логирование (ФСТЭК)
+│       └── workflow_service.py
+│
+├── alembic/                 # Миграции БД
+├── seed.py                  # Тестовые данные
+└── requirements.txt
 ```
 
-## Модель данных
+## Схема базы данных
 
-### Основные сущности
+### Основные таблицы
 
-#### User (Пользователь)
-- id, email, full_name, hashed_password
-- role (user/manager/admin)
-- is_active, is_admin
-- created_at, updated_at
+1. **universities** — Вузы и контракты
+   - `id`, `name`, `vendor`, `product`
+   - `contract_number`, `license_signed`, `license_expiry_year`
+   - `status`, `manager_name`, `university_responsible`
+   - `current_workflow_stage_id` (FK → workflow_stages)
 
-#### University (Вуз)
-- id, name, city, contact_person
-- created_at, updated_at
+2. **workflow_stages** — 14 этапов воркфлоу
+   - `id`, `name`, `order` (1-14), `description`
+   - `is_active`
 
-#### ITDirection (ИТ-направление)
-- id, name
-- created_at, updated_at
+3. **users** — Пользователи системы
+   - `id`, `username`, `email`, `hashed_password`
+   - `role` (enum: user, manager, admin)
+   - `is_active`, `last_login`
 
-#### ITProduct (ИТ-продукт)
-- id, name, direction_id
-- created_at, updated_at
+4. **attached_files** — Файлы
+   - `id`, `university_id` (FK)
+   - `file_name`, `file_path`, `mime_type`, `file_size`
+   - `uploaded_by`
 
-#### WorkflowStage (Этап воркфлоу)
-- id, code, name, order, color
-- is_active
-- created_at, updated_at
+5. **action_logs** — Журнал действий (152-ФЗ)
+   - `id`, `university_id` (FK)
+   - `action`, `description`, `user`, `ip_address`
+   - `old_value`, `new_value` (JSON)
+   - `created_at` (индекс для аудита)
 
-#### Interaction (Взаимодействие)
-- id, university_id, product_id, stage_id
-- assigned_kam_id, university_specialist
-- contract_number, contract_date
-- notes, is_active
-- created_at, updated_at
+6. **comments** — Комментарии
+   - `id`, `university_id` (FK)
+   - `text`, `author`, `created_at`
 
-#### Action (Задача)
-- id, interaction_id, title, description
-- due_date, is_completed
-- created_at, updated_at
+## Безопасность и 152-ФЗ
 
-#### AttachedFile (Файл)
-- id, interaction_id, filename
-- file_path, mime_type, file_size
-- created_at
+### RBAC (Role-Based Access Control)
 
-#### ActionLog (Аудит)
-- id, user_id, action, entity_type
-- entity_id, ip_address
-- created_at
+| Роль | Права |
+|------|-------|
+| **User** | Чтение вузов, комментарии |
+| **Manager** | CRUD вузов, загрузка файлов, перемещение по воркфлоу |
+| **Admin** | Полный доступ, управление пользователями, логи |
 
-## API Эндпоинты
+### Логирование (ФСТЭК)
+
+Все действия записываются в `action_logs`:
+- Кто (user, ip_address)
+- Что сделал (action, old_value, new_value)
+- Когда (created_at)
+- С чем (university_id)
 
 ### Аутентификация
-- POST /api/auth/login — вход
-- GET /api/auth/me — текущий пользователь
-- GET /api/auth/users — список пользователей (admin)
-- POST /api/auth/users — создание пользователя (admin)
-- PATCH /api/auth/users/{id} — редактирование (admin)
-- DELETE /api/auth/users/{id} — удаление (admin)
 
-### Справочники
-- GET /api/universities — список вузов
-- POST /api/universities — создание (manager/admin)
-- PATCH /api/universities/{id} — редактирование (manager/admin)
-- DELETE /api/universities/{id} — удаление (manager/admin)
+- Keycloak (OAuth2 / OpenID Connect)
+- JWT токены (access + refresh)
+- HTTPS обязательный
 
-- GET /api/directions — список направлений
-- POST /api/directions — создание (manager/admin)
-- DELETE /api/directions/{id} — удаление (manager/admin)
+## API Endpoints
 
-- GET /api/products — список продуктов
-- POST /api/products — создание (manager/admin)
-- DELETE /api/products/{id} — удаление (manager/admin)
+### Universities
+- `GET /api/v1/universities/` — список вузов (фильтрация, пагинация)
+- `GET /api/v1/universities/{id}` — детали вуза
+- `POST /api/v1/universities/` — создать вуз
+- `PUT /api/v1/universities/{id}` — обновить вуз
+- `DELETE /api/v1/universities/{id}` — удалить вуз
 
-### Воркфлоу
-- GET /api/stages — список этапов
-- POST /api/stages — создание (admin)
-- PATCH /api/stages/{id} — редактирование (admin)
-- DELETE /api/stages/{id} — удаление (admin)
+### Workflow
+- `GET /api/v1/workflow/stages/` — список этапов
+- `PUT /api/v1/universities/{id}/stage` — переместить на этап
 
-### Взаимодействия
-- GET /api/interactions/board — канбан-доска
-- GET /api/interactions — список взаимодействий
-- POST /api/interactions — создание
-- PATCH /api/interactions/{id} — редактирование
-- DELETE /api/interactions/{id} — удаление
-- POST /api/interactions/{id}/move — перемещение между этапами
+### Reports
+- `GET /api/v1/reports/pdf?status=...` — PDF отчет
+- `GET /api/v1/reports/xlsx?manager=...` — XLSX отчет
 
-### Файлы
-- POST /api/files/interactions/{id}/upload — загрузка
-- GET /api/files/{id}/download — скачивание
-- DELETE /api/files/{id} — удаление
+### Files
+- `POST /api/v1/files/upload/` — загрузить файл
+- `GET /api/v1/files/{id}/` — скачать файл
+- `DELETE /api/v1/files/{id}/` — удалить файл
 
-### Отчёты
-- GET /api/reports — сводка
-- GET /api/reports/xlsx — экспорт XLSX
-- GET /api/reports/xls — экспорт XLS
-- GET /api/reports/pdf — экспорт PDF
-- GET /api/reports/json — экспорт JSON (LMS)
+### Auth
+- `POST /api/v1/auth/login/` — получить JWT
+- `POST /api/v1/auth/refresh/` — обновить JWT
+- `POST /api/v1/auth/logout/` — logout
 
-## Безопасность
+## Масштабируемость
 
-### Аутентификация и авторизация
+### Горизонтальное масштабирование
+- Backend: несколько инстансов через Docker Swarm / Kubernetes
+- Database: репликация PostgreSQL (master-slave)
+- Cache: Redis Cluster
 
-- JWT-токены с временем жизни 24 часа
-- Ролевая модель доступа (RBAC)
-- Проверка прав на каждом эндпоинте
+### Оптимизация
+- Индексы на часто используемых полях (status, manager_name, created_at)
+- Кеширование запросов в Redis
+- Асинхронные операции (asyncpg, aiofiles)
 
-### Аудит
+## Мониторинг и логирование
 
-- Middleware для записи всех mutating запросов
-- Соответствие 152-ФЗ
-- Хранение логов в базе данных
-
-### Шифрование
-
-- bcrypt для хеширования паролей
-- HTTPS для передачи данных
+- Health checks: `/health` endpoint
+- Логи: stdout/stderr (Docker logs)
+- Метрики: Prometheus exporter (опционально)
 
 ## Развертывание
 
-### Backend (Render)
+### Production чеклист
 
-- Dockerfile для контейнеризации
-- Переменные окружения:
-  - DATABASE_URL
-  - SECRET_KEY
-  - CORS_ORIGINS
-  - SEED_DEMO_DATA
+- [ ] Заменить SECRET_KEY на случайную строку
+- [ ] Настроить HTTPS сертификаты
+- [ ] Включить backup PostgreSQL
+- [ ] Настроить мониторинг
+- [ ] Ограничить доступ к админке
+- [ ] Включить rate limiting
 
-### Frontend (Vercel)
+## Контакты
 
-- Vite для сборки
-- Переменные окружения:
-  - VITE_API_URL
-
-### Database (Supabase)
-
-- PostgreSQL 15
-- Connection pooling через pgbouncer
-- Ежедневные бэкапы
-
-## Производительность
-
-### Кэширование
-
-- React Query для кэширования API-запросов
-- staleTime: 5 минут
-- gcTime: 10 минут
-
-### Оптимизация
-
-- Асинхронные запросы к БД
-- Индексы на frequently queried поля
-- Lazy loading для больших списков
-
-## Мониторинг
-
-### Логи
-
-- Uvicorn access logs
-- Application logs через loguru
-- Audit logs в базе данных
-
-### Health checks
-
-- GET /health — базовая проверка
-- GET /api/health — проверка с БД
-- GET /api/debug/cors — диагностика CORS
-
-## Дальнейшее развитие
-
-### Планируемые улучшения
-
-- WebSocket для real-time обновлений
-- Full-text поиск по взаимодействиям
-- Advanced analytics и отчёты
-- Mobile приложение (React Native)
-- Интеграция с календарем
-- Автоматические напоминания
+Команда разработки: team@rtk-crm.ru
+Хакатон: "Лидеры цифровой трансформации 2026"
+Кейс №6: ИТ Школа Ростелекома
 
 ## План миграции в Yandex Cloud
 
