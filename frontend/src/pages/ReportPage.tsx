@@ -21,6 +21,10 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const stageChartHeight = Math.max(
+    360,
+    data?.by_stage.length ? data.by_stage.length * 42 + 48 : 360,
+  );
 
   useEffect(() => {
     api.get('/api/reports')
@@ -119,8 +123,12 @@ export default function ReportPage() {
           <EmptyState title="Нет данных" />
         ) : (
           <div
-            className="chart-container"
-            style={{ height: isMobile ? 500 : 600 }}
+            className="chart-container report-stage-chart"
+            style={{
+              height: isMobile
+                ? Math.max(420, data.by_stage.length * 38)
+                : stageChartHeight,
+            }}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -128,20 +136,27 @@ export default function ReportPage() {
                 layout="vertical"
                 margin={{
                   top: 8,
-                  right: 30,
-                  left: 0,
+                  right: 20,
+                  left: 8,
                   bottom: 8,
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" horizontal={isMobile} vertical={!isMobile} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#EEEEF2"
+                  horizontal
+                  vertical={false}
+                />
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={isMobile ? 150 : 220}
+                  width={isMobile ? 185 : 280}
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: string) =>
-                    value.length > 32 ? `${value.slice(0, 30)}…` : value
+                    value.length > (isMobile ? 25 : 42)
+                      ? `${value.slice(0, isMobile ? 23 : 40)}…`
+                      : value
                   }
                 />
                 <Tooltip
@@ -164,11 +179,7 @@ export default function ReportPage() {
 
       {/* Два графика в ряд */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-          gap: 24,
-        }}
+        className="report-chart-grid"
       >
         {/* Доля продуктов */}
         <Card title="Доля продуктов" style={{ borderRadius: 12 }}>
@@ -209,7 +220,7 @@ export default function ReportPage() {
         {/* Динамика за 30 дней */}
         <Card title="Динамика за 30 дней" style={{ borderRadius: 12 }}>
           {data.dynamics.length === 0 ? (
-            <EmptyState title="Нет данных" />
+            <EmptyState title="Нет данных за последние 30 дней" />
           ) : (
             <div className="chart-container" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
