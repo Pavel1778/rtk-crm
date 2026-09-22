@@ -27,6 +27,7 @@ export RTK_TEST_PASSWORD="kam123"
 
 ```bash
 locust -f tests/load/locustfile.py \
+  RTKUser \
   --headless \
   -u 50 \
   -r 5 \
@@ -51,6 +52,25 @@ locust -f tests/load/locustfile.py --host=http://localhost:8000
 
 `report.html` создаётся только после реального запуска против тестового
 окружения и намеренно не подменяется синтетическими результатами.
+
+## 10 параллельных отчётов
+
+Сценарий `ReportsUser` выполняет отчёты с разными фильтрами. Запуск ровно
+десяти одновременных пользователей:
+
+```bash
+locust -f tests/load/locustfile.py ReportsUser \
+  --headless \
+  -u 10 \
+  -r 10 \
+  -t 30s \
+  --host=http://localhost:8000 \
+  --html=tests/load/report-10-reports.html
+```
+
+`report-10-reports.html` создаётся только реальным прогоном. Результаты
+записываются после проверки доступности тестового backend; синтетические
+цифры в репозиторий не добавляются.
 
 ## Локальный прогон 22.09.2026
 
