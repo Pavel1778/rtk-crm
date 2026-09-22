@@ -12,6 +12,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 import { useAuthStore, useRole } from '../stores/authStore';
+import AppFooter from './AppFooter';
 
 const { Header, Content } = Layout;
 
@@ -114,6 +115,7 @@ export default function MainLayout() {
       <Content style={{ padding: screens.md ? 24 : 12 }}>
         <Outlet />
       </Content>
+      <AppFooter />
     </Layout>
   );
 }
