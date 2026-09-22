@@ -160,7 +160,11 @@ async def get_board(
     current: User = Depends(get_current_user),
 ) -> BoardResponse:
     """Колонки = этапы воркфлоу, карточки = взаимодействия."""
-    stmt = select(WorkflowStageRef).order_by(WorkflowStageRef.order)
+    stmt = (
+        select(WorkflowStageRef)
+        .where(WorkflowStageRef.is_active.is_(True))
+        .order_by(WorkflowStageRef.order)
+    )
 
     filters: list = [Interaction.is_active.is_(True)]
     if product_id is not None:
