@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.security import get_current_user
+from app.auth.security import get_current_user, require_manager_or_admin
 from app.db.session import get_db
 from app.models.entities import (
     Interaction,
@@ -34,7 +34,7 @@ async def list_directions(
 async def create_direction(
     payload: ITDirectionCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_manager_or_admin),
 ) -> ITDirection:
     exists = await db.scalar(
         select(ITDirection.id).where(ITDirection.name == payload.name)
@@ -54,7 +54,7 @@ async def create_direction(
 async def delete_direction(
     direction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_manager_or_admin),
 ) -> None:
     """Удаление направления вместе с привязанными продуктами."""
     direction = await db.get(ITDirection, direction_id)
@@ -104,7 +104,7 @@ async def list_products(
 async def create_product(
     payload: ITProductCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_manager_or_admin),
 ) -> ITProductRead:
     exists = await db.scalar(
         select(ITProduct.id).where(ITProduct.name == payload.name)
@@ -138,7 +138,7 @@ async def create_product(
 async def delete_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_manager_or_admin),
 ) -> None:
     product = await db.get(ITProduct, product_id)
     if product is None:

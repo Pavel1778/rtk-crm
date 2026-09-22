@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.security import get_current_user
+from app.auth.security import require_manager_or_admin
 from app.db.session import get_db
 from app.models.entities import ITDirection, ITProduct, University, User
 from app.schemas.entities import ITProductCreate, UniversityCreate
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/catalogs", tags=["catalogs"])
 async def preview_catalog_import(
     catalog_type: str,
     file: UploadFile = File(...),
-    current: User = Depends(get_current_user),
+    current: User = Depends(require_manager_or_admin),
 ) -> dict:
     """Предпросмотр импорта каталога (валидация без сохранения).
     
@@ -34,7 +34,7 @@ async def preview_catalog_import(
             detail="catalog_type должен быть 'universities' или 'products'"
         )
     
-    if not file.filename.endswith((".xlsx", ".xls")):
+    if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(
             status_code=400,
             detail="Файл должен быть в формате Excel (.xlsx или .xls)"
@@ -56,7 +56,7 @@ async def execute_catalog_import(
     catalog_type: str,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current: User = Depends(get_current_user),
+    current: User = Depends(require_manager_or_admin),
 ) -> dict:
     """Выполнение импорта каталога (с сохранением в БД).
     
@@ -73,7 +73,7 @@ async def execute_catalog_import(
             detail="catalog_type должен быть 'universities' или 'products'"
         )
     
-    if not file.filename.endswith((".xlsx", ".xls")):
+    if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(
             status_code=400,
             detail="Файл должен быть в формате Excel (.xlsx или .xls)"

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.security import get_current_user
+from app.auth.security import get_current_user, require_manager_or_admin
 from app.db.session import get_db
 from app.models.entities import Interaction, University, User
 from app.schemas.entities import (
@@ -47,7 +47,7 @@ async def get_university(
 async def create_university(
     payload: UniversityCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_manager_or_admin),
 ) -> University:
     university = University(**payload.model_dump())
     db.add(university)
@@ -61,7 +61,7 @@ async def update_university(
     university_id: int,
     payload: UniversityUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_manager_or_admin),
 ) -> University:
     university = await _get_or_404(db, university_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -75,7 +75,7 @@ async def update_university(
 async def delete_university(
     university_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_manager_or_admin),
 ) -> None:
     """Удаление вуза. Запрещено, если есть активные взаимодействия."""
     university = await _get_or_404(db, university_id)

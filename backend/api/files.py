@@ -25,10 +25,25 @@ ALLOWED_MIME_TYPES = {
     "application/zip",
     "application/gzip",
     "application/x-rar-compressed",
+    "application/vnd.rar",
+    "application/x-gzip",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+ALLOWED_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".pdf",
+    ".zip",
+    ".gz",
+    ".rar",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
 }
 
 # Максимальный размер файла (50 МБ)
@@ -57,10 +72,15 @@ async def upload_file(
         raise HTTPException(status_code=404, detail="Взаимодействие не найдено")
     
     # Проверка MIME-типа
-    if file.content_type not in ALLOWED_MIME_TYPES:
+    filename = file.filename or ""
+    extension = Path(filename).suffix.lower()
+    if (
+        file.content_type not in ALLOWED_MIME_TYPES
+        or extension not in ALLOWED_EXTENSIONS
+    ):
         raise HTTPException(
             status_code=400,
-            detail=f"Недопустимый тип файла: {file.content_type}. Разрешены: {', '.join(ALLOWED_MIME_TYPES)}"
+            detail="Недопустимый формат файла. Разрешены PNG, JPEG, PDF, ZIP, GZIP, RAR, DOC, DOCX, XLS и XLSX",
         )
     
     # Чтение содержимого файла
@@ -74,7 +94,7 @@ async def upload_file(
         )
     
     # Генерация уникального имени файла
-    file_ext = Path(file.filename).suffix
+    file_ext = extension
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     
     # Создание директории для взаимодействия
@@ -89,7 +109,7 @@ async def upload_file(
     # Создание записи в БД
     attached_file = AttachedFile(
         interaction_id=interaction_id,
-        filename=file.filename,
+        filename=filename,
         file_path=str(file_path),
         size=len(content),
         mime_type=file.content_type,
