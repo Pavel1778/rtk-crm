@@ -305,10 +305,10 @@ class ReportDynamicsPoint(BaseModel):
 class ReportResponse(BaseModel):
     metrics: list[ReportMetric]
     stage_progress: list[StageProgress]
-    by_stage: list[ReportStage] = []
-    by_product: list[ReportProduct] = []
-    dynamics: list[ReportDynamicsPoint] = []
-    totals: dict[str, int] = {}
+    by_stage: list[ReportStage] = Field(default_factory=list)
+    by_product: list[ReportProduct] = Field(default_factory=list)
+    dynamics: list[ReportDynamicsPoint] = Field(default_factory=list)
+    totals: dict[str, int] = Field(default_factory=dict)
     generated_at: datetime
 
 

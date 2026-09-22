@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, message, Spin } from 'antd';
+import { Card, Empty, Result, Skeleton, message } from 'antd';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -19,12 +19,16 @@ export default function ReportPage() {
   const isMobile = device === 'mobile';
   const [data, setData] = useState<ReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
     api.get('/api/reports')
       .then((res) => setData(res.data))
-      .catch(() => message.error('Не удалось загрузить отчёт'))
+      .catch(() => {
+        setError(true);
+        message.error('Не удалось загрузить отчёт');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -42,8 +46,16 @@ export default function ReportPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: 'center' }}>
-        <Spin size="large" />
+      <div className="page-container">
+        <Skeleton active paragraph={{ rows: 12 }} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-container">
+        <Result status="warning" title="Не удалось загрузить отчёт" />
       </div>
     );
   }
@@ -52,10 +64,7 @@ export default function ReportPage() {
     return (
       <div className="page-container">
         <h1>Отчёты</h1>
-        <EmptyState
-          title="Нет данных"
-          description="Не удалось загрузить отчёт"
-        />
+        <Empty description="Нет данных за выбранный период" />
       </div>
     );
   }
