@@ -211,8 +211,11 @@ export const downloadReport = async (
     timeout: 60_000,
   });
   const disposition = response.headers['content-disposition'] as string | undefined;
-  const match = disposition?.match(/filename="?([^"]+)"?/i);
+  const encodedName = disposition?.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  const plainName = disposition?.match(/filename="?([^"]+)"?/i)?.[1];
   const extension = kind === 'json' ? 'json' : kind;
-  const filename = match?.[1] ?? `rtk-crm-report-${Date.now()}.${extension}`;
+  const filename = encodedName
+    ? decodeURIComponent(encodedName)
+    : plainName ?? `rtk-crm-report-${Date.now()}.${extension}`;
   return { blob: response.data as Blob, filename };
 };

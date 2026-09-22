@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -148,11 +148,17 @@ async def get_report(
             .group_by(func.date(Interaction.created_at))
         )
     ).all()
-    dynamics_by_date = {row.date: row.count for row in dynamics_rows}
+    dynamics_by_date = {
+        str(row.date)[:10]: row.count
+        for row in dynamics_rows
+    }
     dynamics = [
         ReportDynamicsPoint(
             date=(start_date + timedelta(days=offset)).isoformat(),
-            count=dynamics_by_date.get(start_date + timedelta(days=offset), 0),
+            count=dynamics_by_date.get(
+                (start_date + timedelta(days=offset)).isoformat(),
+                0,
+            ),
         )
         for offset in range(30)
     ]
@@ -187,8 +193,8 @@ async def _build_interaction_data(
     stage_id: int | None = None,
     university_id: int | None = None,
     product_id: int | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
 ) -> list[dict]:
     """Построение данных взаимодействий для экспорта."""
     filters: list = [Interaction.is_active.is_(True)]
@@ -198,6 +204,20 @@ async def _build_interaction_data(
         filters.append(Interaction.university_id == university_id)
     if product_id is not None:
         filters.append(Interaction.product_id == product_id)
+    if date_from is not None:
+        filters.append(
+            Interaction.created_at
+            >= datetime.combine(date_from, time.min, tzinfo=timezone.utc)
+        )
+    if date_to is not None:
+        filters.append(
+            Interaction.created_at
+            < datetime.combine(
+                date_to + timedelta(days=1),
+                time.min,
+                tzinfo=timezone.utc,
+            )
+        )
 
     interactions = list(
         await db.scalars(
@@ -235,23 +255,13 @@ async def _build_interaction_data(
     return data
 
 
-@router.options("/xlsx")
-async def xlsx_preflight():
-    """CORS preflight для XLSX экспорта."""
-    return Response(headers={
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-    })
-
-
 @router.get("/xlsx")
 async def export_xlsx(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
-    date_from: str | None = Query(default=None),
-    date_to: str | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
@@ -271,23 +281,13 @@ async def export_xlsx(
     )
 
 
-@router.options("/xls")
-async def xls_preflight():
-    """CORS preflight для XLS экспорта."""
-    return Response(headers={
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-    })
-
-
 @router.get("/xls")
 async def export_xls(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
-    date_from: str | None = Query(default=None),
-    date_to: str | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
@@ -307,23 +307,13 @@ async def export_xls(
     )
 
 
-@router.options("/pdf")
-async def pdf_preflight():
-    """CORS preflight для PDF экспорта."""
-    return Response(headers={
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-    })
-
-
 @router.get("/pdf")
 async def export_pdf(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
-    date_from: str | None = Query(default=None),
-    date_to: str | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
@@ -348,8 +338,8 @@ async def export_json(
     stage_id: int | None = Query(default=None),
     university_id: int | None = Query(default=None),
     product_id: int | None = Query(default=None),
-    date_from: str | None = Query(default=None),
-    date_to: str | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):

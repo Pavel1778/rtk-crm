@@ -168,6 +168,31 @@ img, svg, canvas, video, table { max-width: 100%; }
   .recharts-legend-item-text { font-size: 10px !important; }
 }
 
+.report-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.report-stage-chart .recharts-yAxis .recharts-cartesian-axis-tick-value {
+  fill: #3d3d46;
+}
+
+.report-stage-chart .recharts-bar-rectangle {
+  transition: opacity 0.15s ease;
+}
+
+.report-stage-chart .recharts-bar-rectangle:hover {
+  opacity: 0.78;
+}
+
+@media (max-width: 767px) {
+  .report-chart-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 /* ═══════ КНОПКИ ЭКСПОРТА ═══════ */
 .btn-export {
   padding: 8px 16px;
