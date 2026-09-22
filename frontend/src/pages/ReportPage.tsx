@@ -184,7 +184,7 @@ export default function ReportPage() {
         {/* Доля продуктов */}
         <Card title="Доля продуктов" style={{ borderRadius: 12 }}>
           {data.by_product.length === 0 ? (
-            <EmptyState title="Нет данных" />
+            <EmptyState title="Нет активных взаимодействий с указанным продуктом" />
           ) : (
             <div className="chart-container" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">

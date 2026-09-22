@@ -109,15 +109,20 @@ async def get_report(
                 ITProduct.name,
                 func.count(Interaction.id).label("count"),
             )
-            .join(Interaction, Interaction.product_id == ITProduct.id)
+            .select_from(Interaction)
+            .outerjoin(ITProduct, Interaction.product_id == ITProduct.id)
             .where(active)
             .group_by(ITProduct.id, ITProduct.name)
             .having(func.count(Interaction.id) > 0)
-            .order_by(func.count(Interaction.id).desc(), ITProduct.name)
+            .order_by(func.count(Interaction.id).desc(), ITProduct.name.nulls_last())
         )
     ).all()
     by_product = [
-        ReportProduct(product_id=row.id, name=row.name, count=row.count)
+        ReportProduct(
+            product_id=row.id or 0,
+            name=row.name or "Без продукта",
+            count=row.count,
+        )
         for row in product_rows
     ]
 
