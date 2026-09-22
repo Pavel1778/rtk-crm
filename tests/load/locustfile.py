@@ -48,7 +48,7 @@ class RTKUser(HttpUser):
 class ReportsUser(HttpUser):
     """Отдельный сценарий для параллельного построения отчётов."""
 
-    weight = 0
+    weight = 1
     wait_time = between(0.5, 1.5)
 
     def on_start(self) -> None:
