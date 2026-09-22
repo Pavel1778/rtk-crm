@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     secret_key: str = "development-only-change-me-32-chars"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
+    # JWT remains the active auth mode; Keycloak integration is a future
+    # closed-contour deployment option.
+    mock_mode: bool = True
 
     # CORS — строка через запятую в env
     cors_origins: str = (
