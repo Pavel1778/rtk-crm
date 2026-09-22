@@ -10,6 +10,8 @@ export default function AppFooter() {
         borderTop: '1px solid #EEEEF2',
         background: 'transparent',
         padding: '16px 24px',
+        minHeight: 'max-content',
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom))',
       }}
     >
       <Space wrap size={12} style={{ justifyContent: 'center', width: '100%' }}>
