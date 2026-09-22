@@ -5,12 +5,13 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
   LineChart, Line,
 } from 'recharts';
-import { api, downloadBlob, errorMessage } from '../api/client';
+import { downloadBlob, errorMessage } from '../api/client';
 import { downloadReport } from '../api/endpoints';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
 import type { ReportResponse } from '../types';
+import { getReport, type ReportFilters } from '../api/endpoints';
 
 const COLORS = [
   'var(--atmr-accent-default)',
@@ -28,25 +29,29 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [draftDates, setDraftDates] = useState({ date_from: '', date_to: '' });
+  const [filters, setFilters] = useState<ReportFilters>({});
   const stageChartHeight = Math.max(
     360,
     data?.by_stage.length ? data.by_stage.length * 42 + 48 : 360,
   );
 
   useEffect(() => {
-    api.get('/api/reports')
-      .then((res) => setData(res.data))
+    setLoading(true);
+    setError(false);
+    getReport(filters)
+      .then((report) => setData(report))
       .catch(() => {
         setError(true);
         message.error('Не удалось загрузить отчёт');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [filters]);
 
   const handleExport = async (format: 'xlsx' | 'xls' | 'pdf') => {
     setExporting(format);
     try {
-      const result = await downloadReport(format);
+      const result = await downloadReport(format, filters);
       downloadBlob(result.blob, result.filename);
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось скачать отчёт'));
@@ -108,6 +113,42 @@ export default function ReportPage() {
             Экспорт PDF
           </button>
         </div>
+      </div>
+      <div className="responsive-form report-filters" role="search" aria-label="Фильтры отчёта">
+        <label>
+          С даты
+          <input
+            type="date"
+            value={draftDates.date_from}
+            onChange={(event) => setDraftDates({ ...draftDates, date_from: event.target.value })}
+          />
+        </label>
+        <label>
+          По дату
+          <input
+            type="date"
+            value={draftDates.date_to}
+            onChange={(event) => setDraftDates({ ...draftDates, date_to: event.target.value })}
+          />
+        </label>
+        <button
+          className="btn-export"
+          onClick={() => setFilters({
+            date_from: draftDates.date_from || undefined,
+            date_to: draftDates.date_to || undefined,
+          })}
+        >
+          Применить фильтры
+        </button>
+        <button
+          className="btn-export"
+          onClick={() => {
+            setDraftDates({ date_from: '', date_to: '' });
+            setFilters({});
+          }}
+        >
+          Сбросить
+        </button>
       </div>
 
       {/* KPI-карточки */}
