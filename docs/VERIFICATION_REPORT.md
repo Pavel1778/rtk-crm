@@ -4,9 +4,30 @@
 Ветка: `dev`  
 Репозиторий: `github.com/Pavel1778/rtk-crm`
 
-Проверка выполнена без запуска серверов, Docker Compose и браузерных
-прогонов. Проверены исходный код, конфигурация, документация и генерация
-экспортов в памяти.
+Проверены исходный код, конфигурация, документация, генерация экспортов,
+frontend build и разрешённый Locust-прогон. Браузерный smoke-test и Docker
+Compose не запускались.
+
+## Актуализация после performance/UI блока
+
+Последующие коммиты на `dev`:
+
+| Коммит | Что сделано |
+|---|---|
+| `4cac43e` | Redis/in-process TTL-кэш отчётов, инвалидация после mutations, индексы и устранение N+1 |
+| `853de15` | Отдельный сценарий `ReportsUser` для параллельных отчётов |
+| `0698e76` | Документация JWT/Keycloak, `MOCK_MODE`, production URLs и ссылки проекта |
+| `354f67c` | Vite manual chunks и перевод legacy UI-цветов на `--atmr-*` tokens |
+| `0df43eb` | Исправлен выбор `ReportsUser` в Locust CLI (`weight=1`) |
+
+Фактический локальный прогон на SQLite backend:
+
+- 50 пользователей / 60 секунд: 1613 запросов, 0 ошибок, aggregate p95 93 мс;
+- 10 пользователей `ReportsUser` / 30 секунд: 303 запроса, 0 ошибок,
+  p95 `/api/reports` 7 мс, aggregate p95 77 мс.
+
+Эти значения относятся к локальному SQLite окружению и не являются SLA
+production Render/Supabase.
 
 ## Итог
 
@@ -105,9 +126,9 @@
 
 | Проверка | Статус | Доказательство / примечание |
 |---|---|---|
-| Production response target ≤1 s | `⚠️ Warning` | Предыдущий Locust: 50 пользователей, 1460 запросов, 0% ошибок, aggregate p95 1600 ms; API endpoints без login 37–480 ms. `tests/load/README.md:59-65` |
-| 50 concurrent users | `✅ OK` | `tests/load/README.md:59-60` |
-| 10 concurrent report requests | `⚠️ Warning` | Сценарий проверяет отчёты в общем профиле Locust, отдельный доказательный тест ровно на 10 report requests не зафиксирован |
+| Production response target ≤1 s | `⚠️ Warning` | Локальный прогон достиг aggregate p95 93 мс, но production SLA отдельно не подтверждён |
+| 50 concurrent users | `✅ OK` | Реальный локальный прогон: 1613 запросов, 0 ошибок |
+| 10 concurrent report requests | `✅ OK` | Реальный `ReportsUser`: 303 запроса, 0 ошибок, `/api/reports` p95 7 мс |
 | SPA и viewport | `✅ OK` | `frontend/index.html:5`; React Router и Vite build |
 | Коды 400/401/403/404/409/422/500 | `✅ OK` | Проверены статически по FastAPI routes/handlers; `422` handler: `backend/main.py:74-89` |
 | USER_GUIDE и ADMIN_GUIDE | `✅ OK` | Файлы присутствуют |
@@ -126,7 +147,7 @@
 | Радиусы/spacing/responsive grids | `✅ OK` | `frontend/src/index.css`; report layout |
 | Mobile table/export/chart handling | `✅ OK` | responsive classes in `frontend/src/index.css`; responsive legend in `ReportPage.tsx` |
 | Footer safe-area и max-content | `✅ OK` | `frontend/src/components/AppFooter.tsx:8-15` |
-| Hardcoded colors | `⚠️ Warning` | Ключевые report colors переведены в tokens; в legacy UI остаются отдельные inline/CSS цвета, не влияющие на функциональность |
+| Hardcoded colors | `✅ OK` | Рабочие UI-использования переведены в `--atmr-*`; HEX остались только в определениях токенов и native color inputs |
 | TypeScript build | `✅ OK` | `source ~/.nvm/nvm.sh && npm run build`; build завершён, Vite сообщил только размер bundle >500 KB |
 | Python compileall | `✅ OK` | `python3 -m compileall -q backend/... scripts tests/load` |
 | `git diff --check` | `✅ OK` | Выполнено после финальных правок |
@@ -138,7 +159,6 @@
    состояния не отзывает старые значения.
 2. Отдельно провести разрешённый браузерный UI-pass и сохранить минимум 8 реальных
    screenshots в `docs/images/`.
-3. Оптимизировать login/p95 и повторить Locust до aggregate p95 < 1000 ms.
-4. При необходимости полностью перевести legacy hardcoded CSS colors в tokens.
-5. При необходимости заменить JWT на Keycloak/добавить явно документированный
+3. Отдельно проверить production latency на Render/Supabase; локальный target достигнут.
+4. При необходимости заменить JWT на Keycloak/добавить явно документированный
    `MOCK_MODE`, если это обязательное условие комиссии, а не альтернативный вариант.
