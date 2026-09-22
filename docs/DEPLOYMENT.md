@@ -21,7 +21,7 @@ Region: **eu-west-1 (Ирландия)**
 
 Connection string (Session Pooler, порт 5432):
 ```
-DATABASE_URL=postgresql+asyncpg://postgres.azdovsiwdyjzoqmltvrv:PnDsBd1778P@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5432/postgres
 ```
 
 Требования:
@@ -52,8 +52,8 @@ DATABASE_URL=postgresql+asyncpg://postgres.azdovsiwdyjzoqmltvrv:PnDsBd1778P@aws-
 
 | Ключ | Значение |
 |---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://postgres.azdovsiwdyjzoqmltvrv:PnDsBd1778P@aws-1-eu-west-1.pooler.supabase.com:5432/postgres` |
-| `SECRET_KEY` | `rtk-crm-2026-hackathon-secret-key-32chars` |
+| `DATABASE_URL` | значение из Supabase, хранить только в Render Environment |
+| `SECRET_KEY` | уникальная строка не менее 32 символов |
 | `CORS_ORIGINS` | `https://rtk-crm-nx4r.vercel.app,http://localhost:5173` |
 | `SEED_DEMO_DATA` | `true` |
 
