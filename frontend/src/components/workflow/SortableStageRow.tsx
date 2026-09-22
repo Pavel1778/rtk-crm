@@ -1,5 +1,5 @@
-import { Button, Popconfirm, Space, Tag } from 'antd';
-import { HolderOutlined } from '@ant-design/icons';
+import { Button, Popconfirm, Space, Tag, Tooltip } from 'antd';
+import { DeleteOutlined, HolderOutlined } from '@ant-design/icons';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import StageToggle from './StageToggle';
@@ -41,14 +41,18 @@ export default function SortableStageRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : (stage.is_active ? 1 : 0.5),
+    opacity: isDragging ? 0.5 : undefined,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="sortable-stage-row"
+      className={
+        stage.is_active
+          ? 'sortable-stage-row'
+          : 'sortable-stage-row workflow-row--disabled'
+      }
       onMouseDown={onDragStart}
       onMouseUp={onDragEnd}
     >
@@ -84,17 +88,18 @@ export default function SortableStageRow({
           </Button>
           <Popconfirm
             title="Удалить этап?"
-            disabled={stage.interaction_count > 0}
+            description={
+              stage.interaction_count > 0
+                ? `На этапе ${stage.interaction_count} активных взаимодействий — потребуется перенос.`
+                : undefined
+            }
+            okText="Продолжить"
+            cancelText="Отмена"
             onConfirm={() => onDelete(stage)}
           >
-            <Button
-              type="link"
-              size="small"
-              danger
-              disabled={stage.interaction_count > 0}
-            >
-              Удалить
-            </Button>
+            <Tooltip title="Удалить этап">
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       </Space>
