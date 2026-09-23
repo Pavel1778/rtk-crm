@@ -395,7 +395,7 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                   {comments.length === 0 && <Empty description="Комментариев нет" />}
                   <Timeline
                     items={comments.map((comment) => ({
-                      color: '#6E41F2',
+                      color: 'var(--atmr-accent-default)',
                       children: (
                         <div>
                           <Space align="baseline">
@@ -476,12 +476,12 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '8px 12px',
-                          border: '1px solid #E0E0E5',
+                          border: '1px solid var(--atmr-border-default)',
                           borderRadius: 6,
                         }}
                       >
                         <Space align="center">
-                          <FileOutlined style={{ color: '#6E41F2' }} />
+                          <FileOutlined style={{ color: 'var(--atmr-accent-default)' }} />
                           <div>
                             <Typography.Text style={{ fontSize: 13 }}>
                               {file.filename}

@@ -1,45 +1,54 @@
 import { useEffect, useState } from 'react';
 import { Card, Empty, Result, Skeleton, message } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
   LineChart, Line,
 } from 'recharts';
-import { api, downloadBlob, errorMessage } from '../api/client';
-import { downloadReport } from '../api/endpoints';
+import { downloadBlob, errorMessage } from '../api/client';
+import { downloadReport, getReport, type ReportFilters } from '../api/endpoints';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
 import type { ReportResponse } from '../types';
 
-const COLORS = ['#6E41F2', '#00AC43', '#F5A623', '#E5484D', '#3B82F6', '#8B5CF6'];
+const COLORS = [
+  'var(--atmr-accent-default)',
+  'var(--atmr-success-default)',
+  'var(--atmr-warning-default)',
+  'var(--atmr-error-default)',
+  'var(--atmr-info-default)',
+  'var(--atmr-accent-muted)',
+];
 
 export default function ReportPage() {
   const device = useDevice();
   const isMobile = device === 'mobile';
-  const [data, setData] = useState<ReportResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [draftDates, setDraftDates] = useState({ date_from: '', date_to: '' });
+  const [filters, setFilters] = useState<ReportFilters>({});
+
+  const reportQuery = useQuery<ReportResponse>({
+    queryKey: ['report', filters],
+    queryFn: () => getReport(filters),
+  });
+  const { data, isError: error, isLoading: loading } = reportQuery;
   const stageChartHeight = Math.max(
     360,
     data?.by_stage.length ? data.by_stage.length * 42 + 48 : 360,
   );
 
   useEffect(() => {
-    api.get('/api/reports')
-      .then((res) => setData(res.data))
-      .catch(() => {
-        setError(true);
-        message.error('Не удалось загрузить отчёт');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    if (error) {
+      message.error('Не удалось загрузить отчёт');
+    }
+  }, [error]);
 
   const handleExport = async (format: 'xlsx' | 'xls' | 'pdf') => {
     setExporting(format);
     try {
-      const result = await downloadReport(format);
+      const result = await downloadReport(format, filters);
       downloadBlob(result.blob, result.filename);
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось скачать отчёт'));
@@ -102,6 +111,42 @@ export default function ReportPage() {
           </button>
         </div>
       </div>
+      <div className="responsive-form report-filters" role="search" aria-label="Фильтры отчёта">
+        <label>
+          С даты
+          <input
+            type="date"
+            value={draftDates.date_from}
+            onChange={(event) => setDraftDates({ ...draftDates, date_from: event.target.value })}
+          />
+        </label>
+        <label>
+          По дату
+          <input
+            type="date"
+            value={draftDates.date_to}
+            onChange={(event) => setDraftDates({ ...draftDates, date_to: event.target.value })}
+          />
+        </label>
+        <button
+          className="btn-export"
+          onClick={() => setFilters({
+            date_from: draftDates.date_from || undefined,
+            date_to: draftDates.date_to || undefined,
+          })}
+        >
+          Применить фильтры
+        </button>
+        <button
+          className="btn-export"
+          onClick={() => {
+            setDraftDates({ date_from: '', date_to: '' });
+            setFilters({});
+          }}
+        >
+          Сбросить
+        </button>
+      </div>
 
       {/* KPI-карточки */}
       <div className="stats-grid" style={{ marginBottom: 24 }}>
@@ -143,7 +188,7 @@ export default function ReportPage() {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#EEEEF2"
+                  stroke="var(--atmr-border-default)"
                   horizontal
                   vertical={false}
                 />
@@ -151,7 +196,7 @@ export default function ReportPage() {
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={isMobile ? 185 : 280}
+                  width={240}
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: string) =>
                     value.length > (isMobile ? 25 : 42)
@@ -161,6 +206,7 @@ export default function ReportPage() {
                 />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  labelFormatter={(label) => String(label)}
                   formatter={(value) => [
                     Number(value ?? 0),
                     'Взаимодействий',
@@ -168,7 +214,7 @@ export default function ReportPage() {
                 />
                 <Bar 
                   dataKey="count" 
-                  fill="#6E41F2" 
+                  fill="var(--atmr-accent-default)"
                   radius={isMobile ? [6, 6, 0, 0] : [0, 6, 6, 0]} 
                 />
               </BarChart>
@@ -184,7 +230,7 @@ export default function ReportPage() {
         {/* Доля продуктов */}
         <Card title="Доля продуктов" style={{ borderRadius: 12 }}>
           {data.by_product.length === 0 ? (
-            <EmptyState title="Нет данных" />
+            <EmptyState title="Нет активных взаимодействий с указанным продуктом" />
           ) : (
             <div className="chart-container" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -195,8 +241,8 @@ export default function ReportPage() {
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
+                    innerRadius={60}
+                    outerRadius={100}
                     paddingAngle={2}
                   >
                     {data.by_product.map((_, i) => (
@@ -205,7 +251,9 @@ export default function ReportPage() {
                   </Pie>
                   <Tooltip formatter={(value) => [value, 'Взаимодействий']} />
                   <Legend
-                    verticalAlign="bottom"
+                    layout={isMobile ? 'horizontal' : 'vertical'}
+                    align={isMobile ? 'center' : 'right'}
+                    verticalAlign={isMobile ? 'bottom' : 'middle'}
                     wrapperStyle={{ fontSize: 11 }}
                     formatter={(value: string) =>
                       value.length > 24 ? `${value.slice(0, 22)}…` : value
@@ -225,7 +273,7 @@ export default function ReportPage() {
             <div className="chart-container" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.dynamics} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEF2" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--atmr-border-default)" />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: isMobile ? 10 : 11 }}
@@ -237,9 +285,9 @@ export default function ReportPage() {
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#6E41F2"
+                    stroke="var(--atmr-accent-default)"
                     strokeWidth={2}
-                    dot={!isMobile}
+                    dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>

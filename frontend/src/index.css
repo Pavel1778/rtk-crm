@@ -1,3 +1,37 @@
+:root {
+  --atmr-accent-default: #6E41F2;
+  --atmr-bg-page: #F5F5F7;
+  --atmr-bg-container: #FFFFFF;
+  --atmr-fg-default: #1C1D22;
+  --atmr-fg-muted: #6B6B72;
+  --atmr-border-default: #E0E0E5;
+  --atmr-border-soft: #EEEEF2;
+  --atmr-border-muted: #E5E7EB;
+  --atmr-bg-soft: #F5F5F7;
+  --atmr-bg-dropzone: #F3E5F5;
+  --atmr-fg-subtle: #3D3D46;
+  --atmr-accent-gradient-start: #6E41F2;
+  --atmr-accent-gradient-mid: #A88BFA;
+  --atmr-success-default: #00AC43;
+  --atmr-warning-default: #F5A623;
+  --atmr-error-default: #E5484D;
+  --atmr-info-default: #3B82F6;
+  --atmr-accent-muted: #8B5CF6;
+}
+
+.Theme_root_rtk_purple_light {
+  color-scheme: light;
+}
+
+.Theme_root_rtk_purple_dark {
+  color-scheme: dark;
+  --atmr-bg-page: #1C1D22;
+  --atmr-bg-container: #2A2B31;
+  --atmr-fg-default: #FFFFFF;
+  --atmr-fg-muted: #B8B8C0;
+  --atmr-border-default: #474850;
+}
+
 /* Базовая адаптивность для всех устройств */
 
 /* Изображения и графика - запрет на вылет из сетки */
@@ -175,7 +209,7 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 
 .report-stage-chart .recharts-yAxis .recharts-cartesian-axis-tick-value {
-  fill: #3d3d46;
+  fill: var(--atmr-fg-subtle);
 }
 
 .report-stage-chart .recharts-bar-rectangle {
@@ -197,17 +231,17 @@ img, svg, canvas, video, table { max-width: 100%; }
 .btn-export {
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid var(--atmr-border-default, #E0E0E5);
-  background: #fff;
-  color: var(--atmr-fg-default, #1C1D22);
+  border: 1px solid var(--atmr-border-default);
+  background: var(--atmr-bg-container);
+  color: var(--atmr-fg-default);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .btn-export:hover {
-  border-color: var(--atmr-accent-default, #6E41F2);
-  color: var(--atmr-accent-default, #6E41F2);
+  border-color: var(--atmr-accent-default);
+  color: var(--atmr-accent-default);
 }
 .btn-export:disabled {
   cursor: wait;
@@ -249,7 +283,12 @@ img, svg, canvas, video, table { max-width: 100%; }
   inset: 0 0 auto;
   z-index: 1200;
   height: 3px;
-  background: linear-gradient(90deg, #6E41F2, #A88BFA, #6E41F2);
+  background: linear-gradient(
+    90deg,
+    var(--atmr-accent-gradient-start),
+    var(--atmr-accent-gradient-mid),
+    var(--atmr-accent-gradient-start)
+  );
   background-size: 200% 100%;
   animation: global-progress 1.2s linear infinite;
 }
@@ -360,7 +399,7 @@ img, svg, canvas, video, table { max-width: 100%; }
 .sortable-stage-row {
   padding: 12px;
   background: #fff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--atmr-border-muted);
   border-radius: 8px;
   cursor: grab;
   transition: box-shadow 0.2s ease;
@@ -373,7 +412,7 @@ img, svg, canvas, video, table { max-width: 100%; }
 /* Выключенный этап в конструкторе воркфлоу */
 .workflow-row--disabled {
   opacity: 0.55;
-  background: #f5f5f7;
+  background: var(--atmr-bg-soft);
 }
 
 /* Баннер согласия на cookie */
@@ -390,7 +429,7 @@ img, svg, canvas, video, table { max-width: 100%; }
   gap: 16px;
   padding: 16px clamp(12px, 3vw, 32px);
   background: #fff;
-  border-top: 1px solid #eeeef2;
+  border-top: 1px solid var(--atmr-border-soft);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
 }
 

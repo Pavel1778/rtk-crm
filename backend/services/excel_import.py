@@ -1,208 +1,269 @@
-"""Импорт каталогов из XLSX файлов."""
+"""Импорт каталогов из XLS и XLSX файлов."""
 
-from typing import Any
+from __future__ import annotations
+
+import json
 from io import BytesIO
+from pathlib import Path
+from typing import Any
+
+try:
+    import xlrd
+except ImportError:  # pragma: no cover
+    xlrd = None
+
+try:
+    from jsonschema import Draft7Validator
+except ImportError:  # pragma: no cover
+    Draft7Validator = None
 
 try:
     from openpyxl import load_workbook
-    OPENPYXL_AVAILABLE = True
-except ImportError:
-    OPENPYXL_AVAILABLE = False
+except ImportError:  # pragma: no cover
+    load_workbook = None
 
 
 class CatalogImportResult:
-    """Результат импорта каталога."""
-    
-    def __init__(self, success: bool, data: list[dict], errors: list[str] = None):
+    """Нормализованный результат импорта каталога."""
+
+    def __init__(
+        self,
+        success: bool,
+        data: list[dict[str, Any]],
+        errors: list[str] | None = None,
+        headers: list[str] | None = None,
+    ):
         self.success = success
         self.data = data
         self.errors = errors or []
-    
-    def to_dict(self) -> dict:
+        self.headers = headers or []
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "success": self.success,
+            "headers": self.headers,
             "data": self.data,
             "errors": self.errors,
-            "count": len(self.data)
+            "count": len(self.data),
         }
 
 
-def parse_catalog_file(file: BytesIO, catalog_type: str) -> CatalogImportResult:
-    """Парсинг файла каталога (вузов или продуктов).
-    
-    Args:
-        file: BytesIO с содержимым файла
-        catalog_type: 'universities' или 'products'
-    
-    Returns:
-        CatalogImportResult с данными и ошибками
-    """
-    if not OPENPYXL_AVAILABLE:
+def parse_catalog_file(
+    file: BytesIO,
+    catalog_type: str,
+    filename: str | None = None,
+    mapping: dict[str, str] | None = None,
+) -> CatalogImportResult:
+    """Разбирает XLS/XLSX и приводит его к общей структуре строк."""
+    if catalog_type not in {"universities", "products"}:
         return CatalogImportResult(
             success=False,
             data=[],
-            errors=["openpyxl не установлен. Установите: pip install openpyxl"]
+            errors=[f"Неизвестный тип каталога: {catalog_type}"],
         )
-    
+
+    suffix = Path(filename or "").suffix.lower() or ".xlsx"
     try:
-        wb = load_workbook(file)
-        ws = wb.active
-        
-        if catalog_type == "universities":
-            return _parse_universities(ws)
-        elif catalog_type == "products":
-            return _parse_products(ws)
-        else:
+        headers, rows = _read_table(file, suffix)
+    except Exception as exc:  # noqa: BLE001
+        return CatalogImportResult(
+            success=False,
+            data=[],
+            errors=[f"Ошибка чтения файла: {exc}"],
+        )
+
+    if catalog_type == "universities":
+        return _parse_universities(headers, rows, mapping)
+    return _parse_products(headers, rows, mapping)
+
+
+def parse_catalog_json(
+    content: bytes,
+    catalog_type: str,
+    mapping: dict[str, str] | None = None,
+) -> CatalogImportResult:
+    """Разбирает JSON-массив каталога через ту же нормализацию, что и Excel."""
+    try:
+        payload = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return CatalogImportResult(False, [], [f"Некорректный JSON: {exc}"])
+
+    records = payload.get("data") if isinstance(payload, dict) else payload
+    if Draft7Validator is not None:
+        validation = Draft7Validator({
+            "oneOf": [
+                {"type": "array", "items": {"type": "object"}},
+                {
+                    "type": "object",
+                    "required": ["data"],
+                    "properties": {
+                        "data": {"type": "array", "items": {"type": "object"}},
+                    },
+                },
+            ],
+        })
+        errors = sorted(validation.iter_errors(payload), key=lambda error: list(error.path))
+        if errors:
             return CatalogImportResult(
-                success=False,
-                data=[],
-                errors=[f"Неизвестный тип каталога: {catalog_type}"]
+                False,
+                [],
+                [f"Ошибка структуры JSON: {errors[0].message}"],
             )
-    except Exception as e:
+    if not isinstance(records, list) or not all(isinstance(item, dict) for item in records):
         return CatalogImportResult(
-            success=False,
-            data=[],
-            errors=[f"Ошибка чтения файла: {str(e)}"]
+            False,
+            [],
+            ["JSON должен содержать массив объектов или объект с полем data"],
         )
+    if not records:
+        return CatalogImportResult(False, [], ["JSON-массив пуст"])
+
+    headers = list(records[0].keys())
+    rows = [[record.get(header) for header in headers] for record in records]
+    if catalog_type == "universities":
+        return _parse_universities(headers, rows, mapping)
+    if catalog_type == "products":
+        return _parse_products(headers, rows, mapping)
+    return CatalogImportResult(False, [], [f"Неизвестный тип каталога: {catalog_type}"])
 
 
-def _parse_universities(worksheet) -> CatalogImportResult:
-    """Парсинг листа с вузами.
-    
-    Ожидаемые колонки:
-    - Название (обязательно)
-    - Город
-    - Контактное лицо
-    - Email
-    - Телефон
-    """
-    data = []
-    errors = []
-    
-    # Проверяем заголовки
-    headers = []
-    for cell in worksheet[1]:
-        headers.append(cell.value)
-    
-    if not headers or all(h is None for h in headers):
-        return CatalogImportResult(
-            success=False,
-            data=[],
-            errors=["Файл пуст или отсутствуют заголовки"]
-        )
-    
-    # Нормализуем заголовки
-    header_map = {
+def _read_table(file: BytesIO, suffix: str) -> tuple[list[str], list[list[Any]]]:
+    if suffix == ".xls":
+        if xlrd is None:
+            raise RuntimeError("xlrd не установлен. Установите xlrd==1.2.0")
+        workbook = xlrd.open_workbook(file_contents=file.read())
+        sheet = workbook.sheet_by_index(0)
+        rows = [sheet.row_values(row_index) for row_index in range(sheet.nrows)]
+    elif suffix == ".xlsx":
+        if load_workbook is None:
+            raise RuntimeError("openpyxl не установлен")
+        workbook = load_workbook(file, read_only=True, data_only=True)
+        sheet = workbook.active
+        rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+        workbook.close()
+    else:
+        raise ValueError("Поддерживаются только файлы .xls и .xlsx")
+
+    if not rows or not any(value is not None for value in rows[0]):
+        raise ValueError("Файл пуст или отсутствуют заголовки")
+
+    headers = [_normalise_value(value) for value in rows[0]]
+    return headers, rows[1:]
+
+
+def _normalise_value(value: Any) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def _column_indices(headers: list[str], aliases: dict[str, str]) -> dict[str, int]:
+    indices: dict[str, int] = {}
+    for index, header in enumerate(headers):
+        alias = aliases.get(header.casefold())
+        if alias:
+            indices[alias] = index
+    return indices
+
+
+def _mapped_indices(
+    headers: list[str],
+    aliases: dict[str, str],
+    mapping: dict[str, str] | None,
+) -> dict[str, int]:
+    if not mapping:
+        return _column_indices(headers, aliases)
+    header_indices = {header.casefold(): index for index, header in enumerate(headers)}
+    return {
+        field: header_indices[source.casefold()]
+        for field, source in mapping.items()
+        if source.casefold() in header_indices
+    }
+
+
+def _cell(row: list[Any], indices: dict[str, int], field: str) -> Any:
+    index = indices.get(field)
+    return row[index] if index is not None and index < len(row) else None
+
+
+def _parse_universities(
+    headers: list[str],
+    rows: list[list[Any]],
+    mapping: dict[str, str] | None = None,
+) -> CatalogImportResult:
+    aliases = {
         "название": "name",
-        "город": "city",
-        "контактное лицо": "contact_person",
-        "email": "contact_email",
-        "телефон": "contact_phone",
+        "наименование": "name",
         "name": "name",
+        "город": "city",
         "city": "city",
+        "контактное лицо": "contact_person",
         "contact person": "contact_person",
+        "email": "contact_email",
         "contact email": "contact_email",
+        "телефон": "contact_phone",
         "contact phone": "contact_phone",
     }
-    
-    column_indices = {}
-    for idx, header in enumerate(headers):
-        if header and str(header).lower().strip() in header_map:
-            column_indices[header_map[str(header).lower().strip()]] = idx
-    
-    if "name" not in column_indices:
-        return CatalogImportResult(
-            success=False,
-            data=[],
-            errors=["Не найдена обязательная колонка 'Название'"]
-        )
-    
-    # Парсим данные
-    for row_idx, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-        if not any(cell.value for cell in row):
-            continue  # Пропускаем пустые строки
-        
-        try:
-            university = {
-                "name": row[column_indices["name"]].value,
-                "city": row.get(column_indices.get("city", 1), None).value if "city" in column_indices else None,
-                "contact_person": row.get(column_indices.get("contact_person", 2), None).value if "contact_person" in column_indices else None,
-                "contact_email": row.get(column_indices.get("contact_email", 3), None).value if "contact_email" in column_indices else None,
-                "contact_phone": row.get(column_indices.get("contact_phone", 4), None).value if "contact_phone" in column_indices else None,
-            }
-            
-            # Валидация
-            if not university["name"]:
-                errors.append(f"Строка {row_idx}: отсутствует название")
-                continue
-            
-            data.append(university)
-        except Exception as e:
-            errors.append(f"Строка {row_idx}: {str(e)}")
-    
-    return CatalogImportResult(success=True, data=data, errors=errors)
+    return _parse_rows(
+        headers,
+        rows,
+        _mapped_indices(headers, aliases, mapping),
+        fields=("name", "city", "contact_person", "contact_email", "contact_phone"),
+        required="name",
+        error_label="Название",
+    )
 
 
-def _parse_products(worksheet) -> CatalogImportResult:
-    """Парсинг листа с продуктами.
-    
-    Ожидаемые колонки:
-    - Название (обязательно)
-    - Направление
-    """
-    data = []
-    errors = []
-    
-    # Проверяем заголовки
-    headers = []
-    for cell in worksheet[1]:
-        headers.append(cell.value)
-    
-    if not headers or all(h is None for h in headers):
-        return CatalogImportResult(
-            success=False,
-            data=[],
-            errors=["Файл пуст или отсутствуют заголовки"]
-        )
-    
-    # Нормализуем заголовки
-    header_map = {
+def _parse_products(
+    headers: list[str],
+    rows: list[list[Any]],
+    mapping: dict[str, str] | None = None,
+) -> CatalogImportResult:
+    aliases = {
         "название": "name",
-        "направление": "direction",
+        "наименование": "name",
         "name": "name",
+        "направление": "direction",
         "direction": "direction",
     }
-    
-    column_indices = {}
-    for idx, header in enumerate(headers):
-        if header and str(header).lower().strip() in header_map:
-            column_indices[header_map[str(header).lower().strip()]] = idx
-    
-    if "name" not in column_indices:
+    return _parse_rows(
+        headers,
+        rows,
+        _mapped_indices(headers, aliases, mapping),
+        fields=("name", "direction"),
+        required="name",
+        error_label="Название",
+    )
+
+
+def _parse_rows(
+    headers: list[str],
+    rows: list[list[Any]],
+    indices: dict[str, int],
+    fields: tuple[str, ...],
+    required: str,
+    error_label: str,
+) -> CatalogImportResult:
+    if required not in indices:
         return CatalogImportResult(
             success=False,
             data=[],
-            errors=["Не найдена обязательная колонка 'Название'"]
+            headers=headers,
+            errors=[f"Не найдена обязательная колонка '{error_label}'"],
         )
-    
-    # Парсим данные
-    for row_idx, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-        if not any(cell.value for cell in row):
-            continue  # Пропускаем пустые строки
-        
-        try:
-            product = {
-                "name": row[column_indices["name"]].value,
-                "direction": row.get(column_indices.get("direction", 1), None).value if "direction" in column_indices else None,
-            }
-            
-            # Валидация
-            if not product["name"]:
-                errors.append(f"Строка {row_idx}: отсутствует название")
-                continue
-            
-            data.append(product)
-        except Exception as e:
-            errors.append(f"Строка {row_idx}: {str(e)}")
-    
-    return CatalogImportResult(success=True, data=data, errors=errors)
+
+    data: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for row_number, row in enumerate(rows, start=2):
+        if not any(value not in (None, "") for value in row):
+            continue
+        item = {field: _cell(row, indices, field) for field in fields}
+        if item[required] in (None, ""):
+            errors.append(f"Строка {row_number}: отсутствует {error_label.lower()}")
+            continue
+        data.append(item)
+
+    return CatalogImportResult(
+        success=True,
+        data=data,
+        errors=errors,
+        headers=headers,
+    )

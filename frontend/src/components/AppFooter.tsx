@@ -7,7 +7,7 @@ export default function AppFooter() {
   return (
     <Layout.Footer
       style={{
-        borderTop: '1px solid #EEEEF2',
+        borderTop: '1px solid var(--atmr-border-soft)',
         background: 'transparent',
         padding: '16px 24px',
         minHeight: 'max-content',

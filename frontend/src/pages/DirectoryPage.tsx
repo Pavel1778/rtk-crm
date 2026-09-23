@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   App as AntApp,
   Button,
+  Card,
+  Descriptions,
   Empty,
   Grid,
   Input,
+  Modal,
   Popconfirm,
   Select,
   Space,
   Spin,
   Table,
+  Tag,
   Tabs,
 } from 'antd';
 
@@ -24,17 +28,21 @@ import {
   listDirections,
   listProducts,
   listUniversities,
+  executeCatalogImport,
+  previewCatalogImport,
 } from '../api/endpoints';
 import type { ITDirection, ITProduct, University } from '../types';
 import { useRole } from '../stores/authStore';
 
 export default function DirectoryPage() {
+  const role = useRole();
   return (
     <div className="page-container">
       <div className="page-header">
         <h1>Справочники</h1>
       </div>
       <div className="page-content">
+        {role !== 'user' && <CatalogImportPanel />}
         <Tabs
           items={[
             { key: 'universities', label: 'Вузы', children: <UniversitiesTab /> },
@@ -44,6 +52,161 @@ export default function DirectoryPage() {
         />
       </div>
     </div>
+  );
+}
+
+const IMPORT_FIELDS = {
+  universities: [
+    ['name', 'Название ВУЗа', true],
+    ['city', 'Город', false],
+    ['contact_person', 'Ответственные от ВУЗа', false],
+    ['contact_email', 'Email', false],
+    ['contact_phone', 'Телефон', false],
+  ],
+  products: [
+    ['name', 'Название продукта', true],
+    ['direction', 'ИТ-направление', false],
+  ],
+} as const;
+
+function CatalogImportPanel() {
+  const { message } = AntApp.useApp();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [catalogType, setCatalogType] = useState<'universities' | 'products'>('universities');
+  const [format, setFormat] = useState<'excel' | 'json'>('excel');
+  const [file, setFile] = useState<File | null>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fields = IMPORT_FIELDS[catalogType];
+  const profileKey = `rtk-import-mapping:${catalogType}:${format}`;
+
+  const selectFile = (nextFormat: 'excel' | 'json') => {
+    setFormat(nextFormat);
+    if (inputRef.current) {
+      inputRef.current.accept = nextFormat === 'json' ? '.json,application/json' : '.xls,.xlsx';
+      inputRef.current.value = '';
+      inputRef.current.click();
+    }
+  };
+
+  const onFile = async (selected: File | undefined) => {
+    if (!selected) return;
+    setFile(selected);
+    setLoading(true);
+    try {
+      const saved = localStorage.getItem(profileKey);
+      const savedMapping = saved ? JSON.parse(saved) as Record<string, string> : {};
+      const result = await previewCatalogImport(catalogType, selected, savedMapping, format);
+      setHeaders(result.headers);
+      setPreviewRows(result.data.slice(0, 5));
+      setMapping(savedMapping);
+      setOpen(true);
+      if (result.errors.length) message.warning(result.errors.join('; '));
+    } catch (error) {
+      message.error(errorMessage(error, 'Не удалось прочитать файл'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const execute = async () => {
+    if (!file) return;
+    const requiredMissing = fields.some(([key, , required]) => required && !mapping[key]);
+    if (requiredMissing) {
+      message.error('Сопоставьте все обязательные поля');
+      return;
+    }
+    setLoading(true);
+    try {
+      localStorage.setItem(profileKey, JSON.stringify(mapping));
+      const result = await executeCatalogImport(catalogType, file, mapping, format);
+      if (result.errors.length) message.warning(result.errors.join('; '));
+      message.success(`Импортировано записей: ${result.created}`);
+      setOpen(false);
+    } catch (error) {
+      message.error(errorMessage(error, 'Импорт не выполнен'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card
+      size="small"
+      title="Импорт справочников"
+      extra={<Tag color="blue">XLS / XLSX / JSON</Tag>}
+      style={{ marginBottom: 16 }}
+    >
+      <Space wrap>
+        <Select
+          value={catalogType}
+          onChange={setCatalogType}
+          options={[
+            { value: 'universities', label: 'Вузы' },
+            { value: 'products', label: 'Продукты' },
+          ]}
+          style={{ width: 180 }}
+        />
+        <Button onClick={() => selectFile('excel')} loading={loading}>
+          Импорт XLS / XLSX
+        </Button>
+        <Button onClick={() => selectFile('json')} loading={loading}>
+          Импорт JSON
+        </Button>
+      </Space>
+      <input
+        ref={inputRef}
+        hidden
+        type="file"
+        onChange={(event) => void onFile(event.target.files?.[0])}
+      />
+      <Modal
+        title={`Сопоставление полей: ${file?.name ?? ''}`}
+        open={open}
+        width={900}
+        onCancel={() => setOpen(false)}
+        onOk={() => void execute()}
+        confirmLoading={loading}
+        okText="Импортировать"
+      >
+        <Descriptions size="small" column={1} style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="Профиль">
+            Схема сохраняется локально для повторного импорта этого типа файла.
+          </Descriptions.Item>
+        </Descriptions>
+        <Space direction="vertical" style={{ width: '100%' }}>
+          {fields.map(([key, label, required]) => (
+            <Space key={key} style={{ width: '100%' }}>
+              <Tag style={{ width: 190 }}>{label}{required ? ' *' : ''}</Tag>
+              <Select
+                allowClear
+                placeholder="Выберите колонку"
+                value={mapping[key]}
+                onChange={(value) => setMapping((current) => ({ ...current, [key]: value ?? '' }))}
+                options={headers.map((header) => ({ value: header, label: header }))}
+                style={{ minWidth: 300 }}
+              />
+            </Space>
+          ))}
+        </Space>
+        <Table
+          size="small"
+          style={{ marginTop: 20 }}
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+          dataSource={previewRows.map((row, index) => ({ ...row, key: index }))}
+          columns={fields.map(([key, label]) => ({
+            title: label,
+            dataIndex: key,
+            key,
+          }))}
+        />
+      </Modal>
+    </Card>
   );
 }
 

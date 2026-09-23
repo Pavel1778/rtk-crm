@@ -107,3 +107,25 @@ http://127.0.0.1:5173 — dev-сервер проксирует `/api` на `loc
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) — развёртывание
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) — архитектура
 - [USER_GUIDE.md](docs/USER_GUIDE.md) — руководство пользователя
+- [ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) — руководство администратора
+- [SECURITY.md](docs/SECURITY.md) — безопасность, 152-ФЗ и privacy
+- [pitch.md](docs/pitch.md) — презентационный сценарий
+- [qa-jury.md](docs/qa-jury.md) — вопросы жюри и ответы
+
+## Production
+
+- Frontend: https://rtk-crm-nx4r.vercel.app
+- Backend: https://rtk-crm-backend.onrender.com
+
+## Нагрузочная проверка
+
+```bash
+locust -f tests/load/locustfile.py RTKUser \
+  --headless -u 50 -r 5 -t 60s \
+  --host=http://localhost:8000 \
+  --html=tests/load/report.html
+```
+
+Для отдельной проверки десяти параллельных отчётов используйте сценарий
+`ReportsUser`; подробности находятся в
+[tests/load/README.md](tests/load/README.md).

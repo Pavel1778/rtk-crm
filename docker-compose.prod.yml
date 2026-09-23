@@ -12,7 +12,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rtk_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rtk_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-rtk_crm}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -26,8 +26,8 @@ services:
 
   backend:
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://rtk_user:rtk_password@postgres:5432/rtk_crm}
-      SECRET_KEY: ${SECRET_KEY:-change-me-32-chars-minimum}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       PYTHONPATH: "/"

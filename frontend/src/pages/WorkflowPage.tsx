@@ -152,7 +152,7 @@ export default function WorkflowPage() {
       )}
 
       {!isLoading && stages.length > 0 && (
-        <Card style={{ border: '1px solid #EEEEF2' }}>
+        <Card style={{ border: '1px solid var(--atmr-border-soft)' }}>
           <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext
               items={stages.map((s) => s.id)}
@@ -180,7 +180,7 @@ export default function WorkflowPage() {
           code: editingStage.code,
           name: editingStage.name,
           order: editingStage.order,
-          color: editingStage.color ?? '#6E41F2',
+          color: editingStage.color ?? 'var(--atmr-accent-default)',
         } : undefined}
         onCancel={() => {
           setEditorOpen(false);

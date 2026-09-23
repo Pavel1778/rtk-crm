@@ -2,16 +2,21 @@ from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import get_db
+from app.models.enums import UserRole
 from app.models.entities import User
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=10,
+)
 bearer_scheme = HTTPBearer(auto_error=False)
 
 CREDENTIALS_ERROR = HTTPException(
@@ -39,6 +44,7 @@ def create_access_token(user: User) -> str:
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
@@ -58,6 +64,7 @@ async def get_current_user(
     user = await db.scalar(select(User).where(User.id == user_id))
     if user is None or not user.is_active:
         raise CREDENTIALS_ERROR
+    request.state.user = user
     return user
 
 
@@ -69,5 +76,17 @@ async def require_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Требуется роль администратора",
+        )
+    return user
+
+
+async def require_manager_or_admin(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Доступ к справочникам только менеджеру или администратору."""
+    if user.role not in {UserRole.MANAGER, UserRole.ADMIN}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Требуется роль менеджера или администратора",
         )
     return user

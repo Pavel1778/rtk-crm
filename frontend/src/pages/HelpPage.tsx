@@ -90,7 +90,7 @@ export default function HelpPage() {
   return (
     <div style={{ padding: 24 }}>
       <Title level={2}>Помощь</Title>
-      <Card style={{ border: '1px solid #EEEEF2' }}>
+      <Card style={{ border: '1px solid var(--atmr-border-soft)' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 48 }}>
             <Spin size="large" />

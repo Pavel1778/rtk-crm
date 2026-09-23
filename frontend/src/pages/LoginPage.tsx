@@ -32,11 +32,11 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#F5F5F7',
+        background: 'var(--atmr-bg-page)',
         padding: 16,
       }}
     >
-      <Card style={{ width: 400, border: '1px solid #EEEEF2' }}>
+      <Card style={{ width: 400, border: '1px solid var(--atmr-border-soft)' }}>
         <Typography.Title level={3} style={{ marginTop: 0 }}>
           Вход в RTK CRM
         </Typography.Title>
