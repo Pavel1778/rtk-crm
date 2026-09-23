@@ -287,8 +287,9 @@ def generate_pdf(interactions: list[dict]) -> BytesIO:
         meta_style
     )
     
-    # Разделитель
-    spacer = Paragraph("<br/><br/>", styles["Normal"])
+    # Разделитель. Используем meta_style, иначе Paragraph берёт Normal
+    # с Helvetica и в PDF попадает шрифт без кириллицы.
+    spacer = Paragraph("<br/><br/>", meta_style)
 
     # Построение документа
     elements = [title, meta_text, spacer, table]
