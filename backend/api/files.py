@@ -7,8 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.security import get_current_user
+from app.api.access import get_accessible_interaction
 from app.db.session import get_db
-from app.models.entities import AttachedFile, Interaction, User
+from app.models.entities import AttachedFile, User
 from app.schemas.entities import AttachedFileRead
 from app.services.file_storage import get_storage
 
@@ -55,12 +56,10 @@ async def upload_file(
     current: User = Depends(get_current_user),
 ) -> AttachedFileRead:
     """Загрузка файла к взаимодействию."""
-    
-    # Проверка взаимодействия
-    interaction = await db.get(Interaction, interaction_id)
-    if interaction is None:
-        raise HTTPException(status_code=404, detail="Взаимодействие не найдено")
-    
+
+    # Проверка взаимодействия и прав на него
+    await get_accessible_interaction(db, interaction_id, current)
+
     # Проверка MIME-типа
     filename = file.filename or ""
     extension = Path(filename).suffix.lower()
@@ -72,23 +71,23 @@ async def upload_file(
             status_code=400,
             detail="Недопустимый формат файла. Разрешены PNG, JPEG, PDF, ZIP, GZIP, RAR, DOC, DOCX, XLS и XLSX",
         )
-    
+
     # Чтение содержимого файла
     content = await file.read()
-    
+
     # Проверка размера
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
             detail=f"Файл слишком большой. Максимум: {MAX_FILE_SIZE / (1024*1024)} МБ"
         )
-    
+
     # Сохранение в S3/MinIO либо в локальный uploads/ (fallback).
     storage = get_storage()
-    
-    
+
+
     storage_key = await storage.save(interaction_id, filename, content)
-    
+
     # Создание записи в БД
     attached_file = AttachedFile(
         interaction_id=interaction_id,
@@ -101,10 +100,10 @@ async def upload_file(
     db.add(attached_file)
     await db.commit()
     await db.refresh(attached_file)
-    
+
     # Получение имени загрузчика
     uploader = await db.get(User, current.id)
-    
+
     return AttachedFileRead(
         id=attached_file.id,
         interaction_id=attached_file.interaction_id,
@@ -121,15 +120,12 @@ async def upload_file(
 async def list_files(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> list[AttachedFileRead]:
     """Список файлов взаимодействия."""
-    
-    # Проверка взаимодействия
-    interaction = await db.get(Interaction, interaction_id)
-    if interaction is None:
-        raise HTTPException(status_code=404, detail="Взаимодействие не найдено")
-    
+
+    await get_accessible_interaction(db, interaction_id, current)
+
     # Получение файлов
     files = list(
         await db.scalars(
@@ -138,7 +134,7 @@ async def list_files(
             .order_by(AttachedFile.created_at.desc())
         )
     )
-    
+
     # Добавление имён загрузчиков
     result = []
     for file in files:
@@ -155,7 +151,7 @@ async def list_files(
                 created_at=file.created_at,
             )
         )
-    
+
     return result
 
 
@@ -163,14 +159,17 @@ async def list_files(
 async def download_file(
     file_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ):
     """Скачивание файла."""
-    
+
     attached_file = await db.get(AttachedFile, file_id)
     if attached_file is None:
         raise HTTPException(status_code=404, detail="Файл не найден")
-    
+
+    # Файл наследует доступ своего взаимодействия.
+    await get_accessible_interaction(db, attached_file.interaction_id, current)
+
     try:
         content = await get_storage().read(attached_file.file_path)
     except Exception:  # noqa: BLE001
@@ -202,21 +201,21 @@ async def delete_file(
     current: User = Depends(get_current_user),
 ) -> None:
     """Удаление файла."""
-    
+
     attached_file = await db.get(AttachedFile, file_id)
     if attached_file is None:
         raise HTTPException(status_code=404, detail="Файл не найден")
-    
+
     # Проверка прав (admin или автор)
     if not current.is_admin and attached_file.uploaded_by != current.id:
         raise HTTPException(
             status_code=403,
             detail="Можно удалять только свои файлы"
         )
-    
+
     # Удаление из S3/MinIO или локального каталога
     await get_storage().delete(attached_file.file_path)
-    
+
     # Удаление из БД
     await db.delete(attached_file)
     await db.commit()

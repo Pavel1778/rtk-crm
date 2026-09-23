@@ -242,3 +242,72 @@ async def test_kam_create_assigns_self(client: AsyncClient) -> None:
     )
     assert r.status_code == 201, r.text
     assert r.json()["assigned_kam_id"] == ids["kam@t.ru"]
+
+
+async def test_kam_cannot_upload_to_foreign_interaction(client: AsyncClient) -> None:
+    """Файлы наследуют доступ взаимодействия — загрузка к чужой карточке запрещена."""
+    foreign_id = await _seed_foreign_interaction("kam2@t.ru")
+    headers = await _token(client, "kam@t.ru")
+    r = await client.post(
+        f"/api/files/interactions/{foreign_id}/upload",
+        headers=headers,
+        files={"file": ("note.pdf", b"%PDF-1.4 test", "application/pdf")},
+    )
+    assert r.status_code == 403, r.text
+
+
+async def test_kam_cannot_list_foreign_files(client: AsyncClient) -> None:
+    foreign_id = await _seed_foreign_interaction("kam2@t.ru")
+    headers = await _token(client, "kam@t.ru")
+    r = await client.get(
+        f"/api/files/interactions/{foreign_id}", headers=headers
+    )
+    assert r.status_code == 403, r.text
+
+
+async def test_kam_can_upload_own_and_download_own(client: AsyncClient) -> None:
+    own_id = await _seed_foreign_interaction("kam@t.ru")
+    headers = await _token(client, "kam@t.ru")
+    r = await client.post(
+        f"/api/files/interactions/{own_id}/upload",
+        headers=headers,
+        files={"file": ("note.pdf", b"%PDF-1.4 test", "application/pdf")},
+    )
+    assert r.status_code == 201, r.text
+    file_id = r.json()["id"]
+
+    r = await client.get(f"/api/files/{file_id}/download", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.content == b"%PDF-1.4 test"
+
+
+async def test_kam_cannot_download_foreign_file(client: AsyncClient) -> None:
+    foreign_id = await _seed_foreign_interaction("kam2@t.ru")
+    owner_headers = await _token(client, "kam2@t.ru")
+    r = await client.post(
+        f"/api/files/interactions/{foreign_id}/upload",
+        headers=owner_headers,
+        files={"file": ("note.pdf", b"%PDF-1.4 test", "application/pdf")},
+    )
+    assert r.status_code == 201, r.text
+    file_id = r.json()["id"]
+
+    headers = await _token(client, "kam@t.ru")
+    r = await client.get(f"/api/files/{file_id}/download", headers=headers)
+    assert r.status_code == 403, r.text
+
+
+async def test_manager_can_download_any_file(client: AsyncClient) -> None:
+    foreign_id = await _seed_foreign_interaction("kam2@t.ru")
+    owner_headers = await _token(client, "kam2@t.ru")
+    r = await client.post(
+        f"/api/files/interactions/{foreign_id}/upload",
+        headers=owner_headers,
+        files={"file": ("note.pdf", b"%PDF-1.4 test", "application/pdf")},
+    )
+    file_id = r.json()["id"]
+
+    headers = await _token(client, "mgr@t.ru")
+    r = await client.get(f"/api/files/{file_id}/download", headers=headers)
+    assert r.status_code == 200, r.text
+

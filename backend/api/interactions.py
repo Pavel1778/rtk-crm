@@ -5,6 +5,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.security import get_current_user
+from app.api.access import (
+    get_accessible_interaction,
+    get_interaction_or_404,
+)
 from app.db.session import get_db
 from app.models.entities import (
     Action,
@@ -40,33 +44,14 @@ MAX_PARALLEL_INTERACTIONS = 2
 
 # ---------- Вспомогательные функции ----------
 async def _get_or_404(db: AsyncSession, interaction_id: int) -> Interaction:
-    interaction = await db.get(Interaction, interaction_id)
-    if interaction is None:
-        raise HTTPException(status_code=404, detail="Взаимодействие не найдено")
-    return interaction
+    return await get_interaction_or_404(db, interaction_id)
 
 
 async def _get_accessible(
     db: AsyncSession, interaction_id: int, current: User
 ) -> Interaction:
-    """Возвращает взаимодействие, если пользователь имеет к нему доступ.
-
-    КАМ (роль `user`) работает только со своими карточками: списки и доска
-    это уже учитывают, но операции по id нужно проверять отдельно, иначе
-    чужой id открывает чтение и изменение карточки. Руководитель и
-    администратор видят все взаимодействия.
-    """
-    interaction = await _get_or_404(db, interaction_id)
-    _ensure_can_access(interaction, current)
-    return interaction
-
-
-def _ensure_can_access(interaction: Interaction, current: User) -> None:
-    if current.role == UserRole.USER and interaction.assigned_kam_id != current.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Взаимодействие не принадлежит текущему пользователю",
-        )
+    """Взаимодействие, если пользователь имеет к нему доступ."""
+    return await get_accessible_interaction(db, interaction_id, current)
 
 
 async def _default_stage(
