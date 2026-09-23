@@ -53,7 +53,7 @@ export default function HelpPage() {
       key: 'user',
       label: 'Руководство пользователя',
       children: [
-        <div key="user" style={{ padding: 16 }}>
+        <div key="user" className="help-doc" style={{ padding: 16 }}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content.userGuide}</ReactMarkdown>
         </div>,
       ],
@@ -62,7 +62,7 @@ export default function HelpPage() {
       key: 'admin',
       label: 'Руководство администратора',
       children: [
-        <div key="admin" style={{ padding: 16 }}>
+        <div key="admin" className="help-doc" style={{ padding: 16 }}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content.adminGuide}</ReactMarkdown>
         </div>,
       ],

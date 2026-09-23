@@ -476,3 +476,13 @@ img, svg, canvas, video, table { max-width: 100%; }
     flex: 1 1 auto;
   }
 }
+
+/* Встроенная документация (/help): скриншоты не должны занимать весь экран */
+.help-doc img {
+  max-width: 720px;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--atmr-border-soft);
+  border-radius: 8px;
+  margin: 12px 0;
+}
