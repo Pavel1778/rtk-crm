@@ -160,6 +160,7 @@ export type CatalogImportResult = {
   errors: string[];
   count: number;
   created?: number;
+  total?: number;
   issues?: ImportIssue[];
   summary?: {
     total_rows: number;
