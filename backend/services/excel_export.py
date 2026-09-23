@@ -18,13 +18,239 @@ except ImportError:
 
 try:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import landscape, letter
+    from reportlab.lib.pagesizes import A4, landscape
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.units import inch
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+
+
+# Колонки отчёта: ключ в данных + короткий заголовок для узкой шапки.
+PDF_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("university_name", "ВУЗ"),
+    ("direction_name", "ИТ-направление"),
+    ("product_name", "ИТ-продукт"),
+    ("stage_name", "Статус"),
+    ("assigned_kam_name", "Ответственный"),
+    ("contract_number", "Договор"),
+    ("contract_date", "Лицензия до"),
+)
+
+
+def _resolve_pdf_fonts() -> tuple[str, str]:
+    """Регистрирует DejaVu Sans и возвращает (regular, bold).
+
+    DejaVu покрывает кириллицу; встроенные в reportlab Helvetica её не знают.
+    """
+    import os
+
+    regular_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    bold_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    if not os.path.exists(regular_path):
+        return "Helvetica", "Helvetica-Bold"
+
+    if "DejaVu" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont("DejaVu", regular_path))
+    bold = "DejaVu"
+    if os.path.exists(bold_path):
+        if "DejaVu-Bold" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("DejaVu-Bold", bold_path))
+        bold = "DejaVu-Bold"
+    return "DejaVu", bold
+
+
+def _fit_column_widths(
+    rows: list[list[str]],
+    headers: list[str],
+    font_name: str,
+    font_bold: str,
+    body_size: float,
+    head_size: float,
+    available: float,
+    padding: float = 12,
+) -> list[float]:
+    """Считает ширины колонок от содержимого так, чтобы таблица влезла в страницу.
+
+    Минимум по колонке — самое длинное слово (без него текст не переносится),
+    желаемая ширина — самая длинная ячейка/заголовок целиком. Свободное место
+    раздаётся колонкам, которым не хватает до желаемой ширины.
+    """
+    min_widths: list[float] = []
+    desired_widths: list[float] = []
+    for idx, header in enumerate(headers):
+        longest_word = pdfmetrics.stringWidth(header, font_bold, head_size)
+        longest_cell = longest_word
+        for row in rows:
+            value = str(row[idx]) if idx < len(row) else ""
+            longest_cell = max(longest_cell, pdfmetrics.stringWidth(value, font_name, body_size))
+            for token in value.split():
+                longest_word = max(
+                    longest_word, pdfmetrics.stringWidth(token, font_name, body_size)
+                )
+        min_widths.append(longest_word + padding)
+        desired_widths.append(max(longest_cell, longest_word) + padding)
+
+    cap = available * 0.30  # ни одна колонка не забирает всю страницу
+    desired_widths = [min(w, cap) for w in desired_widths]
+    min_widths = [min(a, b) for a, b in zip(min_widths, desired_widths)]
+
+    total_min = sum(min_widths)
+    if total_min > available:  # экзотические данные: ужимаем пропорционально
+        scale = available / total_min
+        return [w * scale for w in min_widths]
+
+    widths = list(min_widths)
+    remaining = available - total_min
+    deficits = [d - m for d, m in zip(desired_widths, min_widths)]
+    total_deficit = sum(deficits)
+    if total_deficit > 0:
+        for i, deficit in enumerate(deficits):
+            widths[i] += remaining * (deficit / total_deficit)
+    elif remaining > 0:
+        # Всем хватило: размазываем остаток поровну.
+        even = remaining / len(widths)
+        widths = [w + even for w in widths]
+    return widths
+
+
+def estimate_pdf_table_width(interactions: list[dict]) -> float:
+    """Оценка итоговой ширины таблицы PDF — для тестов и проверок вёрстки."""
+    if not REPORTLAB_AVAILABLE:
+        raise ImportError("reportlab не установлен. Установите: pip install reportlab")
+
+    font_name, font_bold = _resolve_pdf_fonts()
+    headers = [label for _, label in PDF_COLUMNS]
+    rows = [[str(item.get(key, "—") or "—") for key, _ in PDF_COLUMNS] for item in interactions]
+    page = A4 if len(PDF_COLUMNS) <= 5 else landscape(A4)
+    margins = _PDF_MARGINS
+    available = page[0] - margins * 2
+    widths = _fit_column_widths(
+        rows, headers, font_name, font_bold, _PDF_BODY_FONT_SIZE, _PDF_HEAD_FONT_SIZE, available
+    )
+    return sum(widths)
+
+
+_PDF_MARGINS = 28
+_PDF_BODY_FONT_SIZE = 8.5
+_PDF_HEAD_FONT_SIZE = 10
+
+
+def generate_pdf(interactions: list[dict]) -> BytesIO:
+    """Генерация PDF отчёта по взаимодействиям."""
+    if not REPORTLAB_AVAILABLE:
+        raise ImportError("reportlab не установлен. Установите: pip install reportlab")
+
+    font_name, font_bold = _resolve_pdf_fonts()
+
+    headers = [label for _, label in PDF_COLUMNS]
+    rows = [
+        [str(item.get(key, "—") or "—") for key, _ in PDF_COLUMNS] for item in interactions
+    ]
+
+    # 7 колонок в портрет A4 не влезают — переходим на landscape.
+    page_size = A4 if len(PDF_COLUMNS) <= 5 else landscape(A4)
+    available = page_size[0] - _PDF_MARGINS * 2
+    col_widths = _fit_column_widths(
+        rows,
+        headers,
+        font_name,
+        font_bold,
+        _PDF_BODY_FONT_SIZE,
+        _PDF_HEAD_FONT_SIZE,
+        available,
+    )
+
+    output = BytesIO()
+    doc = SimpleDocTemplate(
+        output,
+        pagesize=page_size,
+        rightMargin=_PDF_MARGINS,
+        leftMargin=_PDF_MARGINS,
+        topMargin=_PDF_MARGINS,
+        bottomMargin=_PDF_MARGINS,
+        title="Отчёт по взаимодействиям с ВУЗами",
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "RtkTitle",
+        parent=styles["Title"],
+        alignment=1,
+        fontName=font_bold,
+        fontSize=16,
+        textColor=colors.HexColor("#6E41F2"),
+    )
+    meta_style = ParagraphStyle(
+        "RtkMeta",
+        parent=styles["Normal"],
+        fontName=font_name,
+        fontSize=9,
+        textColor=colors.HexColor("#6B6B72"),
+    )
+    # Обычный перенос по словам: минимальная ширина колонки уже >= самого
+    # длинного слова, поэтому слова не разрезаются, а длинные значения
+    # переносятся на следующую строку.
+    head_cell_style = ParagraphStyle(
+        "RtkHeadCell",
+        parent=styles["Normal"],
+        fontName=font_bold,
+        fontSize=_PDF_HEAD_FONT_SIZE,
+        leading=_PDF_HEAD_FONT_SIZE + 2,
+        textColor=colors.whitesmoke,
+        wordWrap="LTR",
+    )
+    body_cell_style = ParagraphStyle(
+        "RtkBodyCell",
+        parent=styles["Normal"],
+        fontName=font_name,
+        fontSize=_PDF_BODY_FONT_SIZE,
+        leading=_PDF_BODY_FONT_SIZE + 2.5,
+        wordWrap="LTR",
+    )
+
+    data = [[Paragraph(label, head_cell_style) for label in headers]]
+    data += [
+        [Paragraph(value, body_cell_style) for value in row] for row in rows
+    ]
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#6E41F2")),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("TOPPADDING", (0, 0), (-1, 0), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                ("TOPPADDING", (0, 1), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 1), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9F5FC")]),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E0E0E5")),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#5A31D9")),
+            ]
+        )
+    )
+
+    title = Paragraph("Отчёт по взаимодействиям с ВУЗами", title_style)
+    date_str = datetime.now().strftime("%d.%m.%Y %H:%M")
+    meta_text = Paragraph(
+        f"Сформирован: {date_str} | Всего записей: {len(interactions)}",
+        meta_style,
+    )
+    # Разделитель. Используем meta_style, иначе Paragraph берёт Normal
+    # с Helvetica и в PDF попадает шрифт без кириллицы.
+    spacer = Paragraph("<br/><br/>", meta_style)
+
+    doc.build([title, meta_text, spacer, table])
+
+    output.seek(0)
+    return output
 
 
 def generate_xlsx(interactions: list[dict]) -> BytesIO:
@@ -156,144 +382,3 @@ def generate_xls(interactions: list[dict]) -> BytesIO:
     output.seek(0)
     return output
 
-
-def generate_pdf(interactions: list[dict]) -> BytesIO:
-    """Генерация PDF отчёта по взаимодействиям с улучшенной кириллицей."""
-    if not REPORTLAB_AVAILABLE:
-        raise ImportError("reportlab не установлен. Установите: pip install reportlab")
-
-    output = BytesIO()
-    doc = SimpleDocTemplate(
-        output, 
-        pagesize=landscape(letter),
-        rightMargin=30,
-        leftMargin=30,
-        topMargin=30,
-        bottomMargin=30
-    )
-
-    # Регистрация шрифта с кириллицей
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    import os
-
-    FONT_PATH = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-    BOLD_FONT_PATH = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-    
-    if os.path.exists(FONT_PATH):
-        pdfmetrics.registerFont(TTFont('DejaVu', FONT_PATH))
-        font_name = 'DejaVu'
-        if os.path.exists(BOLD_FONT_PATH):
-            pdfmetrics.registerFont(TTFont('DejaVu-Bold', BOLD_FONT_PATH))
-            font_bold = 'DejaVu-Bold'
-        else:
-            font_bold = 'DejaVu'
-    else:
-        font_name = 'Helvetica'
-        font_bold = 'Helvetica-Bold'
-
-    # Стили
-    styles = getSampleStyleSheet()
-    
-    # Заголовок документа
-    title_style = styles["Title"]
-    title_style.alignment = 1
-    title_style.fontName = font_bold
-    title_style.fontSize = 18
-    title_style.textColor = colors.HexColor('#6E41F2')
-    
-    # Стиль метаинформации
-    meta_style = styles["Normal"]
-    meta_style.fontName = font_name
-    meta_style.fontSize = 10
-    meta_style.textColor = colors.HexColor('#6B6B72')
-    
-    # Данные для таблицы по ТЗ
-    headers = [
-        "Наименование ВУЗа",
-        "ИТ-направление",
-        "ИТ-продукт",
-        "Статус работы с ВУЗом",
-        "Ответственный",
-        "Номер договора",
-        "Срок действия лицензии (год)",
-    ]
-    data = [headers]
-
-    for interaction in interactions:
-        row = [
-            interaction.get("university_name", "—"),
-            interaction.get("direction_name", "—"),
-            interaction.get("product_name", "—"),
-            interaction.get("stage_name", "—"),
-            interaction.get("assigned_kam_name", "—"),
-            interaction.get("contract_number", "—"),
-            interaction.get("contract_date", "—"),
-        ]
-        data.append(row)
-
-    # Создание таблицы
-    table = Table(
-        data,
-        colWidths=[
-            1.7 * inch,
-            1.35 * inch,
-            1.35 * inch,
-            1.45 * inch,
-            1.2 * inch,
-            1.15 * inch,
-            1.15 * inch,
-        ],
-        repeatRows=1,
-    )
-
-    # Стиль таблицы
-    table_style = TableStyle([
-        # Заголовок
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6E41F2')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('FONTNAME', (0, 0), (-1, 0), font_bold),
-        ('FONTSIZE', (0, 0), (-1, 0), 11),
-        ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('TOPPADDING', (0, 0), (-1, 0), 12),
-        
-        # Тело таблицы
-        ('FONTNAME', (0, 1), (-1, -1), font_name),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
-        ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 1), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-        
-        # Чередование строк
-        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#F9F5FC')),
-        ('BACKGROUND', (0, 2), (-1, 2), colors.white),
-        
-        # Сетка
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E5')),
-        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.HexColor('#5A31D9')),
-    ])
-    table.setStyle(table_style)
-    
-    # Заголовок документа
-    title = Paragraph("Отчёт по взаимодействиям с ВУЗами", title_style)
-    
-    # Метаинформация
-    date_str = datetime.now().strftime('%d.%m.%Y %H:%M')
-    meta_text = Paragraph(
-        f"Сформирован: {date_str} | Всего записей: {len(interactions)}",
-        meta_style
-    )
-    
-    # Разделитель. Используем meta_style, иначе Paragraph берёт Normal
-    # с Helvetica и в PDF попадает шрифт без кириллицы.
-    spacer = Paragraph("<br/><br/>", meta_style)
-
-    # Построение документа
-    elements = [title, meta_text, spacer, table]
-    doc.build(elements)
-
-    output.seek(0)
-    return output
