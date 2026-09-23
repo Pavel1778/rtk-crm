@@ -163,6 +163,11 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 
 /* ═══════ ФОРМЫ ═══════ */
+.date-range-filter__label {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--atmr-fg-muted);
+}
 .responsive-form {
   display: flex;
   flex-direction: column;

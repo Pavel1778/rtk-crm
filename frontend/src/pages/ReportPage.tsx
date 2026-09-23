@@ -12,6 +12,7 @@ import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
 import ChartExportButtons from '../components/dashboard/ChartExportButtons';
+import DateRangeFilter, { type DateRangeValue } from '../components/DateRangeFilter';
 import type { ReportResponse } from '../types';
 
 const COLORS = [
@@ -27,7 +28,7 @@ export default function ReportPage() {
   const device = useDevice();
   const isMobile = device === 'mobile';
   const [exporting, setExporting] = useState<string | null>(null);
-  const [draftDates, setDraftDates] = useState({ date_from: '', date_to: '' });
+  const [draftDates, setDraftDates] = useState<DateRangeValue>({});
   const [filters, setFilters] = useState<ReportFilters>({});
   const stageChartRef = useRef<HTMLDivElement>(null);
   const productChartRef = useRef<HTMLDivElement>(null);
@@ -116,22 +117,11 @@ export default function ReportPage() {
         </div>
       </div>
       <div className="responsive-form report-filters" role="search" aria-label="Фильтры отчёта">
-        <label>
-          С даты
-          <input
-            type="date"
-            value={draftDates.date_from}
-            onChange={(event) => setDraftDates({ ...draftDates, date_from: event.target.value })}
-          />
-        </label>
-        <label>
-          По дату
-          <input
-            type="date"
-            value={draftDates.date_to}
-            onChange={(event) => setDraftDates({ ...draftDates, date_to: event.target.value })}
-          />
-        </label>
+        <DateRangeFilter
+          id="report-date-range"
+          value={draftDates}
+          onChange={setDraftDates}
+        />
         <button
           className="btn-export"
           onClick={() => setFilters({
@@ -144,7 +134,7 @@ export default function ReportPage() {
         <button
           className="btn-export"
           onClick={() => {
-            setDraftDates({ date_from: '', date_to: '' });
+            setDraftDates({});
             setFilters({});
           }}
         >
