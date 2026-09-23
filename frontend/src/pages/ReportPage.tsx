@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, Empty, Result, Skeleton, message } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -11,6 +11,7 @@ import { downloadReport, getReport, type ReportFilters } from '../api/endpoints'
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
+import ChartExportButtons from '../components/dashboard/ChartExportButtons';
 import type { ReportResponse } from '../types';
 
 const COLORS = [
@@ -28,6 +29,9 @@ export default function ReportPage() {
   const [exporting, setExporting] = useState<string | null>(null);
   const [draftDates, setDraftDates] = useState({ date_from: '', date_to: '' });
   const [filters, setFilters] = useState<ReportFilters>({});
+  const stageChartRef = useRef<HTMLDivElement>(null);
+  const productChartRef = useRef<HTMLDivElement>(null);
+  const dynamicsChartRef = useRef<HTMLDivElement>(null);
 
   const reportQuery = useQuery<ReportResponse>({
     queryKey: ['report', filters],
@@ -162,17 +166,29 @@ export default function ReportPage() {
       {/* График: Распределение по этапам */}
       <Card
         title="Распределение по этапам"
+        extra={
+          data.by_stage.length > 0 && (
+            <ChartExportButtons
+              target={() => stageChartRef.current}
+              filename="report-by-stage"
+              title="Распределение взаимодействий по этапам"
+            />
+          )
+        }
         style={{ borderRadius: 12, marginBottom: 24 }}
       >
         {data.by_stage.length === 0 ? (
           <EmptyState title="Нет данных" />
         ) : (
           <div
+            ref={stageChartRef}
+            data-chart-export="report-by-stage"
             className="chart-container report-stage-chart"
             style={{
               height: isMobile
                 ? Math.max(420, data.by_stage.length * 38)
                 : stageChartHeight,
+              background: 'var(--atmr-bg-container)',
             }}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -228,11 +244,28 @@ export default function ReportPage() {
         className="report-chart-grid"
       >
         {/* Доля продуктов */}
-        <Card title="Доля продуктов" style={{ borderRadius: 12 }}>
+        <Card
+          title="Доля продуктов"
+          extra={
+            data.by_product.length > 0 && (
+              <ChartExportButtons
+                target={() => productChartRef.current}
+                filename="report-by-product"
+                title="Доля продуктов"
+              />
+            )
+          }
+          style={{ borderRadius: 12 }}
+        >
           {data.by_product.length === 0 ? (
             <EmptyState title="Нет активных взаимодействий с указанным продуктом" />
           ) : (
-            <div className="chart-container" style={{ height: 320 }}>
+            <div
+              ref={productChartRef}
+              data-chart-export="report-by-product"
+              className="chart-container"
+              style={{ height: 320, background: 'var(--atmr-bg-container)' }}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -266,11 +299,28 @@ export default function ReportPage() {
         </Card>
 
         {/* Динамика за 30 дней */}
-        <Card title="Динамика за 30 дней" style={{ borderRadius: 12 }}>
+        <Card
+          title="Динамика за 30 дней"
+          extra={
+            data.dynamics.length > 0 && (
+              <ChartExportButtons
+                target={() => dynamicsChartRef.current}
+                filename="report-dynamics"
+                title="Динамика взаимодействий за 30 дней"
+              />
+            )
+          }
+          style={{ borderRadius: 12 }}
+        >
           {data.dynamics.length === 0 ? (
             <EmptyState title="Нет данных за последние 30 дней" />
           ) : (
-            <div className="chart-container" style={{ height: 320 }}>
+            <div
+              ref={dynamicsChartRef}
+              data-chart-export="report-dynamics"
+              className="chart-container"
+              style={{ height: 320, background: 'var(--atmr-bg-container)' }}
+            >
               <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.dynamics} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--atmr-border-default)" />
