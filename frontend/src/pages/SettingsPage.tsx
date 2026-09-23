@@ -7,11 +7,7 @@ import {
   Grid,
   Input,
   InputNumber,
-  Popconfirm,
   Space,
-  Switch,
-  Table,
-  Tag,
 } from 'antd';
 import { useEffect, useState } from 'react';
 
@@ -24,6 +20,8 @@ import {
 } from '../api/endpoints';
 import type { WorkflowStage } from '../types';
 import { useRole } from '../stores/authStore';
+
+import StageTable from '../components/workflow/StageTable';
 
 /**
  * Настройка воркфлоу: этапы можно добавлять, переименовывать,
@@ -142,92 +140,28 @@ export default function SettingsPage() {
         </Form>
       </Card>
 
-        <Card title="Этапы воркфлоу" style={{ border: '1px solid var(--atmr-border-soft)' }}>
-        <div className="scroll-box">
-          <Table<WorkflowStage>
-            rowKey="id"
-            dataSource={stages}
-            pagination={false}
-            size="small"
-            scroll={{ x: 'max-content' }}
-            columns={[
-              { title: 'Порядок', dataIndex: 'order', width: 80 },
-              {
-                title: 'Этап',
-                dataIndex: 'name',
-                render: (name: string, record) => (
-                  <Space>
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 5,
-                        background: record.color ?? 'var(--atmr-accent-default)',
-                        display: 'inline-block',
-                      }}
-                    />
-                    <EditableText
-                      value={name}
-                      onSave={(value) =>
-                        updateStage(record.id, { name: value })
-                          .then(() => message.success('Название обновлено'))
-                          .then(load)
-                          .catch((e) => message.error(errorMessage(e)))
-                      }
-                    />
-                  </Space>
-                ),
-              },
-              {
-                title: 'Код',
-                dataIndex: 'code',
-                width: 150,
-                render: (code: string) => <Tag>{code}</Tag>,
-              },
-              {
-                title: 'Взаимодействий',
-                dataIndex: 'interaction_count',
-                width: 120,
-              },
-              {
-                title: 'Активен',
-                dataIndex: 'is_active',
-                width: 100,
-                render: (active: boolean, record) => (
-                  <Switch
-                    checked={active}
-                    loading={togglingStageId === record.id}
-                    onChange={(checked) => toggleStage(record.id, checked)}
-                  />
-                ),
-              },
-              {
-                title: '',
-                width: 80,
-                render: (_, record) => (
-                  <Popconfirm
-                    title="Удалить этап?"
-                    disabled={record.interaction_count > 0}
-                    onConfirm={() =>
-                      deleteStage(record.id)
-                        .then(load)
-                        .catch((e) => message.error(errorMessage(e)))
-                    }
-                  >
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      disabled={record.interaction_count > 0}
-                    >
-                      Удалить
-                    </Button>
-                  </Popconfirm>
-                ),
-              },
-            ]}
-          />
-        </div>
+      <Card title="Этапы воркфлоу" style={{ border: '1px solid var(--atmr-border-soft)' }}>
+        <StageTable
+          stages={stages}
+          onToggle={(stage, next) => toggleStage(stage.id, next)}
+          togglingId={togglingStageId}
+          onDelete={(stage) => {
+            void deleteStage(stage.id)
+              .then(load)
+              .catch((e) => message.error(errorMessage(e)));
+          }}
+          renderName={(stage) => (
+            <EditableText
+              value={stage.name}
+              onSave={(value) =>
+                updateStage(stage.id, { name: value })
+                  .then(() => message.success('Название обновлено'))
+                  .then(load)
+                  .catch((e) => message.error(errorMessage(e)))
+              }
+            />
+          )}
+        />
       </Card>
     </Space>
   );
