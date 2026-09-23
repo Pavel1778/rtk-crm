@@ -6,9 +6,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.security import get_current_user
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.entities import (
     Action,
+    AttachedFile,
     Interaction,
     ITDirection,
     ITProduct,
@@ -308,6 +310,8 @@ async def _build_interaction_data(
                 ITProduct.name,
                 WorkflowStageRef.name,
                 User.full_name,
+                WorkflowStageRef.scope,
+                ITProduct.direction_id,
             )
             .join(University, Interaction.university_id == University.id)
             .outerjoin(ITProduct, Interaction.product_id == ITProduct.id)
@@ -320,7 +324,16 @@ async def _build_interaction_data(
     ).all()
 
     data = []
-    for interaction, university_name, direction_name, product_name, stage_name, assigned_kam_name in rows:
+    for (
+        interaction,
+        university_name,
+        direction_name,
+        product_name,
+        stage_name,
+        assigned_kam_name,
+        scope,
+        direction_id,
+    ) in rows:
         data.append({
             "id": interaction.id,
             "university_name": university_name,
@@ -333,6 +346,14 @@ async def _build_interaction_data(
             "university_specialist": interaction.university_specialist,
             "notes": interaction.notes,
             "is_active": interaction.is_active,
+            # Ключи связи с БД: id сущностей и внешние ключи. Нужны LMS/CMS,
+            # чтобы сопоставить выгрузку с записями на своей стороне.
+            "scope": scope.value if hasattr(scope, "value") else scope,
+            "university_id": interaction.university_id,
+            "product_id": interaction.product_id,
+            "stage_id": interaction.stage_id,
+            "direction_id": direction_id,
+            "assigned_kam_id": interaction.assigned_kam_id,
         })
 
     return data
@@ -461,7 +482,12 @@ async def export_json(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    """Экспорт взаимодействий в JSON формате для LMS интеграции."""
+    """Экспорт взаимодействий в JSON для LMS-интеграции.
+
+    По Q&A Крылова выгрузка должна содержать не только данные карточек, но и
+    ключи связи: id/внешние ключи записей БД и ключи файлов в S3-хранилище,
+    чтобы принимающая сторона могла сопоставить объекты и скачать вложения.
+    """
     data = await _build_interaction_data(
         db,
         stage_id,
@@ -472,8 +498,56 @@ async def export_json(
         date_from,
         date_to,
     )
+
+    interaction_ids = [item["id"] for item in data]
+    files_by_interaction = await _files_by_interaction(db, interaction_ids)
+    for item in data:
+        item["files"] = files_by_interaction.get(item["id"], [])
+
+    settings = get_settings()
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": len(data),
+        "storage": {
+            "type": "s3" if settings.s3_enabled else "local",
+            "bucket": settings.s3_bucket if settings.s3_enabled else None,
+        },
+        # Применённые фильтры: выгрузка воспроизводима по этим параметрам.
+        "filters": {
+            "stage_id": stage_id,
+            "university_id": university_id,
+            "product_id": product_id,
+            "direction_id": direction_id,
+            "assigned_kam_id": assigned_kam_id,
+            "date_from": date_from.isoformat() if date_from else None,
+            "date_to": date_to.isoformat() if date_to else None,
+        },
         "interactions": data,
     }
+
+
+async def _files_by_interaction(
+    db: AsyncSession, interaction_ids: list[int]
+) -> dict[int, list[dict]]:
+    """Вложения, сгруппированные по взаимодействию, с ключами связи с S3."""
+    if not interaction_ids:
+        return {}
+
+    settings = get_settings()
+    rows = await db.scalars(
+        select(AttachedFile).where(AttachedFile.interaction_id.in_(interaction_ids))
+    )
+    grouped: dict[int, list[dict]] = {}
+    for attached in rows:
+        grouped.setdefault(attached.interaction_id, []).append({
+            "file_id": attached.id,
+            "interaction_id": attached.interaction_id,
+            "filename": attached.filename,
+            # file_path — это ключ объекта в бакете (или путь в uploads/).
+            "bucket": settings.s3_bucket if settings.s3_enabled else None,
+            "key": attached.file_path,
+            "size": attached.size,
+            "mime_type": attached.mime_type,
+            "uploaded_by": attached.uploaded_by,
+        })
+    return grouped
