@@ -1,5 +1,8 @@
 export type UserRole = 'user' | 'manager' | 'admin';
 
+// Тип воронки: B2B (вузы/юрлица) и B2C (физлица) — независимые workflow.
+export type WorkflowScope = 'b2b' | 'b2c';
+
 export interface User {
   id: number;
   email: string;
@@ -44,6 +47,7 @@ export interface WorkflowStage {
   order: number;
   color: string | null;
   is_active: boolean;
+  scope: WorkflowScope;
   interaction_count: number;
 }
 
@@ -82,6 +86,7 @@ export interface InteractionCard {
   stage_id: number;
   stage_name: string | null;
   stage_code: string | null;
+  scope: WorkflowScope;
   contract_number: string | null;
   university_specialist: string | null;
   assigned_kam_name: string | null;

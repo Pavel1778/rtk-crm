@@ -1,4 +1,4 @@
-import { App as AntApp, Button, Card, Space, Spin } from 'antd';
+import { App as AntApp, Button, Card, Segmented, Space, Spin } from 'antd';
 import { PlusOutlined, UndoOutlined } from '@ant-design/icons';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -7,7 +7,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '../api/client';
 import { createStage, updateStage } from '../api/endpoints';
-import type { WorkflowStage } from '../types';
+import type { WorkflowScope, WorkflowStage } from '../types';
 import { stagesKey, useDeleteStage, useStages } from '../hooks/useStages';
 import { useRole } from '../stores/authStore';
 import StageEditor from '../components/workflow/StageEditor';
@@ -19,7 +19,8 @@ export default function WorkflowPage() {
   const { message } = AntApp.useApp();
   const role = useRole();
   const qc = useQueryClient();
-  const { data: stages = [], isLoading } = useStages('all');
+  const [funnel, setFunnel] = useState<WorkflowScope>('b2b');
+  const { data: stages = [], isLoading } = useStages('all', funnel);
   const deleteStageMutation = useDeleteStage();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<WorkflowStage | undefined>();
@@ -49,7 +50,8 @@ export default function WorkflowPage() {
         await updateStage(editingStage.id, data);
         message.success('Этап обновлён');
       } else {
-        await createStage(data);
+        // Новый этап попадает в выбранную воронку, чтобы не смешивать B2B/B2C.
+        await createStage({ ...data, scope: funnel });
         message.success('Этап создан');
       }
       setEditorOpen(false);
@@ -103,7 +105,7 @@ export default function WorkflowPage() {
       ...s,
       order: idx + 1,
     }));
-    qc.setQueryData(stagesKey('all'), reordered);
+    qc.setQueryData(stagesKey('all', funnel), reordered);
 
     try {
       for (const stage of reordered) {
@@ -121,6 +123,18 @@ export default function WorkflowPage() {
       <div className="page-header">
         <h1>Конструктор воркфлоу</h1>
         <Space>
+          <Segmented
+            id="workflow-funnel"
+            value={funnel}
+            onChange={(value) => {
+              setFunnel(value as WorkflowScope);
+              setEditingStage(undefined);
+            }}
+            options={[
+              { value: 'b2b', label: 'B2B' },
+              { value: 'b2c', label: 'B2C' },
+            ]}
+          />
           {stages.some((s) => !s.is_active) && (
             <Button onClick={handleRestoreAll} icon={<UndoOutlined />}>
               Восстановить все

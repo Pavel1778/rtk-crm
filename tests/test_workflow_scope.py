@@ -170,3 +170,38 @@ async def test_stage_from_other_scope_is_rejected() -> None:
 
     assert response.status_code == 409
     assert "другому workflow" in response.json()["detail"]
+
+
+async def test_board_returns_only_requested_funnel() -> None:
+    """Доска фильтруется по scope: карточки B2C не попадают в B2B-воронку."""
+    token = await _admin_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    b2b_university = await _university("B2B-Вуз")
+    b2c_university = await _university("B2C-Физлицо")
+
+    async with _client() as client:
+        await client.post(
+            "/api/interactions",
+            json={"university_id": b2b_university, "scope": "b2b"},
+            headers=headers,
+        )
+        await client.post(
+            "/api/interactions",
+            json={"university_id": b2c_university, "scope": "b2c"},
+            headers=headers,
+        )
+
+        b2b_board = (await client.get("/api/interactions/board", headers=headers)).json()
+        b2c_board = (
+            await client.get(
+                "/api/interactions/board", params={"scope": "b2c"}, headers=headers
+            )
+        ).json()
+
+    b2b_cards = [c for col in b2b_board["columns"] for c in col["interactions"]]
+    b2c_cards = [c for col in b2c_board["columns"] for c in col["interactions"]]
+
+    assert all(col["stage"]["scope"] == "b2b" for col in b2b_board["columns"])
+    assert all(col["stage"]["scope"] == "b2c" for col in b2c_board["columns"])
+    assert [c["university_name"] for c in b2b_cards] == ["B2B-Вуз"]
+    assert [c["university_name"] for c in b2c_cards] == ["B2C-Физлицо"]
