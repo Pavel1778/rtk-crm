@@ -91,7 +91,7 @@ services:
       S3_SECURE: "false"
       KEYCLOAK_URL: "http://keycloak:8080"
       PYTHONPATH: "/"
-      CORS_ORIGINS: "http://localhost:3000,http://localhost,http://127.0.0.1:3000"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1}"
     depends_on:
       - redis
       - minio

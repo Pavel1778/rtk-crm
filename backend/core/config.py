@@ -31,11 +31,17 @@ class Settings(BaseSettings):
     # closed-contour deployment option.
     mock_mode: bool = True
 
-    # CORS — строка через запятую в env
+    # CORS — строка через запятую в env. Явный список: с allow_credentials=True
+    # браузер отвергает ответы с `*` в Access-Control-Allow-Origin.
+    # 127.0.0.1 и localhost считаются разными origin, поэтому нужны оба.
     cors_origins: str = (
         "http://localhost:3000,http://localhost:5173,http://localhost,"
+        "http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1,"
         "https://rtk-crm-nx4r.vercel.app"
     )
+    # Дополнительные origin'ы по регулярному выражению (стенды предпросмотра).
+    # Пустая строка отключает правило.
+    cors_origin_regex: str = r"https://[a-z0-9-]+\.prod-runtime\.all-hands\.dev"
 
     # Загрузка справочников и демо-данных при старте
     seed_demo_data: bool = True

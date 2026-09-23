@@ -82,10 +82,21 @@ app.middleware("http")(login_rate_limit_middleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    # Разрешаем динамические хосты предпросмотра/стендов без правки env.
+    # Пустая настройка -> None, иначе правило отключено (не «разрешить всё»).
+    allow_origin_regex=settings.cors_origin_regex or None,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["Content-Disposition", "Content-Type", "Content-Length"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Accept-Language",
+        "Origin",
+        "X-Requested-With",
+    ],
+    # Content-Disposition нужен фронту, чтобы прочитать имя скачиваемого файла.
+    expose_headers=["Content-Disposition", "Content-Length"],
     max_age=3600,
 )
 
