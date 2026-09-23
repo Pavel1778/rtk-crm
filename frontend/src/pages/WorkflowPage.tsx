@@ -1,18 +1,16 @@
 import { App as AntApp, Button, Card, Segmented, Space, Spin } from 'antd';
 import { PlusOutlined, UndoOutlined } from '@ant-design/icons';
-import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { errorMessage } from '../api/client';
-import { createStage, updateStage } from '../api/endpoints';
+import { createStage, reorderStages, updateStage } from '../api/endpoints';
 import type { WorkflowScope, WorkflowStage } from '../types';
 import { stagesKey, useDeleteStage, useStages } from '../hooks/useStages';
 import { useRole } from '../stores/authStore';
 import StageEditor from '../components/workflow/StageEditor';
 import DeleteStageModal from '../components/workflow/DeleteStageModal';
-import SortableStageRow from '../components/workflow/SortableStageRow';
+import StageTable from '../components/workflow/StageTable';
 import EmptyState from '../components/EmptyState';
 
 export default function WorkflowPage() {
@@ -94,23 +92,11 @@ export default function WorkflowPage() {
     }
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) {
-      return;
-    }
-    const oldIndex = stages.findIndex((i) => i.id === active.id);
-    const newIndex = stages.findIndex((i) => i.id === over.id);
-    const reordered = arrayMove(stages, oldIndex, newIndex).map((s, idx) => ({
-      ...s,
-      order: idx + 1,
-    }));
+  const handleDragEnd = async (reordered: WorkflowStage[]) => {
     qc.setQueryData(stagesKey('all', funnel), reordered);
 
     try {
-      for (const stage of reordered) {
-        await updateStage(stage.id, { order: stage.order });
-      }
+      await reorderStages(reordered.map((s) => ({ id: s.id, order: s.order })));
     } catch (e) {
       message.error(errorMessage(e));
     } finally {
@@ -167,23 +153,13 @@ export default function WorkflowPage() {
 
       {!isLoading && stages.length > 0 && (
         <Card style={{ border: '1px solid var(--atmr-border-soft)' }}>
-          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={stages.map((s) => s.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                {stages.map((stage) => (
-                  <SortableStageRow
-                    key={stage.id}
-                    stage={stage}
-                    onEdit={handleEdit}
-                    onDelete={setDeletingStage}
-                  />
-                ))}
-              </Space>
-            </SortableContext>
-          </DndContext>
+          <StageTable
+            stages={stages}
+            sortable
+            onReorder={handleDragEnd}
+            onEdit={handleEdit}
+            onDelete={setDeletingStage}
+          />
         </Card>
       )}
 

@@ -451,24 +451,146 @@ img, svg, canvas, video, table { max-width: 100%; }
   }
 }
 
-/* Сортируемые строки для конструктора воркфлоу */
-.sortable-stage-row {
+/* Единая таблица этапов workflow (WorkflowPage и SettingsPage) */
+.stage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.stage-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--atmr-text-secondary);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--atmr-border-muted);
+  white-space: nowrap;
+}
+
+.stage-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--atmr-border-soft);
+  vertical-align: middle;
+}
+
+.stage-table__row {
+  transition: background 0.2s ease;
+}
+
+.stage-table__row:hover {
+  background: var(--atmr-bg-soft);
+}
+
+.stage-table__row--disabled {
+  opacity: 0.55;
+}
+
+.stage-table__col-handle {
+  width: 40px;
+}
+
+.stage-table__col-order,
+.stage-table__col-count {
+  width: 120px;
+}
+
+.stage-table__handle {
+  cursor: grab;
+}
+
+.stage-table__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Длинные названия этапов не должны растягивать карточку и таблицу */
+.stage-table__name > span:not(.stage-table__dot) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stage-card .stage-table__name {
+  flex: 1;
+}
+
+.stage-card .stage-table__name > span {
+  overflow-wrap: anywhere;
+}
+
+/* Кнопка-название этапа (инлайн-редактирование) переносит текст, а не растягивает карточку */
+.stage-table__name .ant-btn,
+.stage-table__name .ant-btn > span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  height: auto;
+  max-width: 100%;
+}
+
+.stage-table__name .ant-btn {
+  padding-inline: 4px;
+}
+
+.stage-table__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Мобильный вариант единой таблицы этапов */
+.stage-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stage-card {
   padding: 12px;
-  background: #fff;
   border: 1px solid var(--atmr-border-muted);
   border-radius: 8px;
-  cursor: grab;
-  transition: box-shadow 0.2s ease;
+  background: #fff;
 }
 
-.sortable-stage-row:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-/* Выключенный этап в конструкторе воркфлоу */
-.workflow-row--disabled {
+.stage-card--disabled,
+.stage-card.stage-table__row--disabled {
   opacity: 0.55;
   background: var(--atmr-bg-soft);
+}
+
+.stage-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.stage-card__order {
+  flex-shrink: 0;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--atmr-bg-soft);
+  font-weight: 600;
+}
+
+.stage-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--atmr-text-secondary);
+}
+
+.stage-card__actions {
+  margin-top: 10px;
 }
 
 /* Баннер согласия на cookie */
