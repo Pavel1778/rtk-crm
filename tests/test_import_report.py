@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from uuid import uuid4
 
 import openpyxl
 import pytest
@@ -212,6 +213,36 @@ async def test_report_endpoint_returns_xlsx_with_counts_in_headers() -> None:
     sheet = openpyxl.load_workbook(BytesIO(response.content)).active
     values = [cell for row in sheet.iter_rows(values_only=True) for cell in row if cell]
     assert "Ошибок: 1" in values
+
+
+async def test_execute_imports_valid_rows_and_reports_skipped() -> None:
+    async with _report_client() as client:
+        headers = await _auth_headers(client)
+        name = f"Только валидные {uuid4().hex[:8]}"
+        response = await client.post(
+            "/api/catalogs/import/execute",
+            params={"catalog_type": "universities"},
+            files={
+                "file": (
+                    "catalog.xlsx",
+                    _xlsx([
+                        [name, "Москва", "Иван", "ivan@example.com", "+7"],
+                        ["", "Москва", "", "", ""],
+                    ]).getvalue(),
+                )
+            },
+            data={
+                "mapping": "{}",
+            },
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    # Одна строка импортируется, строка с пустым названием отсекается валидацией.
+    assert body["created"] == 1
+    assert body["total"] == 1
+    assert body["errors"] == ["Строка 3: отсутствует название"]
 
 
 async def test_report_endpoint_rejects_non_excel_and_unknown_catalog() -> None:
