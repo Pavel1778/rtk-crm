@@ -46,6 +46,29 @@ async def _get_or_404(db: AsyncSession, interaction_id: int) -> Interaction:
     return interaction
 
 
+async def _get_accessible(
+    db: AsyncSession, interaction_id: int, current: User
+) -> Interaction:
+    """Возвращает взаимодействие, если пользователь имеет к нему доступ.
+
+    КАМ (роль `user`) работает только со своими карточками: списки и доска
+    это уже учитывают, но операции по id нужно проверять отдельно, иначе
+    чужой id открывает чтение и изменение карточки. Руководитель и
+    администратор видят все взаимодействия.
+    """
+    interaction = await _get_or_404(db, interaction_id)
+    _ensure_can_access(interaction, current)
+    return interaction
+
+
+def _ensure_can_access(interaction: Interaction, current: User) -> None:
+    if current.role == UserRole.USER and interaction.assigned_kam_id != current.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Взаимодействие не принадлежит текущему пользователю",
+        )
+
+
 async def _default_stage(
     db: AsyncSession, scope: WorkflowScope = WorkflowScope.B2B
 ) -> WorkflowStageRef:
@@ -286,16 +309,18 @@ async def list_interactions(
 async def get_interaction(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
-    return await _read(db, await _get_or_404(db, interaction_id))
+    return await _read(
+        db, await _get_accessible(db, interaction_id, current)
+    )
 
 
 @router.post("", response_model=InteractionRead, status_code=201)
 async def create_interaction(
     payload: InteractionCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
     """Регистрация взаимодействия на первом этапе выбранного workflow."""
     if await db.get(University, payload.university_id) is None:
@@ -319,10 +344,20 @@ async def create_interaction(
     else:
         stage = await _default_stage(db, payload.scope)
 
+    # КАМ всегда становится ответственным за созданную им карточку —
+    # иначе она сразу выпадает из его доски. Руководитель и администратор
+    # могут назначить любого КАМ явно.
+    assigned_kam_id = payload.assigned_kam_id
+    if current.role == UserRole.USER:
+        assigned_kam_id = current.id
+    elif assigned_kam_id is not None and await db.get(User, assigned_kam_id) is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
     interaction = Interaction(
         university_id=payload.university_id,
         product_id=payload.product_id,
         stage_id=stage.id,
+        assigned_kam_id=assigned_kam_id,
         scope=payload.scope,
     )
     db.add(interaction)
@@ -337,10 +372,17 @@ async def update_interaction(
     interaction_id: int,
     payload: InteractionUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
-    interaction = await _get_or_404(db, interaction_id)
+    interaction = await _get_accessible(db, interaction_id, current)
     data = payload.model_dump(exclude_unset=True)
+
+    # Передача карточки другому сотруднику — управленческое действие.
+    if current.role == UserRole.USER:
+        data.pop("assigned_kam_id", None)
+    elif data.get("assigned_kam_id") is not None:
+        if await db.get(User, data["assigned_kam_id"]) is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     if "product_id" in data or "stage_id" in data:
         product_id = data.get("product_id", interaction.product_id)
@@ -378,9 +420,9 @@ async def update_interaction(
 async def delete_interaction(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> None:
-    interaction = await _get_or_404(db, interaction_id)
+    interaction = await _get_accessible(db, interaction_id, current)
     await db.delete(interaction)
     await db.commit()
     await invalidate_report_cache()
@@ -392,10 +434,10 @@ async def move_interaction(
     interaction_id: int,
     stage_id: int = Query(description="Целевой этап"),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
     """Перемещение карточки на другой этап (drag-and-drop на доске)."""
-    interaction = await _get_or_404(db, interaction_id)
+    interaction = await _get_accessible(db, interaction_id, current)
     stage = await db.get(WorkflowStageRef, stage_id)
     if stage is None:
         raise HTTPException(status_code=404, detail="Этап не найден")
@@ -422,9 +464,9 @@ async def move_interaction(
 async def list_actions(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> list[ActionRead]:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     rows = (
         await db.execute(
             select(Action, User.full_name)
@@ -454,7 +496,7 @@ async def create_action(
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> ActionRead:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     action = Action(
         interaction_id=interaction_id,
         author_id=current.id,
@@ -480,11 +522,12 @@ async def update_action(
     action_id: int,
     payload: ActionUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> ActionRead:
     action = await db.get(Action, action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="Задача не найдена")
+    await _get_accessible(db, action.interaction_id, current)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(action, field, value)
     await db.commit()
@@ -505,11 +548,12 @@ async def update_action(
 async def delete_action(
     action_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> None:
     action = await db.get(Action, action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="Задача не найдена")
+    await _get_accessible(db, action.interaction_id, current)
     await db.delete(action)
     await db.commit()
     await invalidate_report_cache()
@@ -520,9 +564,9 @@ async def delete_action(
 async def list_comments(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> list[CommentRead]:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     rows = (
         await db.execute(
             select(Comment, User.full_name)
@@ -552,7 +596,7 @@ async def create_comment(
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> CommentRead:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     comment = Comment(
         interaction_id=interaction_id, text=payload.text, author_id=current.id
     )

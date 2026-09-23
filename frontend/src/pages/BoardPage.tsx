@@ -41,6 +41,7 @@ import {
   getBoard,
   listProducts,
   listUniversities,
+  listUsers,
   moveInteraction,
 } from '../api/endpoints';
 import type {
@@ -48,6 +49,7 @@ import type {
   InteractionCard,
   ITProduct,
   University,
+  User,
   WorkflowScope,
   WorkflowStage,
 } from '../types';
@@ -417,16 +419,24 @@ function CreateInteractionModal({
   onCreated: () => void;
 }) {
   const { message } = AntApp.useApp();
+  const role = useRole();
   const [universities, setUniversities] = useState<University[]>([]);
   const [products, setProducts] = useState<ITProduct[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [universityId, setUniversityId] = useState<number | null>(null);
   const [productId, setProductId] = useState<number | null>(null);
+  const [kamId, setKamId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const canAssign = role === 'admin' || role === 'manager';
 
   useEffect(() => {
     if (open) {
       void listUniversities().then(setUniversities).catch(() => undefined);
       void listProducts().then(setProducts).catch(() => undefined);
+      if (canAssign) {
+        void listUsers().then(setUsers).catch(() => undefined);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -441,11 +451,13 @@ function CreateInteractionModal({
       await createInteraction({
         university_id: universityId,
         product_id: productId,
+        assigned_kam_id: kamId,
         scope,
       });
       message.success('Взаимодействие создано');
       setUniversityId(null);
       setProductId(null);
+      setKamId(null);
       onCreated();
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось создать'));
@@ -502,6 +514,21 @@ function CreateInteractionModal({
           optionFilterProp="label"
           options={products.map((p) => ({ value: p.id, label: p.name }))}
         />
+        {canAssign && (
+          <Select
+            id="drawer-kam"
+            showSearch
+            allowClear
+            placeholder="Ответственный КАМ"
+            style={{ width: '100%' }}
+            value={kamId}
+            onChange={(value) => setKamId(value ?? null)}
+            optionFilterProp="label"
+            options={users
+              .filter((u) => u.role === 'user')
+              .map((u) => ({ value: u.id, label: u.full_name }))}
+          />
+        )}
         <Button type="primary" block loading={saving} onClick={submit}>
           Создать
         </Button>

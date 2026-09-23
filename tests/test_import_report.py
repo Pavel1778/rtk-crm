@@ -15,8 +15,9 @@ import openpyxl
 import pytest
 from httpx import ASGITransport, AsyncClient
 from openpyxl import Workbook
+from sqlalchemy import select
 
-from app.db.session import create_tables
+from app.db.session import SessionLocal, create_tables
 from app.main import app
 from app.services.excel_import import (
     SEVERITY_ERROR,
@@ -27,10 +28,33 @@ from app.services.import_report import HEADERS, generate_import_report
 
 UNIVERSITY_HEADERS = ["Название", "Город", "Контактное лицо", "Email", "Телефон"]
 
+ADMIN_EMAIL = "admin@rtk.ru"
+ADMIN_PASSWORD = "admin123"
+
 
 @pytest.fixture(autouse=True)
 async def _prepare_db():
+    """Таблицы + администратор: тесты не должны зависеть от внешнего сида."""
     await create_tables()
+    from app.auth.security import hash_password
+    from app.models.entities import User
+    from app.models.enums import UserRole
+
+    async with SessionLocal() as session:
+        existing = await session.scalar(
+            select(User).where(User.email == ADMIN_EMAIL)
+        )
+        if existing is None:
+            session.add(
+                User(
+                    email=ADMIN_EMAIL,
+                    full_name="Администратор",
+                    role=UserRole.ADMIN,
+                    is_admin=True,
+                    hashed_password=hash_password(ADMIN_PASSWORD),
+                )
+            )
+            await session.commit()
 
 
 def _xlsx(rows: list[list[object]]) -> BytesIO:

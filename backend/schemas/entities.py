@@ -159,6 +159,7 @@ class InteractionCreate(BaseModel):
     university_id: int
     product_id: int | None = None
     stage_id: int | None = None
+    assigned_kam_id: int | None = None
     scope: WorkflowScope = WorkflowScope.B2B
 
 

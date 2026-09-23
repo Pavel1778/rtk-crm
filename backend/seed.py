@@ -154,25 +154,40 @@ async def _seed_users(session: AsyncSession) -> bool:
 
 
 async def _seed_directories(session: AsyncSession) -> bool:
-    existing = await session.scalar(
-        select(func.count(ITDirection.id)).where(ITDirection.name == DIRECTIONS[0])
-    )
-    if existing:
-        return False
+    """Дозаполняет направления и продукты независимо друг от друга.
 
+    Справочники сидятся раздельно: база может содержать направления без
+    продуктов (прерванный сид, ручное удаление продуктов). Привязка к первому
+    направлению в этом случае заблокировала бы создание продуктов.
+    """
+    created = False
+
+    existing_directions = {
+        name for name in await session.scalars(select(ITDirection.name))
+    }
     for name in DIRECTIONS:
-        session.add(ITDirection(name=name))
-    await session.flush()
+        if name not in existing_directions:
+            session.add(ITDirection(name=name))
+            created = True
+    if created:
+        await session.flush()
 
     directions = {
         d.name: d.id
         for d in await session.scalars(select(ITDirection))
     }
+
+    existing_products = {
+        name for name in await session.scalars(select(ITProduct.name))
+    }
     for name, direction_name in PRODUCTS:
+        if name in existing_products:
+            continue
         session.add(
             ITProduct(name=name, direction_id=directions.get(direction_name))
         )
-    return True
+        created = True
+    return created
 
 
 async def _seed_demo_interactions(session: AsyncSession) -> bool:
@@ -213,7 +228,13 @@ async def _seed_demo_interactions(session: AsyncSession) -> bool:
         (1, 3, "stage_control", "РТК-2025-114"),
     ]
     for university_idx, product_idx, stage_code, contract in demo_cards:
-        product = products[product_idx] if product_idx is not None else None
+        # Индексы зашиты в демо-карточках: при неполном справочнике продукт
+        # может отсутствовать, поэтому берём его безопасно, а не по индексу.
+        product = (
+            products[product_idx]
+            if product_idx is not None and 0 <= product_idx < len(products)
+            else None
+        )
         session.add(
             Interaction(
                 university_id=universities[university_idx].id,
