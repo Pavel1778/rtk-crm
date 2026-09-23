@@ -1,6 +1,7 @@
 import {
   AppstoreOutlined,
   BarChartOutlined,
+  BulbOutlined,
   DatabaseOutlined,
   LogoutOutlined,
   MenuOutlined,
@@ -12,6 +13,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 import { useAuthStore, useRole } from '../stores/authStore';
+import { useThemeStore } from '../stores/themeStore';
 import AppFooter from './AppFooter';
 
 const { Header, Content } = Layout;
@@ -37,6 +39,8 @@ export default function MainLayout() {
   const signOut = useAuthStore((s) => s.signOut);
   const role = useRole();
   const screens = Grid.useBreakpoint();
+  const themeMode = useThemeStore((s) => s.mode);
+  const toggleTheme = useThemeStore((s) => s.toggle);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const items = role === 'admin'
@@ -84,6 +88,14 @@ export default function MainLayout() {
           {screens.md && (
             <Typography.Text type="secondary">{user?.full_name}</Typography.Text>
           )}
+          <Tooltip title={themeMode === 'dark' ? 'Светлая тема' : 'Тёмная тема'}>
+            <Button
+              type="text"
+              aria-label="Переключить тему"
+              icon={<BulbOutlined />}
+              onClick={toggleTheme}
+            />
+          </Tooltip>
           <Tooltip title="Выйти">
             <Button
               type="text"
