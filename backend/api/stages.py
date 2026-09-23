@@ -10,7 +10,7 @@ from app.models.entities import (
     User,
     WorkflowStageRef,
 )
-from app.models.enums import UserRole
+from app.models.enums import UserRole, WorkflowScope
 from app.schemas.entities import (
     WorkflowStageCreate,
     WorkflowStageRead,
@@ -61,12 +61,19 @@ async def _with_counts(
 
 @router.get("", response_model=list[WorkflowStageRead])
 async def list_stages(
+    scope: WorkflowScope | None = Query(
+        default=None, description="b2b или b2c; без параметра — все этапы"
+    ),
     include_inactive: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[WorkflowStageRead]:
     """Этапы воркфлоу в порядке следования с числом активных взаимодействий."""
-    stmt = select(WorkflowStageRef).order_by(WorkflowStageRef.order)
+    stmt = select(WorkflowStageRef).order_by(
+        WorkflowStageRef.scope, WorkflowStageRef.order
+    )
+    if scope is not None:
+        stmt = stmt.where(WorkflowStageRef.scope == scope)
     if not include_inactive:
         stmt = stmt.where(WorkflowStageRef.is_active.is_(True))
     stages = list(await db.scalars(stmt))
@@ -86,14 +93,15 @@ async def create_stage(
         )
     clash = await db.scalar(
         select(WorkflowStageRef.id).where(
+            WorkflowStageRef.scope == payload.scope,
             (WorkflowStageRef.code == payload.code)
-            | (WorkflowStageRef.order == payload.order)
+            | (WorkflowStageRef.order == payload.order),
         )
     )
     if clash:
         raise HTTPException(
             status_code=409,
-            detail="Этап с таким кодом или порядком уже существует",
+            detail="Этап с таким кодом или порядком уже существует в этом workflow",
         )
     stage = WorkflowStageRef(**payload.model_dump())
     db.add(stage)
@@ -232,4 +240,4 @@ async def reorder_stages(
         if stage:
             stage.order = item["order"]
     await db.commit()
-    return await list_stages(False, db, current)
+    return await list_stages(None, False, db, current)

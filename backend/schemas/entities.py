@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.models.enums import UserRole
+from app.models.enums import UserRole, WorkflowScope
 
 
 class ORMModel(BaseModel):
@@ -119,6 +119,7 @@ class WorkflowStageBase(BaseModel):
     code: str = Field(max_length=50)
     name: str = Field(max_length=255)
     order: int
+    scope: WorkflowScope = WorkflowScope.B2B
     color: str | None = None
     is_active: bool = True
 
@@ -145,6 +146,7 @@ class InteractionBase(BaseModel):
     university_id: int
     product_id: int | None = None
     stage_id: int
+    scope: WorkflowScope = WorkflowScope.B2B
     contract_number: str | None = None
     contract_date: str | None = None
     assigned_kam_id: int | None = None
@@ -157,6 +159,7 @@ class InteractionCreate(BaseModel):
     university_id: int
     product_id: int | None = None
     stage_id: int | None = None
+    scope: WorkflowScope = WorkflowScope.B2B
 
 
 class InteractionUpdate(BaseModel):
@@ -208,6 +211,7 @@ class InteractionCard(ORMModel):
     stage_id: int
     stage_name: str | None = None
     stage_code: str | None = None
+    scope: WorkflowScope = WorkflowScope.B2B
     contract_number: str | None = None
     university_specialist: str | None = None
     assigned_kam_name: str | None = None

@@ -1,12 +1,8 @@
 """API для прикрепления файлов к взаимодействиям."""
 
-import os
-import uuid
 from pathlib import Path
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +10,7 @@ from app.auth.security import get_current_user
 from app.db.session import get_db
 from app.models.entities import AttachedFile, Interaction, User
 from app.schemas.entities import AttachedFileRead
+from app.services.file_storage import get_storage
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -48,13 +45,6 @@ ALLOWED_EXTENSIONS = {
 
 # Максимальный размер файла (50 МБ)
 MAX_FILE_SIZE = 50 * 1024 * 1024
-
-# Директория для хранения файлов
-UPLOAD_DIR = Path("/app/uploads")
-if not UPLOAD_DIR.exists():
-    # Fallback для локальной разработки
-    UPLOAD_DIR = Path("uploads")
-    UPLOAD_DIR.mkdir(exist_ok=True)
 
 
 @router.post("/interactions/{interaction_id}/upload", response_model=AttachedFileRead, status_code=201)
@@ -93,24 +83,17 @@ async def upload_file(
             detail=f"Файл слишком большой. Максимум: {MAX_FILE_SIZE / (1024*1024)} МБ"
         )
     
-    # Генерация уникального имени файла
-    file_ext = extension
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    # Сохранение в S3/MinIO либо в локальный uploads/ (fallback).
+    storage = get_storage()
     
-    # Создание директории для взаимодействия
-    interaction_dir = UPLOAD_DIR / str(interaction_id)
-    interaction_dir.mkdir(exist_ok=True)
     
-    # Сохранение файла
-    file_path = interaction_dir / unique_filename
-    with open(file_path, "wb") as f:
-        f.write(content)
+    storage_key = await storage.save(interaction_id, filename, content)
     
     # Создание записи в БД
     attached_file = AttachedFile(
         interaction_id=interaction_id,
         filename=filename,
-        file_path=str(file_path),
+        file_path=storage_key,
         size=len(content),
         mime_type=file.content_type,
         uploaded_by=current.id,
@@ -188,15 +171,28 @@ async def download_file(
     if attached_file is None:
         raise HTTPException(status_code=404, detail="Файл не найден")
     
-    file_path = Path(attached_file.file_path)
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Файл не найден на диске")
-    
-    return FileResponse(
-        path=file_path,
-        filename=attached_file.filename,
+    try:
+        content = await get_storage().read(attached_file.file_path)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(status_code=404, detail="Файл не найден в хранилище")
+
+    # Отдаём байты напрямую: работает и для локального диска, и для S3,
+    # где локального пути не существует.
+    return Response(
+        content=content,
         media_type=attached_file.mime_type,
+        headers={
+            "Content-Disposition": _attachment_header(attached_file.filename)
+        },
     )
+
+
+def _attachment_header(filename: str) -> str:
+    """RFC 5987: ASCII-фолбэк + UTF-8 имя для кириллических имён файлов."""
+    from urllib.parse import quote
+
+    fallback = filename.encode("ascii", "ignore").decode() or "file"
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
 
 
 @router.delete("/{file_id}", status_code=204)
@@ -218,13 +214,8 @@ async def delete_file(
             detail="Можно удалять только свои файлы"
         )
     
-    # Удаление с диска
-    file_path = Path(attached_file.file_path)
-    if file_path.exists():
-        try:
-            file_path.unlink()
-        except Exception:
-            pass  # Игнорируем ошибки удаления с диска
+    # Удаление из S3/MinIO или локального каталога
+    await get_storage().delete(attached_file.file_path)
     
     # Удаление из БД
     await db.delete(attached_file)

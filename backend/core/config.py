@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     secret_key: str = "development-only-change-me-32-chars"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
+    # Rate limiting для /api/auth/login: число неуспешных попыток с одного IP
+    # за окно (секунды). 0 отключает ограничение.
+    login_rate_limit: int = 5
+    login_rate_limit_window_seconds: int = 60
     # JWT remains the active auth mode; Keycloak integration is a future
     # closed-contour deployment option.
     mock_mode: bool = True
@@ -35,6 +39,30 @@ class Settings(BaseSettings):
 
     # Загрузка справочников и демо-данных при старте
     seed_demo_data: bool = True
+
+    # Уведомления о «зависших» заявках: порог в днях настраивается в админке.
+    stuck_timeout_days: int = 14
+    # Заглушки каналов уведомлений (Telegram/Email). Пустые значения = выкл.
+    telegram_bot_token: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    # Периодическая проверка «зависших» заявок (часы). 0 — выключено.
+    notifications_enabled: bool = True
+    notifications_interval_hours: int = 12
+
+    # MinIO/S3-хранилище файлов. Если endpoint пуст — локальный uploads/.
+    s3_endpoint: str = ""
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_bucket: str = "rtk-crm"
+    s3_secure: bool = False
+
+    @property
+    def s3_enabled(self) -> bool:
+        return bool(self.s3_endpoint)
 
     @property
     def cors_origins_list(self) -> list[str]:
