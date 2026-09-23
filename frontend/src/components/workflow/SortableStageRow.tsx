@@ -3,6 +3,7 @@ import { DeleteOutlined, HolderOutlined } from '@ant-design/icons';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import StageToggle from './StageToggle';
+import type { WorkflowScope } from '../../types';
 
 interface StageData {
   id: number;
@@ -11,6 +12,7 @@ interface StageData {
   order: number;
   color: string | null;
   is_active: boolean;
+  scope: WorkflowScope;
   interaction_count: number;
 }
 

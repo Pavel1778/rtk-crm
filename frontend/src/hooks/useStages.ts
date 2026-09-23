@@ -3,16 +3,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { errorMessage } from '../api/client';
 import { deleteStage, listStages, stageImpact, updateStage } from '../api/endpoints';
-import type { StageImpact, WorkflowStage } from '../types';
+import type { StageImpact, WorkflowScope, WorkflowStage } from '../types';
 
 export type StageScope = 'all' | 'active';
 
-export const stagesKey = (scope: StageScope) => ['stages', scope] as const;
+export const stagesKey = (scope: StageScope, funnel: WorkflowScope | 'all' = 'all') =>
+  ['stages', scope, funnel] as const;
 
-export function useStages(scope: StageScope = 'all') {
+export function useStages(
+  scope: StageScope = 'all',
+  funnel: WorkflowScope | 'all' = 'all'
+) {
   return useQuery<WorkflowStage[]>({
-    queryKey: stagesKey(scope),
-    queryFn: () => listStages(scope === 'all'),
+    queryKey: stagesKey(scope, funnel),
+    queryFn: () =>
+      listStages(scope === 'all', funnel === 'all' ? undefined : funnel),
   });
 }
 

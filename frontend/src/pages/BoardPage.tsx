@@ -20,6 +20,7 @@ import {
   Grid,
   Input,
   Row,
+  Segmented,
   Select,
   Space,
   Spin,
@@ -47,6 +48,7 @@ import type {
   InteractionCard,
   ITProduct,
   University,
+  WorkflowScope,
   WorkflowStage,
 } from '../types';
 import { useRole } from '../stores/authStore';
@@ -199,6 +201,7 @@ export default function BoardPage() {
   const [data, setData] = useState<BoardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [scope, setScope] = useState<WorkflowScope>('b2b');
   const [productFilter, setProductFilter] = useState<number | undefined>();
   const [products, setProducts] = useState<ITProduct[]>([]);
   const [activeCard, setActiveCard] = useState<InteractionCard | null>(null);
@@ -209,7 +212,7 @@ export default function BoardPage() {
   const load = async () => {
     setLoading(true);
     try {
-      setData(await getBoard({ search: search || undefined, product_id: productFilter }));
+      setData(await getBoard({ search: search || undefined, product_id: productFilter, scope }));
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось загрузить доску'));
     } finally {
@@ -221,7 +224,7 @@ export default function BoardPage() {
     void load();
     void listProducts().then(setProducts).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scope]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -270,6 +273,20 @@ export default function BoardPage() {
       
       <div className="page-filters">
         <Row gutter={[12, 12]} align="middle" style={{ width: '100%' }}>
+          <Col>
+            <Segmented
+              id="board-scope"
+              value={scope}
+              onChange={(value) => {
+                setScope(value as WorkflowScope);
+                setMobileStage(undefined);
+              }}
+              options={[
+                { value: 'b2b', label: 'B2B' },
+                { value: 'b2c', label: 'B2C' },
+              ]}
+            />
+          </Col>
           <Col flex="auto">
             <Input.Search
               id="board-search"
@@ -365,6 +382,7 @@ export default function BoardPage() {
 
       <CreateInteractionModal
         open={creating}
+        scope={scope}
         onClose={() => setCreating(false)}
         onCreated={async () => {
           setCreating(false);
@@ -383,10 +401,12 @@ export default function BoardPage() {
 
 function CreateInteractionModal({
   open,
+  scope,
   onClose,
   onCreated,
 }: {
   open: boolean;
+  scope: WorkflowScope;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -415,6 +435,7 @@ function CreateInteractionModal({
       await createInteraction({
         university_id: universityId,
         product_id: productId,
+        scope,
       });
       message.success('Взаимодействие создано');
       setUniversityId(null);

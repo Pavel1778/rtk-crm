@@ -11,6 +11,7 @@ import type {
   Token,
   University,
   User,
+  WorkflowScope,
   WorkflowStage,
 } from '../types';
 
@@ -27,6 +28,7 @@ export const listUsers = () =>
 export const getBoard = (params?: {
   search?: string;
   product_id?: number;
+  scope?: WorkflowScope;
 }) => api.get<BoardResponse>('/api/interactions/board', { params }).then((r) => r.data);
 
 export const getInteraction = (id: number) =>
@@ -36,6 +38,7 @@ export const createInteraction = (payload: {
   university_id: number;
   product_id?: number | null;
   stage_id?: number | null;
+  scope?: WorkflowScope;
 }) => api.post<Interaction>('/api/interactions', payload).then((r) => r.data);
 
 export const updateInteraction = (
@@ -187,10 +190,13 @@ export const executeCatalogImport = (
 };
 
 // --- Воркфлоу ---
-export const listStages = (includeInactive = false) =>
+export const listStages = (includeInactive = false, scope?: WorkflowScope) =>
   api
     .get<WorkflowStage[]>('/api/stages', {
-      params: includeInactive ? { include_inactive: true } : undefined,
+      params: {
+        ...(includeInactive ? { include_inactive: true } : {}),
+        ...(scope ? { scope } : {}),
+      },
     })
     .then((r) => r.data);
 
