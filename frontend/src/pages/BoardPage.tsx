@@ -287,13 +287,13 @@ export default function BoardPage() {
               ]}
             />
           </Col>
-          <Col flex="auto">
+          <Col flex="auto" className="board-filter-search">
             <Input.Search
               id="board-search"
               name="search"
               placeholder="Поиск по вузу"
               allowClear
-              style={{ width: 220 }}
+              className="board-search-input"
               autoComplete="off"
               onSearch={(value) => {
                 setSearch(value);
@@ -301,12 +301,12 @@ export default function BoardPage() {
               }}
             />
           </Col>
-          <Col>
+          <Col className="board-filter-product">
             <Select
               id="board-product-filter"
               placeholder="Продукт"
               allowClear
-              style={{ width: 180 }}
+              className="board-product-select"
               value={productFilter}
               onChange={(value) => {
                 setProductFilter(value);
