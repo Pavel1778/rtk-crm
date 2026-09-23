@@ -385,10 +385,7 @@ async def export_xlsx(
     xlsx_data = generate_xlsx(data)
 
     filename = _report_filename("xlsx")
-    headers = {
-        "Content-Disposition": f'attachment; filename="{filename}"',
-        "Access-Control-Expose-Headers": "Content-Disposition",
-    }
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(
         xlsx_data,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -422,10 +419,7 @@ async def export_xls(
     xls_data = generate_xls(data)
 
     filename = _report_filename("xls")
-    headers = {
-        "Content-Disposition": f'attachment; filename="{filename}"',
-        "Access-Control-Expose-Headers": "Content-Disposition",
-    }
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(
         xls_data,
         media_type="application/vnd.ms-excel",
@@ -459,10 +453,7 @@ async def export_pdf(
     pdf_data = generate_pdf(data)
 
     filename = _report_filename("pdf")
-    headers = {
-        "Content-Disposition": f'attachment; filename="{filename}"',
-        "Access-Control-Expose-Headers": "Content-Disposition",
-    }
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(
         pdf_data,
         media_type="application/pdf",
