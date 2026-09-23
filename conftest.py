@@ -21,6 +21,11 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("SEED_DEMO_DATA", "false")
 
+# Загруженные в тестах файлы не должны попадать в рабочее дерево.
+os.environ.setdefault(
+    "UPLOAD_DIR", tempfile.mkdtemp(prefix="rtk-test-uploads-")
+)
+
 _alias_dir = Path(tempfile.mkdtemp(prefix="rtk-app-alias-"))
 _alias_path = _alias_dir / "app"
 if not _alias_path.exists():
