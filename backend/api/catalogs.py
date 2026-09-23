@@ -1,8 +1,11 @@
 """API для импорта каталогов из Excel и JSON файлов."""
 
 import json
+from datetime import datetime
+from io import BytesIO
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +18,7 @@ from app.services.excel_import import (
     parse_catalog_file,
     parse_catalog_json,
 )
+from app.services.import_report import generate_import_report
 
 router = APIRouter(prefix="/api/catalogs", tags=["catalogs"])
 
@@ -49,7 +53,6 @@ async def preview_catalog_import(
     
     try:
         content = await file.read()
-        from io import BytesIO
         file_bytes = BytesIO(content)
         
         result = parse_catalog_file(
@@ -61,6 +64,51 @@ async def preview_catalog_import(
         return result.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {str(e)}")
+
+
+@router.post("/import/report")
+async def catalog_import_report(
+    catalog_type: str,
+    file: UploadFile = File(...),
+    mapping: str = Form("{}"),
+    _: User = Depends(require_manager_or_admin),
+) -> StreamingResponse:
+    """XLSX-отчёт о проблемах импорта: та же валидация, что в предпросмотре.
+
+    Ошибки (пустое обязательное поле) блокируют строку, предупреждения
+    (дубль в файле, некорректный email) — нет. Отчёт предназначен для
+    менеджера каталога: можно исправить файл и загрузить его снова.
+    """
+    if catalog_type not in ["universities", "products"]:
+        raise HTTPException(
+            status_code=400,
+            detail="catalog_type должен быть 'universities' или 'products'"
+        )
+    if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
+        raise HTTPException(
+            status_code=400,
+            detail="Файл должен быть в формате Excel (.xlsx или .xls)"
+        )
+
+    content = await file.read()
+    result = parse_catalog_file(
+        BytesIO(content),
+        catalog_type,
+        file.filename,
+        _parse_mapping(mapping),
+    )
+    stream = generate_import_report(result)
+    summary = result.to_dict()["summary"]
+    filename = f"import-report-{datetime.now():%Y%m%d-%H%M}.xlsx"
+    return StreamingResponse(
+        stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Import-Error-Rows": str(summary["error_rows"]),
+            "X-Import-Warning-Rows": str(summary["warning_rows"]),
+        },
+    )
 
 
 @router.post("/import/execute")
@@ -94,7 +142,6 @@ async def execute_catalog_import(
     
     try:
         content = await file.read()
-        from io import BytesIO
         file_bytes = BytesIO(content)
         
         result = parse_catalog_file(
