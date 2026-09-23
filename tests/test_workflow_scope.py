@@ -205,3 +205,103 @@ async def test_board_returns_only_requested_funnel() -> None:
     assert all(col["stage"]["scope"] == "b2c" for col in b2c_board["columns"])
     assert [c["university_name"] for c in b2b_cards] == ["B2B-Вуз"]
     assert [c["university_name"] for c in b2c_cards] == ["B2C-Физлицо"]
+
+
+async def _b2b_stage_ids() -> list[int]:
+    async with SessionLocal() as session:
+        stages = list(
+            await session.scalars(
+                select(WorkflowStageRef)
+                .where(WorkflowStageRef.scope == WorkflowScope.B2B)
+                .order_by(WorkflowStageRef.order)
+            )
+        )
+    return [stage.id for stage in stages]
+
+
+async def test_reorder_stages_applies_full_permutation() -> None:
+    """Перестановка крайних этапов проходит, несмотря на UNIQUE(scope, order)."""
+    token = await _admin_token()
+    ids = await _b2b_stage_ids()
+    swapped = [ids[1], ids[0], *ids[2:]]
+
+    async with _client() as client:
+        response = await client.post(
+            "/api/stages/reorder",
+            json={
+                "stages": [
+                    {"id": stage_id, "order": position}
+                    for position, stage_id in enumerate(swapped, start=1)
+                ]
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+
+    async with SessionLocal() as session:
+        stages = list(
+            await session.scalars(
+                select(WorkflowStageRef).where(WorkflowStageRef.scope == WorkflowScope.B2B)
+            )
+        )
+
+    orders = {stage.id: stage.order for stage in stages}
+    assert [orders[stage_id] for stage_id in swapped] == list(range(1, len(swapped) + 1))
+    assert sorted(orders.values()) == list(range(1, len(ids) + 1))
+
+
+async def test_reorder_stages_keeps_unique_orders() -> None:
+    """Итоговые порядки уникальны и не содержат временных отрицательных значений."""
+    token = await _admin_token()
+    ids = await _b2b_stage_ids()
+    reversed_ids = list(reversed(ids))
+
+    async with _client() as client:
+        response = await client.post(
+            "/api/stages/reorder",
+            json={
+                "stages": [
+                    {"id": stage_id, "order": position}
+                    for position, stage_id in enumerate(reversed_ids, start=1)
+                ]
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+
+    async with SessionLocal() as session:
+        stages = list(
+            await session.scalars(
+                select(WorkflowStageRef).where(WorkflowStageRef.scope == WorkflowScope.B2B)
+            )
+        )
+
+    orders = sorted(stage.order for stage in stages)
+    assert orders == list(range(1, len(ids) + 1))
+
+
+async def test_reorder_requires_admin() -> None:
+    """Пересортировка недоступна обычному пользователю."""
+    ids = await _b2b_stage_ids()
+    async with SessionLocal() as session:
+        user = User(
+            email="user-reorder@rtk.ru",
+            full_name="Пользователь",
+            role=UserRole.USER,
+            hashed_password=hash_password("secret123"),
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        token = create_access_token(user)
+
+    async with _client() as client:
+        response = await client.post(
+            "/api/stages/reorder",
+            json={"stages": [{"id": ids[0], "order": 2}, {"id": ids[1], "order": 1}]},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 403
