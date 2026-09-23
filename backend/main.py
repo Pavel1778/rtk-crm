@@ -10,6 +10,7 @@ from loguru import logger
 from sqlalchemy import text
 
 from app.api import (
+    audit,
     auth,
     catalogs,
     directories,
@@ -137,6 +138,7 @@ app.include_router(catalogs.router)
 app.include_router(files.router)
 app.include_router(stages.router)
 app.include_router(interactions.router)
+app.include_router(audit.router)
 app.include_router(reports.router)
 app.include_router(notifications.router)
 

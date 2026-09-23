@@ -1,6 +1,7 @@
 import { api } from './client';
 import type {
   ActionItem,
+  AuditLogPage,
   BoardResponse,
   CommentItem,
   ITDirection,
@@ -13,6 +14,7 @@ import type {
   Token,
   University,
   User,
+  UserRole,
   WorkflowScope,
   WorkflowStage,
 } from '../types';
@@ -25,6 +27,38 @@ export const me = () => api.get<User>('/api/auth/me').then((r) => r.data);
 
 export const listUsers = () =>
   api.get<User[]>('/api/auth/users').then((r) => r.data);
+
+export const createUser = (payload: {
+  email: string;
+  full_name: string;
+  password: string;
+  role: UserRole;
+  is_admin?: boolean;
+}) => api.post<User>('/api/auth/users', payload).then((r) => r.data);
+
+export const updateUser = (id: number, payload: Partial<{
+  email: string;
+  full_name: string;
+  password: string;
+  role: UserRole;
+  is_admin: boolean;
+  is_active: boolean;
+}>) => api.patch<User>(`/api/auth/users/${id}`, payload).then((r) => r.data);
+
+export const deleteUser = (id: number) =>
+  api.delete(`/api/auth/users/${id}`);
+
+// --- Журнал аудита (152-ФЗ) ---
+export const listAuditLogs = (params?: {
+  action?: string;
+  entity_type?: string;
+  user_id?: number;
+  limit?: number;
+  offset?: number;
+}) => api.get<AuditLogPage>('/api/audit', { params }).then((r) => r.data);
+
+export const listAuditEntityTypes = () =>
+  api.get<string[]>('/api/audit/entity-types').then((r) => r.data);
 
 // --- Взаимодействия и доска ---
 export const getBoard = (params?: {

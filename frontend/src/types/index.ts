@@ -19,6 +19,23 @@ export interface Token {
   user: User;
 }
 
+export interface AuditLogEntry {
+  id: number;
+  user_id: number | null;
+  user_name: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: number;
+  ip_address: string | null;
+  new_value: string | null;
+  created_at: string;
+}
+
+export interface AuditLogPage {
+  total: number;
+  items: AuditLogEntry[];
+}
+
 export interface University {
   id: number;
   name: string;

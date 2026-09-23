@@ -321,3 +321,21 @@ class HealthResponse(BaseModel):
     status: str
     app: str
     database: str
+
+
+# ---------- Аудит (152-ФЗ) ----------
+class AuditLogRead(ORMModel):
+    id: int
+    user_id: int | None = None
+    user_name: str | None = None
+    action: str
+    entity_type: str
+    entity_id: int
+    ip_address: str | None = None
+    new_value: str | None = None
+    created_at: datetime
+
+
+class AuditLogPage(BaseModel):
+    total: int
+    items: list[AuditLogRead]
