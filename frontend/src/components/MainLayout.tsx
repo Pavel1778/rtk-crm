@@ -3,6 +3,7 @@ import {
   BarChartOutlined,
   BulbOutlined,
   DatabaseOutlined,
+  HistoryOutlined,
   LogoutOutlined,
   MenuOutlined,
   QuestionCircleOutlined,
@@ -32,6 +33,12 @@ const ADMIN_ITEM = {
   label: 'Пользователи',
 };
 
+const AUDIT_ITEM = {
+  key: '/audit',
+  icon: <HistoryOutlined />,
+  label: 'Журнал',
+};
+
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,7 +51,7 @@ export default function MainLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const items = role === 'admin'
-    ? [...MENU_ITEMS, ADMIN_ITEM]
+    ? [...MENU_ITEMS, ADMIN_ITEM, AUDIT_ITEM]
     : MENU_ITEMS;
 
   return (

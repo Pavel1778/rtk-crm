@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import ReportPage from './pages/ReportPage';
 import DirectoryPage from './pages/DirectoryPage';
 import SettingsPage from './pages/SettingsPage';
+import AuditLogPage from './pages/AuditLogPage';
 import HelpPage from './pages/HelpPage';
 import WorkflowPage from './pages/WorkflowPage';
 import CookiePolicyPage from './pages/CookiePolicyPage';
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/reports" element={<ReportPage />} />
           <Route path="/directories" element={<DirectoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/audit" element={<AuditLogPage />} />
           <Route path="/help" element={<HelpPage />} />
           <Route path="/workflow" element={<WorkflowPage />} />
         </Route>
