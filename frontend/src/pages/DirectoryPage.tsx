@@ -17,7 +17,7 @@ import {
   Tabs,
 } from 'antd';
 
-import { errorMessage } from '../api/client';
+import { errorMessage, downloadBlob } from '../api/client';
 import {
   createDirection,
   createProduct,
@@ -25,6 +25,7 @@ import {
   deleteDirection,
   deleteProduct,
   deleteUniversity,
+  downloadCatalogImportReport,
   listDirections,
   listProducts,
   listUniversities,
@@ -32,6 +33,7 @@ import {
   previewCatalogImport,
 } from '../api/endpoints';
 import type { ITDirection, ITProduct, University } from '../types';
+import type { CatalogImportResult, ImportIssue } from '../api/endpoints';
 import { useRole } from '../stores/authStore';
 
 export default function DirectoryPage() {
@@ -78,6 +80,8 @@ function CatalogImportPanel() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [issues, setIssues] = useState<ImportIssue[]>([]);
+  const [summary, setSummary] = useState<CatalogImportResult['summary']>();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -103,11 +107,26 @@ function CatalogImportPanel() {
       const result = await previewCatalogImport(catalogType, selected, savedMapping, format);
       setHeaders(result.headers);
       setPreviewRows(result.data.slice(0, 5));
+      setIssues(result.issues ?? []);
+      setSummary(result.summary);
       setMapping(savedMapping);
       setOpen(true);
       if (result.errors.length) message.warning(result.errors.join('; '));
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось прочитать файл'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadReport = async () => {
+    if (!file) return;
+    setLoading(true);
+    try {
+      const blob = await downloadCatalogImportReport(catalogType, file, mapping);
+      downloadBlob(blob, `import-report-${Date.now()}.xlsx`);
+    } catch (error) {
+      message.error(errorMessage(error, 'Не удалось сформировать отчёт'));
     } finally {
       setLoading(false);
     }
@@ -179,6 +198,21 @@ function CatalogImportPanel() {
           </Descriptions.Item>
         </Descriptions>
         <Space direction="vertical" style={{ width: '100%' }}>
+          <Space wrap>
+            <Tag color="blue">Строк в файле: {summary?.total_rows ?? 0}</Tag>
+            <Tag color="green">Готовы к импорту: {summary?.valid_rows ?? previewRows.length}</Tag>
+            {Boolean(summary?.error_rows) && (
+              <Tag color="red">Ошибки: {summary?.error_rows}</Tag>
+            )}
+            {Boolean(summary?.warning_rows) && (
+              <Tag color="orange">Предупреждения: {summary?.warning_rows}</Tag>
+            )}
+            {Boolean(issues.length) && (
+              <Button size="small" onClick={() => void downloadReport()} loading={loading}>
+                Скачать отчёт о проблемах
+              </Button>
+            )}
+          </Space>
           {fields.map(([key, label, required]) => (
             <Space key={key} style={{ width: '100%' }}>
               <Tag style={{ width: 190 }}>{label}{required ? ' *' : ''}</Tag>
@@ -205,6 +239,43 @@ function CatalogImportPanel() {
             key,
           }))}
         />
+        {Boolean(issues.length) && (
+          <>
+            <div style={{ marginTop: 20, fontWeight: 600 }}>Проблемы при разборе файла</div>
+            <Table
+              size="small"
+              style={{ marginTop: 8 }}
+              rowKey="issue_key"
+              pagination={issues.length > 10 ? { pageSize: 10 } : false}
+              scroll={{ x: 'max-content' }}
+              dataSource={issues.map((issue, index) => ({
+                ...issue,
+                issue_key: `${issue.row}-${issue.field}-${issue.problem}-${index}`,
+              }))}
+              columns={[
+                {
+                  title: 'Строка',
+                  dataIndex: 'row',
+                  width: 90,
+                  render: (value: number | null) => value ?? '—',
+                },
+                { title: 'Поле', dataIndex: 'field', width: 160 },
+                { title: 'Проблема', dataIndex: 'problem' },
+                {
+                  title: 'Уровень',
+                  dataIndex: 'severity',
+                  width: 140,
+                  render: (value: ImportIssue['severity']) =>
+                    value === 'error' ? (
+                      <Tag color="red">Ошибка</Tag>
+                    ) : (
+                      <Tag color="orange">Предупреждение</Tag>
+                    ),
+                },
+              ]}
+            />
+          </>
+        )}
       </Modal>
     </Card>
   );
