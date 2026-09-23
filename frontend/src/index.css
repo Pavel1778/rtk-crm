@@ -23,6 +23,26 @@
   color-scheme: light;
 }
 
+/* Тёмная тема: переменные переопределяются на корне документа по data-theme,
+   чтобы охватить порталы antd (модалки, dropdown) вне Layout. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --atmr-bg-page: #1C1D22;
+  --atmr-bg-container: #2A2B31;
+  --atmr-fg-default: #FFFFFF;
+  --atmr-fg-muted: #B8B8C0;
+  --atmr-fg-subtle: #D5D5DC;
+  --atmr-border-default: #474850;
+  --atmr-border-soft: #3A3B42;
+  --atmr-border-muted: #3A3B42;
+  --atmr-bg-soft: #33343B;
+  --atmr-bg-dropzone: #3A2E5C;
+  --atmr-accent-default: #A88BFA;
+  --atmr-accent-gradient-start: #6E41F2;
+  --atmr-accent-gradient-mid: #A88BFA;
+  --atmr-accent-muted: #A88BFA;
+}
+
 .Theme_root_rtk_purple_dark {
   color-scheme: dark;
   --atmr-bg-page: #1C1D22;
@@ -51,7 +71,13 @@ img, svg, video {
 /* ═══════ БАЗОВЫЙ СБРОС ═══════ */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-body { margin: 0; overflow-x: hidden; }
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--atmr-bg-page);
+  color: var(--atmr-fg-default);
+  transition: background 0.2s, color 0.2s;
+}
 img, svg, canvas, video, table { max-width: 100%; }
 
 /* ═══════ КОНТЕЙНЕР СТРАНИЦЫ ═══════ */
