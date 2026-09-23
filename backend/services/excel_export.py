@@ -27,16 +27,17 @@ try:
 except ImportError:
     REPORTLAB_AVAILABLE = False
 
+from app.services.report_columns import (
+    column_keys,
+    column_labels,
+    load_report_columns,
+)
+
 
 # Колонки отчёта: ключ в данных + короткий заголовок для узкой шапки.
-PDF_COLUMNS: tuple[tuple[str, str], ...] = (
-    ("university_name", "ВУЗ"),
-    ("direction_name", "ИТ-направление"),
-    ("product_name", "ИТ-продукт"),
-    ("stage_name", "Статус"),
-    ("assigned_kam_name", "Ответственный"),
-    ("contract_number", "Договор"),
-    ("contract_date", "Лицензия до"),
+# Определяются в config/report_columns.json — общем конфиге фронта и бэкенда.
+PDF_COLUMNS: tuple[tuple[str, str], ...] = tuple(
+    (column.key, column.short_label) for column in load_report_columns()
 )
 
 
@@ -262,16 +263,8 @@ def generate_xlsx(interactions: list[dict]) -> BytesIO:
     ws = wb.active
     ws.title = "Отчёт по взаимодействиям"
 
-    # Заголовки по ТЗ
-    headers = [
-        "Наименование ВУЗа",
-        "ИТ-направление",
-        "ИТ-продукт",
-        "Статус работы с ВУЗом",
-        "Ответственный",
-        "Номер договора",
-        "Срок действия лицензии (год)",
-    ]
+    # Заголовки из общего конфига config/report_columns.json
+    headers = list(column_labels())
 
     # Стиль заголовков
     header_font = Font(bold=True, color="FFFFFF", size=11)
@@ -293,17 +286,13 @@ def generate_xlsx(interactions: list[dict]) -> BytesIO:
         cell.border = thin_border
 
     # Запись данных
+    keys = column_keys()
     for row_num, interaction in enumerate(interactions, 2):
-        ws.cell(row=row_num, column=1, value=interaction.get("university_name", ""))
-        ws.cell(row=row_num, column=2, value=interaction.get("direction_name", ""))
-        ws.cell(row=row_num, column=3, value=interaction.get("product_name", ""))
-        ws.cell(row=row_num, column=4, value=interaction.get("stage_name", ""))
-        ws.cell(row=row_num, column=5, value=interaction.get("assigned_kam_name", ""))
-        ws.cell(row=row_num, column=6, value=interaction.get("contract_number", ""))
-        ws.cell(row=row_num, column=7, value=interaction.get("contract_date", ""))
+        for col_num, key in enumerate(keys, 1):
+            ws.cell(row=row_num, column=col_num, value=interaction.get(key, ""))
 
         # Применение границ к ячейкам данных
-        for col_num in range(1, 8):
+        for col_num in range(1, len(keys) + 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.border = thin_border
 
@@ -311,7 +300,8 @@ def generate_xlsx(interactions: list[dict]) -> BytesIO:
     total_row = len(interactions) + 2
     total_cell = ws.cell(row=total_row, column=1, value=f"Всего записей: {len(interactions)}")
     total_cell.font = Font(bold=True, size=11)
-    ws.merge_cells(f"A{total_row}:G{total_row}")
+    last_letter = ws.cell(row=1, column=len(keys)).column_letter
+    ws.merge_cells(f"A{total_row}:{last_letter}{total_row}")
 
     # Автоподбор ширины колонок
     for col in ws.columns:
@@ -341,16 +331,8 @@ def generate_xls(interactions: list[dict]) -> BytesIO:
     wb = XlsWorkbook(encoding='utf-8')
     ws = wb.add_sheet("Отчёт по взаимодействиям")
 
-    # Заголовки по ТЗ
-    headers = [
-        "Наименование ВУЗа",
-        "ИТ-направление",
-        "ИТ-продукт",
-        "Статус работы с ВУЗом",
-        "Ответственный",
-        "Номер договора",
-        "Срок действия лицензии (год)",
-    ]
+    # Заголовки из общего конфига config/report_columns.json
+    headers = list(column_labels())
 
     # Стиль заголовков
     header_style = easyxf(
@@ -363,14 +345,10 @@ def generate_xls(interactions: list[dict]) -> BytesIO:
         ws.write(0, col_num, header, header_style)
 
     # Запись данных
+    keys = column_keys()
     for row_num, interaction in enumerate(interactions, 1):
-        ws.write(row_num, 0, interaction.get("university_name", ""))
-        ws.write(row_num, 1, interaction.get("direction_name", ""))
-        ws.write(row_num, 2, interaction.get("product_name", ""))
-        ws.write(row_num, 3, interaction.get("stage_name", ""))
-        ws.write(row_num, 4, interaction.get("assigned_kam_name", ""))
-        ws.write(row_num, 5, interaction.get("contract_number", ""))
-        ws.write(row_num, 6, interaction.get("contract_date", ""))
+        for col_num, key in enumerate(keys):
+            ws.write(row_num, col_num, interaction.get(key, ""))
 
     # Строка итогов
     total_row = len(interactions) + 1

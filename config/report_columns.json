@@ -1,0 +1,54 @@
+{
+  "comment": "Единый источник правды по колонкам отчёта. Используется фронтендом (предпросмотр таблицы) и бэкендом (экспорт PDF/XLSX/XLS). При добавлении колонки она автоматически появляется и в интерфейсе, и во всех выгрузках.",
+  "columns": [
+    {
+      "key": "university_name",
+      "label": "Наименование ВУЗа",
+      "short_label": "ВУЗ",
+      "width": 28,
+      "align": "left"
+    },
+    {
+      "key": "direction_name",
+      "label": "ИТ-направление",
+      "short_label": "ИТ-направление",
+      "width": 22,
+      "align": "left"
+    },
+    {
+      "key": "product_name",
+      "label": "ИТ-продукт",
+      "short_label": "ИТ-продукт",
+      "width": 20,
+      "align": "left"
+    },
+    {
+      "key": "stage_name",
+      "label": "Статус работы с ВУЗом",
+      "short_label": "Статус",
+      "width": 24,
+      "align": "left"
+    },
+    {
+      "key": "assigned_kam_name",
+      "label": "Ответственный",
+      "short_label": "Ответственный",
+      "width": 18,
+      "align": "left"
+    },
+    {
+      "key": "contract_number",
+      "label": "Номер договора",
+      "short_label": "Договор",
+      "width": 16,
+      "align": "left"
+    },
+    {
+      "key": "contract_date",
+      "label": "Срок действия лицензии (год)",
+      "short_label": "Лицензия до",
+      "width": 14,
+      "align": "center"
+    }
+  ]
+}

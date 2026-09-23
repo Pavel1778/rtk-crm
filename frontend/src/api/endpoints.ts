@@ -6,7 +6,9 @@ import type {
   ITDirection,
   ITProduct,
   Interaction,
+  ReportColumn,
   ReportResponse,
+  ReportTableRow,
   StageImpact,
   Token,
   University,
@@ -231,6 +233,14 @@ export type ReportFilters = {
 
 export const getReport = (params?: ReportFilters) =>
   api.get<ReportResponse>('/api/reports', { params }).then((r) => r.data);
+
+/** Колонки отчёта из общего конфига — тот же список, что и в PDF/XLS-выгрузках. */
+export const getReportColumns = () =>
+  api.get<ReportColumn[]>('/api/reports/columns').then((r) => r.data);
+
+/** Строки отчёта для предпросмотра — те же данные, что в PDF/XLS-выгрузке. */
+export const getReportPreview = (params?: ReportFilters) =>
+  api.get<ReportTableRow[]>('/api/reports/preview', { params }).then((r) => r.data);
 
 export const exportXlsx = (params?: ReportFilters) =>
   api.get('/api/reports/xlsx', {

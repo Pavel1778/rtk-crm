@@ -7,13 +7,19 @@ import {
   LineChart, Line,
 } from 'recharts';
 import { downloadBlob, errorMessage } from '../api/client';
-import { downloadReport, getReport, type ReportFilters } from '../api/endpoints';
+import {
+  downloadReport,
+  getReport,
+  getReportPreview,
+  type ReportFilters,
+} from '../api/endpoints';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
 import ChartExportButtons from '../components/dashboard/ChartExportButtons';
 import DateRangeFilter, { type DateRangeValue } from '../components/DateRangeFilter';
-import type { ReportResponse } from '../types';
+import ReportTable from '../components/report/ReportTable';
+import type { ReportResponse, ReportTableRow } from '../types';
 
 const COLORS = [
   'var(--atmr-accent-default)',
@@ -98,6 +104,10 @@ export default function ReportPage() {
   const reportQuery = useQuery<ReportResponse>({
     queryKey: ['report', filters],
     queryFn: () => getReport(filters),
+  });
+  const previewQuery = useQuery<ReportTableRow[]>({
+    queryKey: ['report-preview', filters],
+    queryFn: () => getReportPreview(filters),
   });
   const { data, isError: error, isLoading: loading } = reportQuery;
   const stageChartHeight = Math.max(
@@ -418,6 +428,15 @@ export default function ReportPage() {
             </div>
           )}
         </Card>
+      </div>
+
+      {/* Таблица: те же строки и колонки, что в PDF/XLS-выгрузке */}
+      <div style={{ marginTop: 24 }}>
+        <ReportTable
+          rows={previewQuery.data ?? []}
+          loading={previewQuery.isLoading}
+          title="Данные отчёта"
+        />
       </div>
     </div>
   );

@@ -68,6 +68,16 @@ img, svg, video {
   -webkit-overflow-scrolling: touch; /* Плавный скролл на смартфонах */
 }
 
+/* Обрезка длинных значений в предпросмотре отчёта: полный текст — в подсказке */
+.report-table__truncate {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
 /* ═══════ БАЗОВЫЙ СБРОС ═══════ */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }

@@ -29,6 +29,7 @@ from app.schemas.entities import (
 )
 from app.services.excel_export import generate_xlsx, generate_xls, generate_pdf
 from app.services.report_cache import get_report_cache, set_report_cache
+from app.services.report_columns import load_report_columns
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -270,6 +271,58 @@ async def get_report(
     return response
 
 
+@router.get("/columns", response_model=list[dict])
+async def report_columns(
+    _: User = Depends(get_current_user),
+) -> list[dict]:
+    """Колонки отчёта из общего конфига config/report_columns.json.
+
+    Фронтенд строит предпросмотр таблицы по этому же списку, что и выгрузки
+    PDF/XLSX/XLS, поэтому набор колонок не расходится.
+    """
+    return [
+        {
+            "key": column.key,
+            "label": column.label,
+            "short_label": column.short_label,
+            "width": column.width,
+            "align": column.align,
+        }
+        for column in load_report_columns()
+    ]
+
+
+@router.get("/preview", response_model=list[dict])
+async def report_preview(
+    stage_id: int | None = Query(default=None),
+    university_id: int | None = Query(default=None),
+    product_id: int | None = Query(default=None),
+    direction_id: int | None = Query(default=None),
+    assigned_kam_id: int | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Те же строки, что уходят в PDF/XLS-выгрузку, для предпросмотра в UI.
+
+    Фронтенд показывает таблицу по этим данным и по колонкам из
+    /api/reports/columns, поэтому предпросмотр и выгрузка не расходятся.
+    """
+    data = await _build_interaction_data(
+        db,
+        stage_id,
+        university_id,
+        product_id,
+        direction_id,
+        assigned_kam_id,
+        date_from,
+        date_to,
+    )
+    return data[:limit]
+
+
 @router.get("/universities", response_model=list[UniversityRead])
 async def universities_report(
     db: AsyncSession = Depends(get_db),
@@ -499,6 +552,18 @@ async def export_json(
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": len(data),
+        # Колонки отчёта из общего конфига: тот же порядок и заголовки,
+        # что в интерфейсе и в PDF/XLS-выгрузках.
+        "columns": [
+            {
+                "key": column.key,
+                "label": column.label,
+                "short_label": column.short_label,
+                "width": column.width,
+                "align": column.align,
+            }
+            for column in load_report_columns()
+        ],
         "storage": {
             "type": "s3" if settings.s3_enabled else "local",
             "bucket": settings.s3_bucket if settings.s3_enabled else None,

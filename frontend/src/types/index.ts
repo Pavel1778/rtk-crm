@@ -156,6 +156,21 @@ export interface ReportDynamicsPoint {
   count: number;
 }
 
+/** Колонка отчёта из общего конфига (config/report_columns.json). */
+export interface ReportColumn {
+  key: string;
+  label: string;
+  short_label: string;
+  width: number;
+  align: string;
+}
+
+/** Строка отчёта: ключи соответствуют key из ReportColumn. */
+export interface ReportTableRow {
+  id: number;
+  [key: string]: string | number | null | undefined;
+}
+
 export interface ReportResponse {
   metrics: ReportMetric[];
   stage_progress: StageProgress[];
