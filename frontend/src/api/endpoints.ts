@@ -98,9 +98,8 @@ export const listFiles = (interactionId: number) =>
 export const uploadFile = (interactionId: number, file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post(`/api/files/interactions/${interactionId}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }).then((r) => r.data);
+  // Content-Type выставляет интерцептор: ручное значение ломает boundary.
+  return api.post(`/api/files/interactions/${interactionId}/upload`, formData).then((r) => r.data);
 };
 
 export const downloadFile = (fileId: number) =>
@@ -146,6 +145,14 @@ export const createProduct = (payload: { name: string; direction_id?: number | n
 export const deleteProduct = (id: number) =>
   api.delete(`/api/products/${id}`);
 
+export type ImportIssue = {
+  row: number | null;
+  field: string;
+  problem: string;
+  severity: 'error' | 'warning' | 'ok';
+  value: string | null;
+};
+
 export type CatalogImportResult = {
   success: boolean;
   headers: string[];
@@ -153,6 +160,15 @@ export type CatalogImportResult = {
   errors: string[];
   count: number;
   created?: number;
+  issues?: ImportIssue[];
+  summary?: {
+    total_rows: number;
+    valid_rows: number;
+    warning_rows: number;
+    error_rows: number;
+    error_count: number;
+    warning_count: number;
+  };
 };
 
 export const previewCatalogImport = (
@@ -188,6 +204,22 @@ export const executeCatalogImport = (
       formData,
       { params: { catalog_type: catalogType } },
     )
+    .then((r) => r.data);
+};
+
+export const downloadCatalogImportReport = (
+  catalogType: 'universities' | 'products',
+  file: File,
+  mapping: Record<string, string>,
+) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mapping', JSON.stringify(mapping));
+  return api
+    .post<Blob>('/api/catalogs/import/report', formData, {
+      params: { catalog_type: catalogType },
+      responseType: 'blob',
+    })
     .then((r) => r.data);
 };
 
