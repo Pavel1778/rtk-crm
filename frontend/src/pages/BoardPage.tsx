@@ -56,6 +56,8 @@ import InteractionDrawer from '../components/interaction/InteractionDrawer';
 import MobileStageFilter from '../components/kanban/MobileStageFilter';
 import EmptyState from '../components/EmptyState';
 
+const FILTER_DEBOUNCE_MS = 300;
+
 interface DragData {
   card: InteractionCard;
   stageId: number;
@@ -220,11 +222,21 @@ export default function BoardPage() {
     }
   };
 
+  // Раньше фильтры применялись через setTimeout(load, 0): замыкание load
+  // захватывало старое значение search/productFilter, поэтому запрос уходил
+  // без фильтров. Эффект с зависимостями пересоздаёт load с актуальными
+  // значениями; debounce защищает от лишних запросов при быстрой смене.
   useEffect(() => {
-    void load();
-    void listProducts().then(setProducts).catch(() => undefined);
+    const timer = setTimeout(() => {
+      void load();
+    }, FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope]);
+  }, [scope, search, productFilter]);
+
+  useEffect(() => {
+    void listProducts().then(setProducts).catch(() => undefined);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -295,10 +307,7 @@ export default function BoardPage() {
               allowClear
               className="board-search-input"
               autoComplete="off"
-              onSearch={(value) => {
-                setSearch(value);
-                setTimeout(load, 0);
-              }}
+              onSearch={setSearch}
             />
           </Col>
           <Col className="board-filter-product">
@@ -308,10 +317,7 @@ export default function BoardPage() {
               allowClear
               className="board-product-select"
               value={productFilter}
-              onChange={(value) => {
-                setProductFilter(value);
-                setTimeout(load, 0);
-              }}
+              onChange={setProductFilter}
               options={products.map((p) => ({ value: p.id, label: p.name }))}
             />
           </Col>
