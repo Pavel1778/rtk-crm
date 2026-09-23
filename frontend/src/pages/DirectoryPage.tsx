@@ -71,6 +71,17 @@ const IMPORT_FIELDS = {
   ],
 } as const;
 
+// Полный список ошибок импорта не помещается в тост: показываем первые две.
+function warnAboutErrors(
+  message: ReturnType<typeof AntApp.useApp>['message'],
+  errors: string[],
+) {
+  if (!errors.length) return;
+  const preview = errors.slice(0, 2).join('; ');
+  const rest = errors.length > 2 ? ` (+${errors.length - 2})` : '';
+  message.warning(`${preview}${rest}`);
+}
+
 function CatalogImportPanel() {
   const { message } = AntApp.useApp();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -111,7 +122,7 @@ function CatalogImportPanel() {
       setSummary(result.summary);
       setMapping(savedMapping);
       setOpen(true);
-      if (result.errors.length) message.warning(result.errors.join('; '));
+      warnAboutErrors(message, result.errors);
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось прочитать файл'));
     } finally {
@@ -143,8 +154,13 @@ function CatalogImportPanel() {
     try {
       localStorage.setItem(profileKey, JSON.stringify(mapping));
       const result = await executeCatalogImport(catalogType, file, mapping, format);
-      if (result.errors.length) message.warning(result.errors.join('; '));
-      message.success(`Импортировано записей: ${result.created}`);
+      warnAboutErrors(message, result.errors);
+      const skipped = Math.max((result.total ?? 0) - (result.created ?? 0), 0);
+      message.success(
+        skipped
+          ? `Импортировано записей: ${result.created ?? 0}; пропущено строк: ${skipped}`
+          : `Импортировано записей: ${result.created ?? 0}`,
+      );
       setOpen(false);
     } catch (error) {
       message.error(errorMessage(error, 'Импорт не выполнен'));
@@ -188,9 +204,27 @@ function CatalogImportPanel() {
         open={open}
         width={900}
         onCancel={() => setOpen(false)}
-        onOk={() => void execute()}
-        confirmLoading={loading}
-        okText="Импортировать"
+        footer={[
+          <Button key="cancel" onClick={() => setOpen(false)}>
+            Отменить
+          </Button>,
+          Boolean(issues.length) && (
+            <Button key="report" onClick={() => void downloadReport()} loading={loading}>
+              Скачать отчёт об ошибках (XLSX)
+            </Button>
+          ),
+          <Button
+            key="ok"
+            type="primary"
+            onClick={() => void execute()}
+            loading={loading}
+            disabled={summary !== undefined && summary.valid_rows === 0}
+          >
+            {summary?.error_rows
+              ? `Импортировать только валидные (${summary.valid_rows})`
+              : 'Импортировать'}
+          </Button>,
+        ]}
       >
         <Descriptions size="small" column={1} style={{ marginBottom: 16 }}>
           <Descriptions.Item label="Профиль">
@@ -206,11 +240,6 @@ function CatalogImportPanel() {
             )}
             {Boolean(summary?.warning_rows) && (
               <Tag color="orange">Предупреждения: {summary?.warning_rows}</Tag>
-            )}
-            {Boolean(issues.length) && (
-              <Button size="small" onClick={() => void downloadReport()} loading={loading}>
-                Скачать отчёт о проблемах
-              </Button>
             )}
           </Space>
           {fields.map(([key, label, required]) => (
