@@ -6,6 +6,7 @@ from app.auth.security import (
     get_current_user,
     hash_password,
     require_admin,
+    require_manager_or_admin,
     create_access_token,
     verify_password,
 )
@@ -74,8 +75,10 @@ async def create_user(
 @router.get("/users", response_model=list[UserRead])
 async def list_users(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(require_manager_or_admin),
 ) -> list[User]:
+    """Список сотрудников: нужен администратору для управления доступом,
+    а руководителю — чтобы назначать ответственного КАМ на взаимодействие."""
     result = await db.scalars(select(User).order_by(User.full_name))
     return list(result)
 

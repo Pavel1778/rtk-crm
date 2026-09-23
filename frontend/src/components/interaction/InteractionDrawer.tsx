@@ -39,6 +39,7 @@ import {
   listComments,
   listFiles,
   listStages,
+  listUsers,
   updateAction,
   updateInteraction,
   uploadFile,
@@ -49,6 +50,7 @@ import type {
   CommentItem,
   Interaction,
   InteractionCard,
+  User,
   WorkflowStage,
 } from '../../types';
 import { useAuthStore } from '../../stores/authStore';
@@ -69,6 +71,7 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [files, setFiles] = useState<AttachedFile[]>([]);
   const [stages, setStages] = useState<WorkflowStage[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -99,6 +102,11 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
     if (card) {
       void load();
       void listStages().then(setStages).catch(() => undefined);
+      // Список сотрудников нужен только ролям, которые могут переназначать
+      // ответственного КАМ: КАМ сам себе карточки не передаёт.
+      if (user?.role === 'admin' || user?.role === 'manager') {
+        void listUsers().then(setUsers).catch(() => undefined);
+      }
     } else {
       setFull(null);
     }
@@ -282,7 +290,31 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                       save({ university_specialist: value }, 'Сохранено')
                     }
                   />
-                  <InfoField label="КАМ" value={full.assigned_kam_name} />
+                  {(user?.role === 'admin' || user?.role === 'manager') ? (
+                    <div>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        КАМ
+                      </Typography.Text>
+                      <Select
+                        id="interaction-kam"
+                        style={{ width: '100%' }}
+                        placeholder="Не назначен"
+                        allowClear
+                        value={full.assigned_kam_id ?? undefined}
+                        onChange={(value) =>
+                          save(
+                            { assigned_kam_id: value ?? null },
+                            'Ответственный обновлён',
+                          )
+                        }
+                        options={users
+                          .filter((u) => u.role === 'user')
+                          .map((u) => ({ value: u.id, label: u.full_name }))}
+                      />
+                    </div>
+                  ) : (
+                    <InfoField label="КАМ" value={full.assigned_kam_name} />
+                  )}
                   <EditableField
                     label="Примечание"
                     value={full.notes}

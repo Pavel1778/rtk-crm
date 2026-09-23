@@ -40,6 +40,7 @@ export const createInteraction = (payload: {
   university_id: number;
   product_id?: number | null;
   stage_id?: number | null;
+  assigned_kam_id?: number | null;
   scope?: WorkflowScope;
 }) => api.post<Interaction>('/api/interactions', payload).then((r) => r.data);
 
