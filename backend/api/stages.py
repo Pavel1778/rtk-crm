@@ -230,14 +230,29 @@ async def reorder_stages(
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> list[WorkflowStageRead]:
-    """Пересортировка этапов. Только для admin."""
+    """Пересортировка этапов. Только для admin.
+
+    Уникальность (scope, order) неотложна, поэтому присваивать новые порядки
+    напрямую нельзя: промежуточное состояние нарушит ограничение. Сначала
+    уводим затронутые этапы в отрицательные временные значения, затем
+    выставляем итоговые.
+    """
     if current.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=403, detail="Только администраторы могут редактировать этапы"
         )
+
+    stages: list[tuple[WorkflowStageRef, int]] = []
     for item in payload.stages:
         stage = await db.get(WorkflowStageRef, item["id"])
-        if stage:
-            stage.order = item["order"]
+        if stage is not None:
+            stages.append((stage, item["order"]))
+
+    for offset, (stage, _) in enumerate(stages, start=1):
+        stage.order = -offset
+    await db.flush()
+
+    for stage, order in stages:
+        stage.order = order
     await db.commit()
     return await list_stages(None, False, db, current)

@@ -209,6 +209,12 @@ export const createStage = (payload: Record<string, unknown>) =>
 export const updateStage = (id: number, payload: Record<string, unknown>) =>
   api.patch<WorkflowStage>(`/api/stages/${id}`, payload).then((r) => r.data);
 
+/** Атомарная пересортировка: backend меняет порядки за одну транзакцию. */
+export const reorderStages = (stages: { id: number; order: number }[]) =>
+  api
+    .post<WorkflowStage[]>('/api/stages/reorder', { stages })
+    .then((r) => r.data);
+
 export const deleteStage = (id: number, targetStageId?: number) =>
   api.delete(`/api/stages/${id}`, { params: targetStageId ? { target_stage_id: targetStageId } : undefined });
 
