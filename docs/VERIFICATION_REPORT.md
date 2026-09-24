@@ -210,7 +210,7 @@ production Render/Supabase.
 
 | Проверка | Статус | Доказательство |
 |---|---|---|
-| Все этапы в конструкторе | `✅ OK` | `frontend/src/pages/WorkflowPage.tsx:22` использует `useStages('all')` |
+| Все этапы в конструкторе | `✅ OK` | `frontend/src/pages/SettingsPage.tsx:285` загружает `listStages(true)`, `StageTable` показывает этапы выбранной воронки |
 | Только активные этапы в Kanban | `✅ OK` | `frontend/src/pages/BoardPage.tsx` и `useStages('active')` |
 | Optimistic update/rollback | `✅ OK` | `frontend/src/hooks/useStages.ts:27-59` |
 | 409 при активных взаимодействиях | `✅ OK` | `backend/api/stages.py:120-130` |
