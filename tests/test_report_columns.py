@@ -32,6 +32,46 @@ SAMPLE = {
 }
 
 
+def test_config_resolves_in_container_layout(tmp_path, monkeypatch) -> None:
+    """При layout контейнера (/app + /config) конфиг находится через фолбэк.
+
+    В образе код лежит в /app (build context — backend/), поэтому
+    `parents[2]/config` указывает на `/config`, а не на корень репозитория.
+    """
+    import importlib
+
+    from app.services import report_columns
+
+    fake_config = tmp_path / "report_columns.json"
+    fake_config.write_text(CONFIG_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+
+    monkeypatch.setenv("REPORT_COLUMNS_CONFIG", str(fake_config))
+    reloaded = importlib.reload(report_columns)
+    try:
+        resolved = reloaded.CONFIG_PATH
+        assert resolved == fake_config
+        assert len(reloaded.load_report_columns()) > 0
+    finally:
+        monkeypatch.delenv("REPORT_COLUMNS_CONFIG", raising=False)
+        importlib.reload(report_columns)
+
+
+def test_error_when_config_missing(tmp_path, monkeypatch) -> None:
+    """Отсутствие конфига даёт понятную ошибку, а не тихий пустой список."""
+    import importlib
+
+    from app.services import report_columns
+
+    monkeypatch.setenv("REPORT_COLUMNS_CONFIG", str(tmp_path / "nope.json"))
+    reloaded = importlib.reload(report_columns)
+    try:
+        with pytest.raises(FileNotFoundError):
+            reloaded.load_report_columns()
+    finally:
+        monkeypatch.delenv("REPORT_COLUMNS_CONFIG", raising=False)
+        importlib.reload(report_columns)
+
+
 def test_config_is_valid_json_with_required_fields() -> None:
     payload = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     assert payload["columns"], "конфиг колонок не должен быть пустым"
