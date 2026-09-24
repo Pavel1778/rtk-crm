@@ -1,4 +1,6 @@
 
+from datetime import UTC, date, datetime, time, timedelta
+
 from app.api.access import (
     get_accessible_interaction,
     get_interaction_or_404,
@@ -199,10 +201,17 @@ async def get_board(
     scope: WorkflowScope = Query(
         default=WorkflowScope.B2B, description="Тип воронки: b2b или b2c"
     ),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> BoardResponse:
     """Колонки = этапы выбранного workflow, карточки = взаимодействия."""
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(
+            status_code=400,
+            detail="Дата начала не может быть позже даты окончания",
+        )
     stmt = (
         select(WorkflowStageRef)
         .where(
@@ -217,6 +226,17 @@ async def get_board(
         filters.append(Interaction.product_id == product_id)
     if assigned_kam_id is not None:
         filters.append(Interaction.assigned_kam_id == assigned_kam_id)
+    # Тот же диапазон, что и в отчётах: включаем весь день date_to.
+    if date_from is not None:
+        filters.append(
+            Interaction.created_at
+            >= datetime.combine(date_from, time.min, tzinfo=UTC)
+        )
+    if date_to is not None:
+        filters.append(
+            Interaction.created_at
+            < datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=UTC)
+        )
     if search:
         matching = select(University.id).where(University.name.ilike(f"%{search}%"))
         filters.append(Interaction.university_id.in_(matching))

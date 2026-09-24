@@ -90,6 +90,8 @@ export const getBoard = (params?: {
   search?: string;
   product_id?: number;
   scope?: WorkflowScope;
+  date_from?: string;
+  date_to?: string;
 }) => api.get<BoardResponse>('/api/interactions/board', { params }).then((r) => r.data);
 
 export const getInteraction = (id: number) =>
