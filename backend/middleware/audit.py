@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Callable
+from contextlib import suppress
 
 from app.db.session import SessionLocal
 from app.models.entities import ActionLog
@@ -27,7 +28,8 @@ async def audit_middleware(request: Request, call_next: Callable) -> Response:
 
     # Логируем только успешные запросы
     if response.status_code < 400:
-        try:
+        # Ошибка логирования не должна прерывать запрос пользователя.
+        with suppress(Exception):
             # Получаем пользователя из контекста (если есть)
             user = getattr(request.state, "user", None)
             user_id = user.id if user else None
@@ -50,24 +52,19 @@ async def audit_middleware(request: Request, call_next: Callable) -> Response:
 
                 # Логируем в БД
                 async with SessionLocal() as session:
-                    try:
-                        # Ограничиваем размер тела для логирования
-                        body_str = _safe_body(body)
+                    # Ограничиваем размер тела для логирования
+                    body_str = _safe_body(body)
 
-                        log_entry = ActionLog(
-                            user_id=user_id,
-                            action=action,
-                            entity_type=entity_type,
-                            entity_id=entity_id,
-                            new_value=body_str,
-                            ip_address=ip_address,
-                        )
-                        session.add(log_entry)
-                        await session.commit()
-                    except Exception:
-                        pass  # Не прерываем запрос при ошибке логирования
-        except Exception:
-            pass  # Не прерываем запрос при ошибках логирования
+                    log_entry = ActionLog(
+                        user_id=user_id,
+                        action=action,
+                        entity_type=entity_type,
+                        entity_id=entity_id,
+                        new_value=body_str,
+                        ip_address=ip_address,
+                    )
+                    session.add(log_entry)
+                    await session.commit()
 
     return response
 

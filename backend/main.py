@@ -1,6 +1,6 @@
 """Точка входа FastAPI: инициализация БД, регистрация роутеров, lifespan."""
 
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from app.api import (
     audit,
@@ -36,11 +36,9 @@ async def lifespan(app: FastAPI):
     try:
         # Удаляем старый тип enum userrole, если он существует
         async with engine.begin() as conn:
-            try:
+            with suppress(Exception):  # Тип может не существовать
                 await conn.execute(text("DROP TYPE IF EXISTS userrole CASCADE"))
                 logger.info("Удалён старый тип enum userrole")
-            except Exception:  # noqa: BLE001
-                pass  # Тип может не существовать
         await create_tables()
         logger.info("Схема БД проверена/создана")
     except Exception as exc:  # noqa: BLE001

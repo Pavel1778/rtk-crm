@@ -35,3 +35,17 @@ exclude = ["frontend/", "\\.venv/"]
 # а миграции Alembic и тестовые фикстуры типы не несут.
 disallow_untyped_defs = false
 check_untyped_defs = true
+
+[tool.bandit]
+# Каталоги и правила, исключаемые из SAST-прогона (см. docs/security/SAST-SCA.md).
+exclude_dirs = ["frontend", "tests", ".venv"]
+skips = [
+    # B101: assert используется только в тестах и локальных проверках.
+    "B101",
+    # B105: значение по умолчанию для dev-окружения — совпадение с шаблоном
+    #             пароля; в production валидатор запрещает дефолт и короткие ключи.
+    "B105",
+    # B406: xml.sax.saxutils.escape экранирует текст перед вставкой в reportlab,
+    #             это не разбор недоверенного XML.
+    "B406",
+]

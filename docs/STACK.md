@@ -7,21 +7,21 @@
 | Компонент | Версия | Назначение |
 |---|---|---|
 | Python | 3.11 | Язык и рантайм (образ `python:3.11-slim`) |
-| FastAPI | 0.115.6 | HTTP API, валидация, OpenAPI |
+| FastAPI | 0.141.1 | HTTP API, валидация, OpenAPI |
 | Uvicorn | 0.34.0 | ASGI-сервер |
 | Pydantic / pydantic-settings | 2.10.4 / 2.7.1 | Схемы и конфигурация из окружения |
 | SQLAlchemy (async) | 2.0.36 | ORM, async-движок |
 | asyncpg | 0.30.0 | Драйвер PostgreSQL |
 | aiosqlite | 0.20.0 | Драйвер SQLite для dev и тестов |
 | Alembic | 1.14.0 | Миграции схемы |
-| python-jose, passlib[bcrypt] | 3.3.0 / 1.7.4 | JWT и хеширование паролей |
+| python-jose, passlib[bcrypt] | 3.5.0 / 1.7.4 | JWT и хеширование паролей |
 | Redis client | 5.2.1 | Кэш отчётов, потенциально — счётчики лимитов |
 | minio | 7.2.10 | S3-совместимое хранилище файлов |
 | APScheduler | 3.11.0 | Фоновые проверки «зависших» заявок |
-| prometheus-fastapi-instrumentator | 7.0.0 | Метрики на `/metrics` |
+| prometheus-fastapi-instrumentator | 8.1.0 | Метрики на `/metrics` |
 | openpyxl, xlwt, xlrd, reportlab | — | Экспорт отчётов XLSX/XLS/PDF |
 | loguru | 0.7.3 | Логирование |
-| pytest, pytest-asyncio | 8.3.4 / 0.25.0 | Тесты |
+| pytest, pytest-asyncio | 9.1.1 / 1.4.0 | Тесты |
 
 ## Frontend
 
