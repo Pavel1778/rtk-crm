@@ -14,7 +14,7 @@
   --atmr-accent-gradient-mid: #A88BFA;
   --atmr-success-default: #00AC43;
   --atmr-warning-default: #F5A623;
-  --atmr-error-default: #E5484D;
+  --atmr-error-default: #CC2936;
   --atmr-info-default: #3B82F6;
   --atmr-accent-muted: #8B5CF6;
   --atmr-shadow-popover: 0 8px 24px rgba(28, 29, 34, 0.12);
@@ -23,6 +23,11 @@
      подпись теряется на светлых долях (например, на warning). */
   --atmr-chart-label: #FFFFFF;
   --atmr-chart-label-halo: rgba(28, 29, 34, 0.6);
+  /* Фон счётчиков на доске: белый текст не проходит AA на светлых
+     состояниях (#F5A623 даёт 2.0:1), поэтому фон темнее, а подпись белая. */
+  --atmr-badge-open-bg: #A85B00;
+  --atmr-badge-done-bg: #007A2F;
+  --atmr-badge-count-fg: #FFFFFF;
 }
 
 /* Автоопределение темы ОС: если пользователь не задал тему вручную,
@@ -53,6 +58,9 @@
     --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
     --atmr-chart-label: #17181C;
     --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
+    --atmr-badge-open-bg: #A85B00;
+    --atmr-badge-done-bg: #007A2F;
+    --atmr-badge-count-fg: #FFFFFF;
   }
 }
 
@@ -89,6 +97,9 @@
   --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
   --atmr-chart-label: #17181C;
   --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
+  --atmr-badge-open-bg: #A85B00;
+  --atmr-badge-done-bg: #007A2F;
+  --atmr-badge-count-fg: #FFFFFF;
 }
 
 /* Легаси-обёртка Layout: оставлена для совместимости, значения берёт
@@ -745,4 +756,13 @@ img, svg, canvas, video, table { max-width: 100%; }
   border: 1px solid var(--atmr-border-soft);
   border-radius: 8px;
   margin: 12px 0;
+}
+
+/* Тег «продукт» на карточке: preset-цвета antd (Tag color="purple") фиксированы
+   и в тёмной теме дают нечитаемый фиолетовый на тёмно-фиолетовом фоне.
+   Токены темы переключаются вместе с оформлением: 4.7:1 в светлой, 5.2:1 в тёмной. */
+.tag-accent {
+  background: var(--atmr-bg-dropzone);
+  border-color: transparent;
+  color: var(--atmr-accent-default);
 }

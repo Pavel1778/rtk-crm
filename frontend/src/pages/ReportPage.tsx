@@ -390,7 +390,14 @@ export default function ReportPage() {
                       const pct = item
                         ? Math.round((item.count / productTotal) * 100)
                         : 0;
-                      return `${value} — ${pct}%`;
+                      // Recharts красит подпись легенды в цвет сектора; на
+                      // светлой теме акценты дают 2-4:1. Возвращаем span с
+                      // обычным цветом текста.
+                      return (
+                        <span style={{ color: 'var(--atmr-fg-default)' }}>
+                          {value} — {pct}%
+                        </span>
+                      );
                     }}
                   />
                 </PieChart>

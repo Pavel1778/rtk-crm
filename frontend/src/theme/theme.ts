@@ -1,4 +1,5 @@
 import type { ThemeConfig } from 'antd';
+import { theme } from 'antd';
 
 /**
  * Дизайн-система «Атомаро»: тема Rostelecom Purple.
@@ -15,7 +16,7 @@ export const atmrTokens = {
   colorInfo: '#6E41F2',
   colorSuccess: '#00AC43',
   colorWarning: '#F5A623',
-  colorError: '#E5484D',
+  colorError: '#CC2936',
   colorText: '#1C1D22',
   colorTextSecondary: '#6B6B72',
   colorBorder: '#E0E0E5',
@@ -74,6 +75,9 @@ export const darkPalette = {
   bgSoft: '#26272E',
   text: '#E6E6EB',
   textSecondary: '#A9A9B4',
+  // Третичный/placeholder текст: производные токены antd по умолчанию остаются
+  // светлыми (rgba(0,0,0,.45)) и на тёмном фоне не читаются.
+  textTertiary: '#9A9AA6',
   border: '#33343B',
   borderSoft: '#2C2D34',
   accent: '#A78BFA',
@@ -83,10 +87,14 @@ export const darkPalette = {
   warning: '#D9A441',
   error: '#E8808A',
   info: '#7FA6E8',
+  // Текст на цветных заливках (основные кнопки, счётчики бейджей). Белый на
+  // осветлённых акцентах даёт ~2.7:1, поэтому заливки подписываем тёмным.
+  onSolid: '#17181C',
 } as const;
 
 export const antDarkTheme: ThemeConfig = {
   ...antTheme,
+  algorithm: theme.darkAlgorithm,
   token: {
     ...atmrTokens,
     colorPrimary: darkPalette.accent,
@@ -96,6 +104,10 @@ export const antDarkTheme: ThemeConfig = {
     colorError: darkPalette.error,
     colorText: darkPalette.text,
     colorTextSecondary: darkPalette.textSecondary,
+    colorTextTertiary: darkPalette.textTertiary,
+    colorTextQuaternary: darkPalette.textTertiary,
+    colorTextPlaceholder: darkPalette.textTertiary,
+    colorTextLightSolid: darkPalette.onSolid,
     colorBorder: darkPalette.border,
     colorBorderSecondary: darkPalette.borderSoft,
     colorBgLayout: darkPalette.bgPage,

@@ -96,7 +96,7 @@ function KanbanCard({
         </Typography.Text>
         <div style={{ marginTop: 4 }}>
           {card.product_name ? (
-            <Tag color="purple" style={{ marginInlineEnd: 4 }}>
+            <Tag className="tag-accent" style={{ marginInlineEnd: 4 }}>
               {card.product_name}
             </Tag>
           ) : null}
@@ -119,7 +119,8 @@ function KanbanCard({
             <Badge
               count={card.actions_open}
               showZero
-              color={card.actions_open > 0 ? 'var(--atmr-warning-default)' : 'var(--atmr-success-default)'}
+              color={card.actions_open > 0 ? 'var(--atmr-badge-open-bg)' : 'var(--atmr-badge-done-bg)'}
+              style={{ color: 'var(--atmr-badge-count-fg)' }}
               title="Открытые задачи"
             />
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
