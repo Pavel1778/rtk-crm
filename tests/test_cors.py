@@ -15,7 +15,8 @@ from app.main import app
 from httpx import ASGITransport, AsyncClient
 
 ALLOWED_ORIGIN = "http://localhost:5173"
-RUNTIME_ORIGIN = "https://work-1-vcbzruitwtlcgdbm.prod-runtime.all-hands.dev"
+# Хост стенда предпросмотра задаётся через CORS_ORIGIN_REGEX (см. conftest.py).
+RUNTIME_ORIGIN = "https://feature-preview.preview.example.com"
 FOREIGN_ORIGIN = "https://evil.example.com"
 
 
