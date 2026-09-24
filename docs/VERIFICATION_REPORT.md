@@ -284,6 +284,40 @@ production Render/Supabase.
 - `python scripts/render_guide_pdfs.py` — `admin-guide.pdf` пересобран с
   разделами про пользователей и журнал.
 
+## Актуализация после финального аудита (24.09)
+
+Коммиты на `dev`:
+
+| Коммит | Что сделано |
+|---|---|
+| `86d57b8` | CI: линтер, типы и тесты в GitHub Actions, общий кодстайл |
+| `3527936` | журнал аудита: фильтры по сотруднику и периоду, выгрузка CSV |
+
+### Что добавлено/закрыто
+
+- **Импорт JSON** — валидация верхнего уровня по JSON Schema (Draft 7):
+  принимается массив объектов либо `{"data": [...]}`; ошибки возвращаются с
+  путём до поля, пустые объекты записей и отсутствие обязательного
+  `Название` отклоняются. Покрыто `tests/test_excel_import.py` (7 тестов).
+- **Seed-скрипт** — `scripts/seed.py` (флаг `--reference`) как обёртка над
+  `backend/seed.py`; общий бутстрап импорта вынесен в `scripts/_bootstrap.py`.
+- **CORS** — хост стенда предпросмотра больше не зашит в код: шаблон приходит
+  через `CORS_ORIGIN_REGEX`, по умолчанию выключен (см. `docs/DEPLOYMENT.md`).
+- **SAST/SCA** — `docs/security/SAST-SCA.md`: пины зависимостей backend,
+  `npm audit` = 0 уязвимостей, остаточный риск `ecdsa 0.19.2`
+  (PYSEC-2026-1325) принят и обоснован (используется HS256).
+- **Архитектура** — `docs/architecture/functional.md` и `er-model.md`
+  добавлены; `ARCHITECTURE.md` дополнен разделом масштабирования 300+ (KeyDB).
+
+### Проверки
+
+- `python -m pytest` — 98 тестов, все зелёные;
+- `ruff check backend/ tests/ scripts/ conftest.py` — All checks passed;
+- `mypy backend/` — no issues found in 40 source files;
+- `bandit -c pyproject.toml -r backend/` — 0 issues;
+- `npx tsc --noEmit` — 0 ошибок; `npm run build` — успешно; `npm audit` — 0;
+- `python scripts/seed.py` — справочники и демо-данные создаются идемпотентно.
+
 ## Осталось
 
 1. Ротировать credentials, которые ранее попали в историю Git; удаление из текущего
