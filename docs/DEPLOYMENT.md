@@ -65,13 +65,25 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
    `uvicorn app.main:app --host 0.0.0.0 --port 8000` (код лежит в `/app`,
    `PYTHONPATH=/`).
 2. При старте приложение (`app.main:lifespan`) создаёт схему БД
-   (`create_tables()`) и загружает справочники (`seed_reference()`: 14 этапов,
-   пользователи, направления, продукты) — идемпотентно.
+   (`create_tables()`) и **сверяет её с моделями**
+   (`ensure_schema()`: добавляет недостающие колонки и индексы, заменяет
+   устаревшие глобальные UNIQUE на составные по `scope`), затем загружает
+   справочники (`seed_reference()`: 14 этапов B2B + 4 этапа B2C, пользователи,
+   направления, продукты) — идемпотентно.
 3. Если `SEED_DEMO_DATA=true`, приложение при старте дополнительно
    заполняет демо-вузы/взаимодействия (только для пустой базы).
 
+> Сверка схемы нужна, потому что `create_all(checkfirst=True)` существующие
+> таблицы не изменяет: база, созданная ранней версией приложения, молча
+> оставалась без `scope`, и загрузка демо-данных падала с
+> `column workflow_stages.scope does not exist`. `ensure_schema()` доводит
+> такую схему до моделей, не удаляя данные, и отмечает головную ревизию
+> Alembic, чтобы последующий `alembic upgrade head` не пытался создать уже
+> существующие таблицы.
+
 `backend/start.sh` — вспомогательный скрипт для Render-деплоя без Docker
-(задаётся вручную как Start Command); в образ он не встроен.
+(задаётся вручную как Start Command); в образ он не встроен. Он выполняет те
+же шаги: `create_tables()` → `ensure_schema()` → `seed_reference()`.
 
 ### Режимы аутентификации
 
@@ -87,8 +99,12 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
 ### Проверка
 
 ```
+GET https://rtk-crm-backend.onrender.com/           -> {"service":"RTK CRM",...}
 GET https://rtk-crm-backend.onrender.com/health      -> {"status":"ok"}
 GET https://rtk-crm-backend.onrender.com/api/health  -> {"status":"ok","app":"RTK CRM","database":"ok"}
+GET https://rtk-crm-backend.onrender.com/healthz     -> {"status":"ok"}
+GET https://rtk-crm-backend.onrender.com/readyz      -> {"status":"ok","checks":{...}}
+GET https://rtk-crm-backend.onrender.com/metrics     -> метрики Prometheus
 GET https://rtk-crm-backend.onrender.com/docs        -> Swagger UI
 ```
 
@@ -98,7 +114,7 @@ GET https://rtk-crm-backend.onrender.com/docs        -> Swagger UI
 |---|---|---|
 | Администратор | `admin@rtk.ru` | `admin123` |
 | Менеджер | `manager@rtk.ru` | `manager123` |
-| КАМ | `user@rtk.ru` | `user123` |
+| КАМ | `kam@rtk.ru` | `kam123` |
 
 ---
 

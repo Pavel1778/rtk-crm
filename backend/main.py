@@ -15,6 +15,7 @@ from app.api import (
     universities,
 )
 from app.core.config import get_settings
+from app.db.schema_sync import ensure_schema
 from app.db.session import SessionLocal, create_tables, engine
 from app.middleware.audit import audit_middleware
 from app.middleware.rate_limit import login_rate_limit_middleware
@@ -40,6 +41,9 @@ async def lifespan(app: FastAPI):
                 await conn.execute(text("DROP TYPE IF EXISTS userrole CASCADE"))
                 logger.info("Удалён старый тип enum userrole")
         await create_tables()
+        # create_all(checkfirst=True) не меняет уже существующие таблицы,
+        # поэтому схему, созданную ранней версией приложения, доводим здесь.
+        await ensure_schema()
         logger.info("Схема БД проверена/создана")
     except Exception as exc:  # noqa: BLE001
         logger.error(f"Не удалось подключиться к БД: {exc}")
@@ -138,6 +142,18 @@ app.include_router(interactions.router)
 app.include_router(audit.router)
 app.include_router(reports.router)
 app.include_router(notifications.router)
+
+
+@app.get("/", tags=["system"])
+async def root() -> dict[str, str]:
+    """Корень сервиса: подсказка вместо 404 для открывших URL без пути."""
+    return {
+        "service": settings.app_name,
+        "version": app.version,
+        "docs": "/docs",
+        "health": "/healthz",
+        "ready": "/readyz",
+    }
 
 
 @app.get("/api/health", response_model=HealthResponse, tags=["system"])

@@ -16,11 +16,15 @@ echo "==> Инициализация схемы БД и справочников
 python - <<'PY'
 import asyncio
 
+from app.db.schema_sync import ensure_schema
 from app.db.session import SessionLocal, create_tables
 from app.seed import seed_reference
 
 async def init() -> None:
     await create_tables()
+    # Доводим схему, созданную ранней версией приложения: create_all
+    # существующие таблицы не меняет, из-за чего падал seed на проде.
+    await ensure_schema()
     async with SessionLocal() as session:
         await seed_reference(session)
 
