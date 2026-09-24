@@ -18,6 +18,11 @@
   --atmr-info-default: #3B82F6;
   --atmr-accent-muted: #8B5CF6;
   --atmr-shadow-popover: 0 8px 24px rgba(28, 29, 34, 0.12);
+  /* Подписи внутри секторов диаграммы: цвет текста и контур-гало.
+     Сектора используют разные токены палитры, поэтому без гало белая
+     подпись теряется на светлых долях (например, на warning). */
+  --atmr-chart-label: #FFFFFF;
+  --atmr-chart-label-halo: rgba(28, 29, 34, 0.6);
 }
 
 /* Автоопределение темы ОС: если пользователь не задал тему вручную,
@@ -46,6 +51,8 @@
     --atmr-error-default: #E8808A;
     --atmr-info-default: #7FA6E8;
     --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --atmr-chart-label: #17181C;
+    --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
   }
 }
 
@@ -80,6 +87,8 @@
   --atmr-error-default: #E8808A;
   --atmr-info-default: #7FA6E8;
   --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --atmr-chart-label: #17181C;
+  --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
 }
 
 /* Легаси-обёртка Layout: оставлена для совместимости, значения берёт

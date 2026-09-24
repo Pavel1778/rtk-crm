@@ -6,6 +6,10 @@ import type { ThemeConfig } from 'antd';
  * в единственном месте конфигурации.
  */
 
+/** Цвет нового этапа workflow по умолчанию — значение данных, не темы:
+ *  сохраняется в БД вместе с этапом, поэтому не зависит от светлой/тёмной. */
+export const DEFAULT_STAGE_COLOR = '#6E41F2';
+
 export const atmrTokens = {
   colorPrimary: '#6E41F2',
   colorInfo: '#6E41F2',

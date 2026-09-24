@@ -35,6 +35,7 @@ import { useAuthStore, useRole } from '../stores/authStore';
 import StageTable from '../components/workflow/StageTable';
 import DeleteStageModal from '../components/workflow/DeleteStageModal';
 import { useDeleteStage } from '../hooks/useStages';
+import { DEFAULT_STAGE_COLOR } from '../theme/theme';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Администратор',
@@ -381,7 +382,7 @@ function WorkflowPanel() {
               autoComplete="off"
             />
           </Form.Item>
-          <Form.Item name="color" initialValue="#6E41F2">
+          <Form.Item name="color" initialValue={DEFAULT_STAGE_COLOR}>
             <ColorPicker showText format="hex" />
           </Form.Item>
           <Form.Item>
