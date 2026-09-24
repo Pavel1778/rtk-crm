@@ -7,17 +7,16 @@
 
 import csv
 import io
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy import desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime
 
 from app.auth.security import require_admin
 from app.db.session import get_db
 from app.models.entities import ActionLog, User
 from app.schemas.entities import AuditLogPage, AuditLogRead
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/audit", tags=["audit"])
 
@@ -26,7 +25,7 @@ ACTION_LABELS = {"CREATE": "Создание", "UPDATE": "Изменение", "
 
 def _as_utc(value: datetime) -> datetime:
     """Naive-дату из query трактуем как UTC."""
-    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 def _build_filters(
@@ -141,7 +140,7 @@ async def export_audit_logs(
         )
 
     payload = "\ufeff" + buffer.getvalue()
-    filename = f"audit-log-{datetime.now(timezone.utc):%Y%m%d-%H%M}.csv"
+    filename = f"audit-log-{datetime.now(UTC):%Y%m%d-%H%M}.csv"
     return StreamingResponse(
         iter([payload.encode("utf-8")]),
         media_type="text/csv; charset=utf-8",

@@ -11,7 +11,6 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
-
 from app.services.report_columns import (
     column_keys,
     column_labels,
@@ -50,7 +49,7 @@ def test_frontend_and_backend_read_same_file() -> None:
 def test_pdf_columns_derive_from_shared_config() -> None:
     from app.services.excel_export import PDF_COLUMNS
 
-    assert PDF_COLUMNS == tuple(zip(column_keys(), column_short_labels()))
+    assert tuple(zip(column_keys(), column_short_labels(), strict=True)) == PDF_COLUMNS
 
 
 def test_row_values_follows_config_order() -> None:

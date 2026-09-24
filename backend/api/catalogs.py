@@ -4,21 +4,19 @@ import json
 from datetime import datetime
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.security import require_manager_or_admin
 from app.db.session import get_db
 from app.models.entities import ITDirection, ITProduct, University, User
-from app.schemas.entities import ITProductCreate, UniversityCreate
 from app.services.excel_import import (
     CatalogImportResult,
     parse_catalog_file,
     parse_catalog_json,
 )
 from app.services.import_report import generate_import_report
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/catalogs", tags=["catalogs"])
 
@@ -31,11 +29,11 @@ async def preview_catalog_import(
     current: User = Depends(require_manager_or_admin),
 ) -> dict:
     """Предпросмотр импорта каталога (валидация без сохранения).
-    
+
     Args:
         catalog_type: 'universities' или 'products'
         file: Excel файл (.xlsx)
-    
+
     Returns:
         dict с результатами парсинга и валидации
     """
@@ -44,17 +42,17 @@ async def preview_catalog_import(
             status_code=400,
             detail="catalog_type должен быть 'universities' или 'products'"
         )
-    
+
     if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(
             status_code=400,
             detail="Файл должен быть в формате Excel (.xlsx или .xls)"
         )
-    
+
     try:
         content = await file.read()
         file_bytes = BytesIO(content)
-        
+
         result = parse_catalog_file(
             file_bytes,
             catalog_type,
@@ -63,7 +61,7 @@ async def preview_catalog_import(
         )
         return result.to_dict()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {e}") from e
 
 
 @router.post("/import/report")
@@ -120,11 +118,11 @@ async def execute_catalog_import(
     current: User = Depends(require_manager_or_admin),
 ) -> dict:
     """Выполнение импорта каталога (с сохранением в БД).
-    
+
     Args:
         catalog_type: 'universities' или 'products'
         file: Excel файл (.xlsx)
-    
+
     Returns:
         dict с результатами импорта
     """
@@ -133,30 +131,30 @@ async def execute_catalog_import(
             status_code=400,
             detail="catalog_type должен быть 'universities' или 'products'"
         )
-    
+
     if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(
             status_code=400,
             detail="Файл должен быть в формате Excel (.xlsx или .xls)"
         )
-    
+
     try:
         content = await file.read()
         file_bytes = BytesIO(content)
-        
+
         result = parse_catalog_file(
             file_bytes,
             catalog_type,
             file.filename,
             _parse_mapping(mapping),
         )
-        
+
         if not result.success:
             return result.to_dict()
-        
+
         created_count = 0
         errors = result.errors.copy()
-        
+
         if catalog_type == "universities":
             for item in result.data:
                 try:
@@ -167,7 +165,7 @@ async def execute_catalog_import(
                     if existing:
                         errors.append(f"Вуз '{item['name']}' уже существует")
                         continue
-                    
+
                     university = University(
                         name=item["name"],
                         city=item.get("city"),
@@ -179,7 +177,7 @@ async def execute_catalog_import(
                     created_count += 1
                 except Exception as e:
                     errors.append(f"Ошибка создания вуза '{item.get('name')}': {str(e)}")
-        
+
         elif catalog_type == "products":
             for item in result.data:
                 try:
@@ -190,7 +188,7 @@ async def execute_catalog_import(
                     if existing:
                         errors.append(f"Продукт '{item['name']}' уже существует")
                         continue
-                    
+
                     # Находим или создаём направление
                     direction = None
                     if item.get("direction"):
@@ -201,7 +199,7 @@ async def execute_catalog_import(
                             direction = ITDirection(name=item["direction"])
                             db.add(direction)
                             await db.flush()
-                    
+
                     product = ITProduct(
                         name=item["name"],
                         direction_id=direction.id if direction else None,
@@ -210,19 +208,19 @@ async def execute_catalog_import(
                     created_count += 1
                 except Exception as e:
                     errors.append(f"Ошибка создания продукта '{item.get('name')}': {str(e)}")
-        
+
         await db.commit()
-        
+
         return {
             "success": True,
             "created": created_count,
             "total": len(result.data),
             "errors": errors,
         }
-        
+
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка импорта: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка импорта: {e}") from e
 
 
 @router.post("/import/json/preview")

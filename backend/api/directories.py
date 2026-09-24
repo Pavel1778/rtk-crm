@@ -1,7 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.security import get_current_user, require_manager_or_admin
 from app.db.session import get_db
 from app.models.entities import (
@@ -16,6 +12,9 @@ from app.schemas.entities import (
     ITProductCreate,
     ITProductRead,
 )
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api", tags=["directories"])
 
@@ -113,9 +112,11 @@ async def create_product(
         raise HTTPException(
             status_code=409, detail="Такой продукт уже есть в справочнике"
         )
-    if payload.direction_id is not None:
-        if await db.get(ITDirection, payload.direction_id) is None:
-            raise HTTPException(status_code=404, detail="Направление не найдено")
+    if (
+        payload.direction_id is not None
+        and await db.get(ITDirection, payload.direction_id) is None
+    ):
+        raise HTTPException(status_code=404, detail="Направление не найдено")
 
     product = ITProduct(**payload.model_dump())
     db.add(product)

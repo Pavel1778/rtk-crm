@@ -8,11 +8,7 @@
 
 from __future__ import annotations
 
-import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
-
 from app.auth.security import hash_password
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
@@ -25,6 +21,8 @@ from app.models.entities import (
     WorkflowStageRef,
 )
 from app.models.enums import UserRole, WorkflowScope
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 
 @pytest_asyncio.fixture

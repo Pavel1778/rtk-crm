@@ -9,15 +9,14 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
-
 from app.services.excel_import import (
     SEVERITY_ERROR,
     SEVERITY_WARNING,
     CatalogImportResult,
 )
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 HEADERS = ("Строка", "Поле", "Проблема", "Значение", "Уровень")
 COLUMN_WIDTHS = (10, 24, 44, 40, 14)

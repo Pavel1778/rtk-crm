@@ -9,11 +9,10 @@
 from __future__ import annotations
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from app.core.config import get_settings
 from app.db.session import create_tables
 from app.main import app
+from httpx import ASGITransport, AsyncClient
 
 ALLOWED_ORIGIN = "http://localhost:5173"
 RUNTIME_ORIGIN = "https://work-1-vcbzruitwtlcgdbm.prod-runtime.all-hands.dev"

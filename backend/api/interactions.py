@@ -1,14 +1,9 @@
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.auth.security import get_current_user
 from app.api.access import (
     get_accessible_interaction,
     get_interaction_or_404,
 )
+from app.auth.security import get_current_user
 from app.db.session import get_db
 from app.models.entities import (
     Action,
@@ -34,6 +29,9 @@ from app.schemas.entities import (
     InteractionUpdate,
 )
 from app.services.report_cache import invalidate_report_cache
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/interactions", tags=["interactions"])
 
@@ -310,9 +308,11 @@ async def create_interaction(
     """Регистрация взаимодействия на первом этапе выбранного workflow."""
     if await db.get(University, payload.university_id) is None:
         raise HTTPException(status_code=404, detail="Вуз не найден")
-    if payload.product_id is not None:
-        if await db.get(ITProduct, payload.product_id) is None:
-            raise HTTPException(status_code=404, detail="Продукт не найден")
+    if (
+        payload.product_id is not None
+        and await db.get(ITProduct, payload.product_id) is None
+    ):
+        raise HTTPException(status_code=404, detail="Продукт не найден")
 
     await _ensure_unique(db, payload.university_id, payload.product_id)
     await _ensure_parallel_limit(db, payload.university_id)
@@ -365,9 +365,11 @@ async def update_interaction(
     # Передача карточки другому сотруднику — управленческое действие.
     if current.role == UserRole.USER:
         data.pop("assigned_kam_id", None)
-    elif data.get("assigned_kam_id") is not None:
-        if await db.get(User, data["assigned_kam_id"]) is None:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+    elif (
+        data.get("assigned_kam_id") is not None
+        and await db.get(User, data["assigned_kam_id"]) is None
+    ):
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     if "product_id" in data or "stage_id" in data:
         product_id = data.get("product_id", interaction.product_id)
@@ -432,11 +434,11 @@ async def move_interaction(
         raise HTTPException(
             status_code=409, detail="Этап принадлежит другому workflow"
         )
-    
+
     # Идемпотентность: если уже на этом этапе, возвращаем текущее состояние
     if interaction.stage_id == stage_id:
         return await _read(db, interaction)
-    
+
     interaction.stage_id = stage_id
     await db.commit()
     await invalidate_report_cache()

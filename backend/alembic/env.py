@@ -28,9 +28,9 @@ if not _alias_path.exists():
 if str(_alias_dir) not in sys.path:
     sys.path.insert(0, str(_alias_dir))
 
+import app.models  # noqa: F401  регистрирует модели в Base.metadata
 from app.core.config import get_settings
 from app.db.base import Base
-import app.models  # noqa: F401  регистрирует модели в Base.metadata
 
 config = context.config
 

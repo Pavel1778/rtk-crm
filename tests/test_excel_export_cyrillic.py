@@ -6,10 +6,6 @@
 
 from __future__ import annotations
 
-from io import BytesIO
-
-import pytest
-
 from app.services.excel_export import generate_pdf, generate_xls, generate_xlsx
 
 # Строка с «проблемными» для кодировок символами: дефис, №, буква ё.

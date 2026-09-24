@@ -1,12 +1,7 @@
 """Загрузка справочников и демо-данных. Идемпотентна: при данных пропускается."""
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.security import hash_password
-from app.models.enums import B2C_STAGES, UserRole, WorkflowScope
 from app.models.entities import (
-
     Action,
     Comment,
     Interaction,
@@ -16,6 +11,9 @@ from app.models.entities import (
     User,
     WorkflowStageRef,
 )
+from app.models.enums import B2C_STAGES, UserRole, WorkflowScope
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # 14 этапов воркфлоу по ТЗ (код, название, цвет колонки канбан-доски).
 # Порядок списка = порядок этапов 1..14.
@@ -162,9 +160,7 @@ async def _seed_directories(session: AsyncSession) -> bool:
     """
     created = False
 
-    existing_directions = {
-        name for name in await session.scalars(select(ITDirection.name))
-    }
+    existing_directions = set(await session.scalars(select(ITDirection.name)))
     for name in DIRECTIONS:
         if name not in existing_directions:
             session.add(ITDirection(name=name))
@@ -177,9 +173,7 @@ async def _seed_directories(session: AsyncSession) -> bool:
         for d in await session.scalars(select(ITDirection))
     }
 
-    existing_products = {
-        name for name in await session.scalars(select(ITProduct.name))
-    }
+    existing_products = set(await session.scalars(select(ITProduct.name)))
     for name, direction_name in PRODUCTS:
         if name in existing_products:
             continue

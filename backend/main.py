@@ -2,13 +2,6 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from loguru import logger
-from sqlalchemy import text
-
 from app.api import (
     audit,
     auth,
@@ -28,6 +21,12 @@ from app.middleware.rate_limit import login_rate_limit_middleware
 from app.schemas.entities import HealthResponse
 from app.services.report_cache import close_report_cache
 from app.services.scheduler import start_scheduler, stop_scheduler
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from loguru import logger
+from sqlalchemy import text
 
 
 @asynccontextmanager

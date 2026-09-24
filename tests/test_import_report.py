@@ -13,10 +13,6 @@ from uuid import uuid4
 
 import openpyxl
 import pytest
-from httpx import ASGITransport, AsyncClient
-from openpyxl import Workbook
-from sqlalchemy import select
-
 from app.db.session import SessionLocal, create_tables
 from app.main import app
 from app.services.excel_import import (
@@ -25,6 +21,9 @@ from app.services.excel_import import (
     parse_catalog_file,
 )
 from app.services.import_report import HEADERS, generate_import_report
+from httpx import ASGITransport, AsyncClient
+from openpyxl import Workbook
+from sqlalchemy import select
 
 UNIVERSITY_HEADERS = ["Название", "Город", "Контактное лицо", "Email", "Телефон"]
 
@@ -109,7 +108,7 @@ def test_duplicate_name_is_warning_and_row_still_imported() -> None:
     warnings = [issue for issue in result.issues if issue.severity == SEVERITY_WARNING]
     assert len(warnings) == 1
     assert warnings[0].row == 3
-    assert "Дубль в файле (строка 2)" == warnings[0].problem
+    assert warnings[0].problem == "Дубль в файле (строка 2)"
 
 
 def test_invalid_email_is_warning() -> None:

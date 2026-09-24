@@ -1,10 +1,6 @@
 """API уведомлений и контроля «зависших» заявок."""
 
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime
 
 from app.auth.security import require_admin
 from app.core.config import get_settings
@@ -15,6 +11,9 @@ from app.services.notifications import (
     find_stuck_interactions,
     notify_stuck_interactions,
 )
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -50,7 +49,7 @@ async def list_stuck(
     items = await find_stuck_interactions(db, threshold)
     return StuckResponse(
         timeout_days=threshold,
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
         count=len(items),
         items=[
             StuckInteractionRead(
