@@ -318,6 +318,50 @@ production Render/Supabase.
 - `npx tsc --noEmit` — 0 ошибок; `npm run build` — успешно; `npm audit` — 0;
 - `python scripts/seed.py` — справочники и демо-данные создаются идемпотентно.
 
+## Актуализация после проверки структуры (24.09)
+
+Проверка дерева проекта на расхождения выявила два дефекта; оба закрыты.
+
+### 1. Зеркало документации расходилось с источниками
+
+Вкладка «Помощь» отдаёт Markdown из `frontend/public/docs/`, но эта копия
+поддерживалась вручную и отстала от `docs/`:
+
+- `ADMIN_GUIDE.md`, `SECURITY.md`, `ARCHITECTURE.md` содержали более ранние
+  редакции (не было воронки B2C, кэша отчётов, rate limit, планировщика);
+- `architecture/functional.md`, `er-model.md`, `security/SAST-SCA.md` и
+  `STACK.md` вообще отсутствовали, хотя исходные документы на них ссылаются, —
+  внутренние ссылки в Help вели в никуда;
+- картинка `10-help-docs.png` отличалась от исходной.
+
+Теперь зеркало собирается детерминированно: `scripts/sync_public_docs.py`
+копирует набор документов и переписывает относительные ссылки в абсолютные
+(`/docs/...`), потому что страница рендерится по маршруту `/help`. Повторный
+прогон не меняет дерево. За дрейфом следит `tests/test_docs_mirror.py`
+(6 тестов): синхронизация воспроизводима, все ссылки разрешаются, относительных
+ссылок и битых картинок нет.
+
+### 2. Бэкенд в контейнере не находил конфиг колонок отчёта
+
+`backend/services/report_columns.py` читал конфиг как
+`Path(__file__).parents[2] / "config" / "report_columns.json"`. В образе код
+лежит в `/app` (build context — `backend/`), поэтому путь указывал на
+`/config/report_columns.json`, а каталог `config/` в образ не попадал —
+выгрузки XLSX/XLS/PDF и `/api/reports/columns` падали бы в Docker.
+
+Исправлено: путь выбирается из кандидатов (корень репозитория и `/config`) с
+поддержкой явного `REPORT_COLUMNS_CONFIG`; в оба compose-файла добавлен
+read-only mount `./config:/config`. Покрыто тестами в
+`tests/test_report_columns.py`.
+
+### Проверки
+
+- `python -m pytest` — 106 тестов, все зелёные (было 98);
+- `ruff check backend/ tests/ scripts/ conftest.py` — All checks passed;
+- `mypy backend/` — no issues found in 40 source files;
+- `npx tsc --noEmit` — 0 ошибок; `npm run build` — успешно;
+- `python scripts/sync_public_docs.py` — идемпотентен, зеркало совпадает с `docs/`.
+
 ## Осталось
 
 1. Ротировать credentials, которые ранее попали в историю Git; удаление из текущего

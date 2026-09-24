@@ -8,11 +8,31 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "report_columns.json"
+# В контейнере код лежит в /app (build context — backend/), а канонический
+# конфиг остаётся в корне репозитория и монтируется в /config. Поэтому
+# проверяем несколько кандидатов, а не один относительный путь.
+_CANDIDATES = (
+    Path(__file__).resolve().parents[2] / "config" / "report_columns.json",
+    Path("/config/report_columns.json"),
+)
+
+
+def _config_path() -> Path:
+    override = os.environ.get("REPORT_COLUMNS_CONFIG")
+    if override:
+        return Path(override)
+    for candidate in _CANDIDATES:
+        if candidate.exists():
+            return candidate
+    return _CANDIDATES[0]
+
+
+CONFIG_PATH = _config_path()
 
 
 @dataclass(frozen=True)
