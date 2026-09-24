@@ -12,19 +12,12 @@
 from __future__ import annotations
 
 import sys
-import tempfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-BACKEND_DIR = ROOT / "backend"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _bootstrap import ROOT, ensure_app_importable  # noqa: E402
 
-# Приложение импортируется как пакет `app` (см. backend/Dockerfile и
-# conftest.py): создаём временный каталог со ссылкой app -> backend.
-_alias_dir = Path(tempfile.mkdtemp(prefix="rtk-app-alias-"))
-_alias_path = _alias_dir / "app"
-if not _alias_path.exists():
-    _alias_path.symlink_to(BACKEND_DIR, target_is_directory=True)
-sys.path.insert(0, str(_alias_dir))
+ensure_app_importable()
 
 from app.services.guide_pdf import render_guide_pdf  # noqa: E402
 

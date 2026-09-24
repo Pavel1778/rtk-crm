@@ -26,6 +26,12 @@ os.environ.setdefault(
     "UPLOAD_DIR", tempfile.mkdtemp(prefix="rtk-test-uploads-")
 )
 
+# Тест CORS проверяет правило для хостов предпросмотра, поэтому подставляем
+# regex в тестовом окружении (в проде значение приходит из env).
+os.environ.setdefault(
+    "CORS_ORIGIN_REGEX", r"https://[a-z0-9-]+\.preview\.example\.com"
+)
+
 _alias_dir = Path(tempfile.mkdtemp(prefix="rtk-app-alias-"))
 _alias_path = _alias_dir / "app"
 if not _alias_path.exists():

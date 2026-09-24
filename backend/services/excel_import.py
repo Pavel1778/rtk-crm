@@ -32,6 +32,29 @@ SEVERITY_OK = "ok"
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+# Схема верхнего уровня: массив объектов каталога либо {"data": [...]}.
+_CATALOG_PAYLOAD_SCHEMA: dict[str, Any] = {
+    "oneOf": [
+        {"type": "array", "items": {"type": "object"}},
+        {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+                "data": {"type": "array", "items": {"type": "object"}},
+            },
+        },
+    ],
+}
+_CATALOG_PAYLOAD_VALIDATOR = (
+    Draft7Validator(_CATALOG_PAYLOAD_SCHEMA) if Draft7Validator is not None else None
+)
+
+
+def _json_error_message(error: Any) -> str:
+    """Приводит ошибку JSON Schema к читаемому виду с путём до поля."""
+    path = "/".join(str(part) for part in error.path) or "корень"
+    return f"Ошибка структуры JSON ({path}): {error.message}"
+
 
 @dataclass
 class ValidationIssue:
@@ -159,25 +182,16 @@ def parse_catalog_json(
         return CatalogImportResult(False, [], [f"Некорректный JSON: {exc}"])
 
     records = payload.get("data") if isinstance(payload, dict) else payload
-    if Draft7Validator is not None:
-        validation = Draft7Validator({
-            "oneOf": [
-                {"type": "array", "items": {"type": "object"}},
-                {
-                    "type": "object",
-                    "required": ["data"],
-                    "properties": {
-                        "data": {"type": "array", "items": {"type": "object"}},
-                    },
-                },
-            ],
-        })
-        errors = sorted(validation.iter_errors(payload), key=lambda error: list(error.path))
+    if _CATALOG_PAYLOAD_VALIDATOR is not None:
+        errors = sorted(
+            _CATALOG_PAYLOAD_VALIDATOR.iter_errors(payload),
+            key=lambda error: list(error.path),
+        )
         if errors:
             return CatalogImportResult(
                 False,
                 [],
-                [f"Ошибка структуры JSON: {errors[0].message}"],
+                [_json_error_message(error) for error in errors[:10]],
             )
     if not isinstance(records, list) or not all(isinstance(item, dict) for item in records):
         return CatalogImportResult(
@@ -187,6 +201,12 @@ def parse_catalog_json(
         )
     if not records:
         return CatalogImportResult(False, [], ["JSON-массив пуст"])
+    if any(not record for record in records):
+        return CatalogImportResult(
+            False,
+            [],
+            ["В JSON есть пустой объект записи (нет ни одного поля)"],
+        )
 
     headers = list(records[0].keys())
     rows = [[record.get(header) for header in headers] for record in records]

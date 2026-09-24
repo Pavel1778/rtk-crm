@@ -88,3 +88,35 @@ def test_json_import_supports_explicit_column_mapping() -> None:
             "contact_phone": None,
         }
     ]
+
+
+def test_json_import_rejects_malformed_payload_with_path() -> None:
+    result = parse_catalog_json(b'{"data": "not-an-array"}', "universities")
+
+    assert result.success is False
+    assert "data" in result.errors[0]
+    assert "Ошибка структуры JSON" in result.errors[0]
+
+
+def test_json_import_rejects_empty_record_object() -> None:
+    result = parse_catalog_json(b"[{}]", "universities")
+
+    assert result.success is False
+    assert "пустой объект" in result.errors[0]
+
+
+def test_json_import_accepts_wrapped_data_object() -> None:
+    content = b'{"data": [{"name": "\\u041c\\u0413\\u0423"}]}'
+
+    result = parse_catalog_json(content, "universities")
+
+    assert result.success is True
+    assert result.data[0]["name"] == "МГУ"
+
+
+def test_json_import_reports_required_name_missing() -> None:
+    payload = b'[{"city": "\\u041a\\u0430\\u0437\\u0430\\u043d\\u044c"}]'
+    result = parse_catalog_json(payload, "universities")
+
+    assert result.success is False
+    assert any("Название" in error for error in result.errors)
