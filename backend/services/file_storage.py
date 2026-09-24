@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import uuid
 from io import BytesIO
@@ -55,10 +56,8 @@ class LocalStorage:
         return (self.base_dir / key).read_bytes()
 
     async def delete(self, key: str) -> None:
-        try:
+        with contextlib.suppress(OSError):
             (self.base_dir / key).unlink()
-        except OSError:
-            pass
 
     async def ping(self) -> None:
         return None
@@ -101,10 +100,9 @@ class S3Storage:
             response.release_conn()
 
     async def delete(self, key: str) -> None:
-        try:
+        # Объект мог быть уже удалён — ошибка удаления не критична.
+        with contextlib.suppress(Exception):
             self.client.remove_object(self.bucket, key)
-        except Exception:  # noqa: BLE001
-            pass
 
     async def ping(self) -> None:
         self.client.bucket_exists(self.bucket)

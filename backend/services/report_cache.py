@@ -2,10 +2,9 @@ import time
 from dataclasses import dataclass
 from fnmatch import fnmatch
 
+from app.core.config import get_settings
 from loguru import logger
 from redis.asyncio import Redis
-
-from app.core.config import get_settings
 
 
 @dataclass

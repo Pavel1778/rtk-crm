@@ -3,9 +3,7 @@ from io import BytesIO
 import xlwt
 from openpyxl import Workbook
 
-from backend.services.excel_import import parse_catalog_file
-from backend.services.excel_import import parse_catalog_json
-
+from backend.services.excel_import import parse_catalog_file, parse_catalog_json
 
 HEADERS = ["Название", "Город", "Контактное лицо", "Email", "Телефон"]
 ROW = ["МГУ им. Ленина №5", "Москва", "Иван Петров", "ivan@example.com", "+7 900 000-00-00"]

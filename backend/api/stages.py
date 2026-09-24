@@ -1,8 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.security import get_current_user
 from app.db.session import get_db
 from app.models.entities import (
@@ -16,6 +11,10 @@ from app.schemas.entities import (
     WorkflowStageRead,
     WorkflowStageUpdate,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class StageReorderRequest(BaseModel):
@@ -139,7 +138,7 @@ async def update_stage(
 
     for field, value in update_data.items():
         setattr(stage, field, value)
-    
+
     await db.commit()
     await db.refresh(stage)
     return await _with_counts(db, stage)

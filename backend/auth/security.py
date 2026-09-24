@@ -1,16 +1,15 @@
-from datetime import datetime, timedelta, timezone
-
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime, timedelta
 
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models.enums import UserRole
 from app.models.entities import User
+from app.models.enums import UserRole
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -36,7 +35,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user: User) -> str:
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.now(UTC) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
     payload = {"sub": str(user.id), "email": user.email, "exp": expire}
@@ -50,7 +49,7 @@ async def get_current_user(
 ) -> User:
     """Извлекает пользователя из Bearer-токена."""
     if credentials is None:
-        raise CREDENTIALS_ERROR
+        raise CREDENTIALS_ERROR from None
     try:
         payload = jwt.decode(
             credentials.credentials,
@@ -59,7 +58,7 @@ async def get_current_user(
         )
         user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError, TypeError):
-        raise CREDENTIALS_ERROR
+        raise CREDENTIALS_ERROR from None
 
     user = await db.scalar(select(User).where(User.id == user_id))
     if user is None or not user.is_active:

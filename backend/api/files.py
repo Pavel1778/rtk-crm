@@ -2,16 +2,15 @@
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.auth.security import get_current_user
 from app.api.access import get_accessible_interaction
+from app.auth.security import get_current_user
 from app.db.session import get_db
 from app.models.entities import AttachedFile, User
 from app.schemas.entities import AttachedFileRead
 from app.services.file_storage import get_storage
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -173,7 +172,7 @@ async def download_file(
     try:
         content = await get_storage().read(attached_file.file_path)
     except Exception:  # noqa: BLE001
-        raise HTTPException(status_code=404, detail="Файл не найден в хранилище")
+        raise HTTPException(status_code=404, detail="Файл не найден в хранилище") from None
 
     # Отдаём байты напрямую: работает и для локального диска, и для S3,
     # где локального пути не существует.

@@ -1,9 +1,4 @@
-from datetime import date, datetime, time, timedelta, timezone
-
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, date, datetime, time, timedelta
 
 from app.auth.security import get_current_user
 from app.core.config import get_settings
@@ -19,23 +14,27 @@ from app.models.entities import (
     WorkflowStageRef,
 )
 from app.schemas.entities import (
-    ReportMetric,
     ReportDynamicsPoint,
+    ReportMetric,
     ReportProduct,
     ReportResponse,
     ReportStage,
     StageProgress,
     UniversityRead,
 )
-from app.services.excel_export import generate_xlsx, generate_xls, generate_pdf
+from app.services.excel_export import generate_pdf, generate_xls, generate_xlsx
 from app.services.report_cache import get_report_cache, set_report_cache
 from app.services.report_columns import load_report_columns
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
 def _report_filename(extension: str) -> str:
-    return f"rtk-report-{datetime.now(timezone.utc):%Y%m%d}.{extension}"
+    return f"rtk-report-{datetime.now(UTC):%Y%m%d}.{extension}"
 
 
 def _report_filters(
@@ -61,7 +60,7 @@ def _report_filters(
     if date_from is not None:
         filters.append(
             Interaction.created_at
-            >= datetime.combine(date_from, time.min, tzinfo=timezone.utc)
+            >= datetime.combine(date_from, time.min, tzinfo=UTC)
         )
     if date_to is not None:
         filters.append(
@@ -69,7 +68,7 @@ def _report_filters(
             < datetime.combine(
                 date_to + timedelta(days=1),
                 time.min,
-                tzinfo=timezone.utc,
+                tzinfo=UTC,
             )
         )
     return filters
@@ -157,15 +156,14 @@ async def get_report(
             .order_by(WorkflowStageRef.order)
         )
     )
-    counts = dict(
-        (
-            await db.execute(
-                select(Interaction.stage_id, func.count(Interaction.id))
-                .where(*filters)
-                .group_by(Interaction.stage_id)
-            )
-        ).all()
-    )
+    rows = (
+        await db.execute(
+            select(Interaction.stage_id, func.count(Interaction.id))
+            .where(*filters)
+            .group_by(Interaction.stage_id)
+        )
+    ).all()
+    counts: dict[int, int] = {row[0]: row[1] for row in rows}
     stage_progress = [
         StageProgress(
             stage_code=stage.code,
@@ -212,7 +210,7 @@ async def get_report(
         for stage in stages
     ]
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     dynamics_end = date_to or today
     dynamics_start = date_from or dynamics_end - timedelta(days=29)
     if dynamics_start > dynamics_end:
@@ -265,7 +263,7 @@ async def get_report(
             "products": len(by_product),
             "stages": len(stages),
         },
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
     )
     await set_report_cache(cache_key, response.model_dump_json())
     return response
@@ -550,7 +548,7 @@ async def export_json(
 
     settings = get_settings()
     return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "total": len(data),
         # Колонки отчёта из общего конфига: тот же порядок и заголовки,
         # что в интерфейсе и в PDF/XLS-выгрузках.

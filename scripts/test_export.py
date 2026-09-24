@@ -1,8 +1,8 @@
 """Проверка генераторов XLSX, XLS и PDF без запуска приложения."""
 
+import sys
 from io import BytesIO
 from pathlib import Path
-import sys
 from zipfile import ZipFile
 
 from openpyxl import load_workbook
@@ -11,7 +11,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from backend.services.excel_export import generate_pdf, generate_xls, generate_xlsx
-
 
 SAMPLE = [
     {

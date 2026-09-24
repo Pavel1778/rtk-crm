@@ -1,3 +1,10 @@
+from app.db.base import Base, TimestampMixin
+from app.models.enums import (
+    USER_ROLE_VALUES,
+    WORKFLOW_SCOPE_VALUES,
+    UserRole,
+    WorkflowScope,
+)
 from sqlalchemy import (
     Boolean,
     Enum,
@@ -10,14 +17,6 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.db.base import Base, TimestampMixin
-from app.models.enums import (
-    USER_ROLE_VALUES,
-    WORKFLOW_SCOPE_VALUES,
-    UserRole,
-    WorkflowScope,
-)
 
 
 class User(Base, TimestampMixin):

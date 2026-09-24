@@ -7,9 +7,8 @@
 
 from __future__ import annotations
 
-from loguru import logger
-
 from app.core.config import get_settings
+from loguru import logger
 
 _scheduler = None
 

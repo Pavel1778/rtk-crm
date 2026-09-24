@@ -9,17 +9,15 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
-
 from app.auth.security import hash_password
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
 from app.main import app
-from app.models.entities import ActionLog, University, User
+from app.models.entities import ActionLog, User
 from app.models.enums import UserRole
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 
 @pytest_asyncio.fixture

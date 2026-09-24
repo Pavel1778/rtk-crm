@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pypdf import PdfReader
-
 from app.services.guide_pdf import markdown_to_story, render_guide_pdf
+from pypdf import PdfReader
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_DIR = REPO_ROOT / "docs"

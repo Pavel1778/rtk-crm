@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from app.core.config import get_settings
 from app.db.session import create_tables
 from app.main import app
 from app.middleware.rate_limit import _login_attempts
+from httpx import ASGITransport, AsyncClient
 
 
 def _client() -> AsyncClient:

@@ -7,11 +7,10 @@
 применяться и в `interactions`, и в `files`.
 """
 
-from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models.entities import Interaction, User
 from app.models.enums import UserRole
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def get_interaction_or_404(

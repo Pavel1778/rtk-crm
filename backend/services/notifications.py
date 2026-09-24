@@ -10,15 +10,14 @@ from __future__ import annotations
 
 import smtplib
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
-
-from loguru import logger
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models.entities import Interaction, ITProduct, University, User, WorkflowStageRef
+from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass
@@ -37,7 +36,7 @@ async def find_stuck_interactions(
     """Активные взаимодействия, стоящие в одном статусе дольше порога."""
     settings = get_settings()
     threshold_days = timeout_days or settings.stuck_timeout_days
-    cutoff = datetime.now(timezone.utc) - timedelta(days=threshold_days)
+    cutoff = datetime.now(UTC) - timedelta(days=threshold_days)
 
     rows = (
         await db.execute(
@@ -54,12 +53,12 @@ async def find_stuck_interactions(
         )
     ).all()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     result: list[StuckInteraction] = []
     for interaction, university, product, stage, manager in rows:
         updated = interaction.updated_at
         if updated is not None and updated.tzinfo is None:
-            updated = updated.replace(tzinfo=timezone.utc)
+            updated = updated.replace(tzinfo=UTC)
         days = (now - updated).days if updated else threshold_days
         result.append(
             StuckInteraction(

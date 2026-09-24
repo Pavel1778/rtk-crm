@@ -9,10 +9,9 @@ from __future__ import annotations
 import time
 from collections import defaultdict, deque
 
+from app.core.config import get_settings
 from fastapi import status
 from fastapi.responses import JSONResponse
-
-from app.core.config import get_settings
 
 _login_attempts: dict[str, deque[float]] = defaultdict(deque)
 

@@ -1,17 +1,18 @@
 """Экспорт отчётов в XLSX, XLS и PDF форматы."""
 
-from io import BytesIO
 from datetime import datetime
+from io import BytesIO
 
 try:
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     OPENPYXL_AVAILABLE = True
 except ImportError:
     OPENPYXL_AVAILABLE = False
 
 try:
-    from xlwt import Workbook as XlsWorkbook, easyxf
+    from xlwt import Workbook as XlsWorkbook
+    from xlwt import easyxf
     XLWT_AVAILABLE = True
 except ImportError:
     XLWT_AVAILABLE = False
@@ -19,10 +20,10 @@ except ImportError:
 try:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
@@ -32,7 +33,6 @@ from app.services.report_columns import (
     column_labels,
     load_report_columns,
 )
-
 
 # Колонки отчёта: ключ в данных + короткий заголовок для узкой шапки.
 # Определяются в config/report_columns.json — общем конфиге фронта и бэкенда.
@@ -96,7 +96,7 @@ def _fit_column_widths(
 
     cap = available * 0.30  # ни одна колонка не забирает всю страницу
     desired_widths = [min(w, cap) for w in desired_widths]
-    min_widths = [min(a, b) for a, b in zip(min_widths, desired_widths)]
+    min_widths = [min(a, b) for a, b in zip(min_widths, desired_widths, strict=True)]
 
     total_min = sum(min_widths)
     if total_min > available:  # экзотические данные: ужимаем пропорционально
@@ -105,7 +105,7 @@ def _fit_column_widths(
 
     widths = list(min_widths)
     remaining = available - total_min
-    deficits = [d - m for d, m in zip(desired_widths, min_widths)]
+    deficits = [d - m for d, m in zip(desired_widths, min_widths, strict=True)]
     total_deficit = sum(deficits)
     if total_deficit > 0:
         for i, deficit in enumerate(deficits):
@@ -308,11 +308,8 @@ def generate_xlsx(interactions: list[dict]) -> BytesIO:
         max_length = 0
         column = col[0].column_letter
         for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
+            if cell.value is not None and len(str(cell.value)) > max_length:
+                max_length = len(str(cell.value))
         adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column].width = adjusted_width
 

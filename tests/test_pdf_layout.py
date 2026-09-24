@@ -7,16 +7,15 @@ landscape A4 при реалистичных длинных названиях �
 from __future__ import annotations
 
 import pytest
-from reportlab.lib.pagesizes import A4, landscape
-
 from app.services.excel_export import (
-    PDF_COLUMNS,
     _PDF_MARGINS,
+    PDF_COLUMNS,
     _fit_column_widths,
     _resolve_pdf_fonts,
     estimate_pdf_table_width,
     generate_pdf,
 )
+from reportlab.lib.pagesizes import A4, landscape
 
 BAUMAN = "Московский государственный технический университет им. Н. Э. Баумана"
 KREMENCHUG = "Кременчуг-Константиновское"

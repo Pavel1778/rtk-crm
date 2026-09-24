@@ -9,12 +9,11 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import func, select
-
 from app.db.base import Base
 from app.db.session import engine
-from app.models.entities import ITProduct, Interaction, University
+from app.models.entities import Interaction, ITProduct, University
 from app.seed import _seed_demo_interactions, seed_demo
+from sqlalchemy import func, select
 
 
 @pytest.fixture

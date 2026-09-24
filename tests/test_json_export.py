@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete, select
-
 from app.auth.security import create_access_token, hash_password
 from app.db.session import SessionLocal, create_tables
 from app.main import app
@@ -20,6 +17,8 @@ from app.models.entities import (
 )
 from app.models.enums import UserRole, WorkflowScope
 from app.seed import seed_reference
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import delete, select
 
 
 def _client() -> AsyncClient:

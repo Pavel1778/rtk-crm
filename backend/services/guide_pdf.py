@@ -13,6 +13,7 @@ from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from app.services.excel_export import _resolve_pdf_fonts
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -25,8 +26,6 @@ from reportlab.platypus import (
     SimpleDocTemplate,
     Spacer,
 )
-
-from app.services.excel_export import _resolve_pdf_fonts
 
 _MARGIN = 20 * mm
 _MAX_IMAGE_WIDTH = 150 * mm
@@ -197,6 +196,7 @@ def markdown_to_story(markdown: str, base_dir: Path) -> list:
             else:
                 if items and ordered:
                     flush_list()
+                assert bullet_match is not None
                 items.append(bullet_match.group("text").strip())
             continue
 
