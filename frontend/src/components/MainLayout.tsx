@@ -23,7 +23,6 @@ const MENU_ITEMS = [
   { key: '/', icon: <AppstoreOutlined />, label: 'Доска' },
   { key: '/reports', icon: <BarChartOutlined />, label: 'Отчёты' },
   { key: '/directories', icon: <DatabaseOutlined />, label: 'Справочники' },
-  { key: '/workflow', icon: <SettingOutlined />, label: 'Воркфлоу' },
   { key: '/help', icon: <QuestionCircleOutlined />, label: 'Помощь' },
 ];
 
@@ -47,8 +46,26 @@ export default function MainLayout() {
   const role = useRole();
   const screens = Grid.useBreakpoint();
   const themeMode = useThemeStore((s) => s.mode);
-  const toggleTheme = useThemeStore((s) => s.toggle);
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Переключение по кругу: светлая → тёмная → системная.
+  const themeTitle =
+    themePreference === 'system'
+      ? 'Как в системе'
+      : themeMode === 'dark'
+        ? 'Тёмная тема'
+        : 'Светлая тема';
+  const cycleTheme = () => {
+    const next =
+      themePreference === 'light'
+        ? 'dark'
+        : themePreference === 'dark'
+          ? 'system'
+          : 'light';
+    setThemePreference(next);
+  };
 
   const items = role === 'admin'
     ? [...MENU_ITEMS, ADMIN_ITEM, AUDIT_ITEM]
@@ -95,12 +112,12 @@ export default function MainLayout() {
           {screens.md && (
             <Typography.Text type="secondary">{user?.full_name}</Typography.Text>
           )}
-          <Tooltip title={themeMode === 'dark' ? 'Светлая тема' : 'Тёмная тема'}>
+          <Tooltip title={`Тема: ${themeTitle}`}>
             <Button
               type="text"
-              aria-label="Переключить тему"
+              aria-label={`Тема: ${themeTitle}. Переключить`}
               icon={<BulbOutlined />}
-              onClick={toggleTheme}
+              onClick={cycleTheme}
             />
           </Tooltip>
           <Tooltip title="Выйти">
