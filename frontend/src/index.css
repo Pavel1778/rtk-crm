@@ -135,7 +135,8 @@ img, svg, canvas, video, table { max-width: 100%; }
    (220/180px) не помещались в строку на узких экранах. На мобильных даём
    каждому контролу всю ширину, от 768px — тянем поиск и фиксируем продукт. */
 .board-filter-search,
-.board-filter-product {
+.board-filter-product,
+.board-filter-dates {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -145,7 +146,8 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 @media (max-width: 767px) {
   .board-filter-search,
-  .board-filter-product {
+  .board-filter-product,
+  .board-filter-dates {
     flex: 0 0 100%;
     max-width: 100%;
   }
@@ -154,6 +156,7 @@ img, svg, canvas, video, table { max-width: 100%; }
   .board-filter-search { flex: 1 1 240px; max-width: 420px; }
   .board-filter-product { flex: 0 1 180px; }
   .board-product-select { min-width: 160px; }
+  .board-filter-dates { flex: 0 1 280px; }
 }
 
 /* ═══════ КОНТЕНТ ═══════ */

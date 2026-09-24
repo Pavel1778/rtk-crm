@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, time, timedelta
+
 import pytest
 from app.auth.security import create_access_token, hash_password
 from app.db.session import SessionLocal, create_tables
@@ -304,3 +306,103 @@ async def test_reorder_requires_admin() -> None:
         )
 
     assert response.status_code == 403
+
+
+async def _create_interaction(
+    university_id: int, created_at: datetime | None = None
+) -> int:
+    """Создаёт взаимодействие с заданным created_at (для проверки фильтра дат)."""
+    async with SessionLocal() as session:
+        stage_id = await session.scalar(
+            select(WorkflowStageRef.id)
+            .where(WorkflowStageRef.scope == WorkflowScope.B2B)
+            .order_by(WorkflowStageRef.order)
+        )
+        interaction = Interaction(
+            university_id=university_id,
+            stage_id=stage_id,
+            scope=WorkflowScope.B2B,
+            is_active=True,
+        )
+        if created_at is not None:
+            interaction.created_at = created_at
+        session.add(interaction)
+        await session.commit()
+        await session.refresh(interaction)
+        return interaction.id
+
+
+async def _board_card_names(params: dict, headers: dict) -> list[str]:
+    async with _client() as client:
+        board = (
+            await client.get("/api/interactions/board", params=params, headers=headers)
+        ).json()
+    return [c["university_name"] for col in board["columns"] for c in col["interactions"]]
+
+
+async def test_board_date_range_excludes_older_cards() -> None:
+    """date_from отсекает карточки, созданные раньше начала диапазона."""
+    token = await _admin_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    old_university = await _university("Старый-Вуз")
+    new_university = await _university("Новый-Вуз")
+    now = datetime.now(UTC)
+    await _create_interaction(old_university, now - timedelta(days=40))
+    await _create_interaction(new_university, now - timedelta(days=2))
+
+    names = await _board_card_names(
+        {"date_from": (now - timedelta(days=7)).date().isoformat()}, headers
+    )
+
+    assert names == ["Новый-Вуз"]
+
+
+async def test_board_date_range_includes_whole_end_day() -> None:
+    """date_to включает весь последний день, а не только 00:00."""
+    token = await _admin_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    university = await _university("Вечерний-Вуз")
+    # 23:00 того же дня, что и date_to — карточка должна попасть в выборку.
+    target_day = (datetime.now(UTC) - timedelta(days=3)).date()
+    await _create_interaction(
+        university, datetime.combine(target_day, time(23, 0), tzinfo=UTC)
+    )
+
+    names = await _board_card_names(
+        {"date_from": target_day.isoformat(), "date_to": target_day.isoformat()},
+        headers,
+    )
+
+    assert names == ["Вечерний-Вуз"]
+
+
+async def test_board_date_range_excludes_later_cards() -> None:
+    """date_to отсекает карточки, созданные позже конца диапазона."""
+    token = await _admin_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    university = await _university("Поздний-Вуз")
+    now = datetime.now(UTC)
+    await _create_interaction(university, now)
+
+    names = await _board_card_names(
+        {"date_to": (now - timedelta(days=10)).date().isoformat()}, headers
+    )
+
+    assert names == []
+
+
+async def test_board_rejects_inverted_date_range() -> None:
+    """Перевёрнутый диапазон отклоняется 400 — контракт как в отчётах."""
+    token = await _admin_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    async with _client() as client:
+        response = await client.get(
+            "/api/interactions/board",
+            params={"date_from": "2026-09-29", "date_to": "2026-09-01"},
+            headers=headers,
+        )
+
+    assert response.status_code == 400
+    assert "позже" in response.json()["detail"]
+

@@ -55,6 +55,7 @@ import type {
 } from '../types';
 import { useRole } from '../stores/authStore';
 import InteractionDrawer from '../components/interaction/InteractionDrawer';
+import DateRangeFilter, { type DateRangeValue } from '../components/DateRangeFilter';
 import MobileStageFilter from '../components/kanban/MobileStageFilter';
 import EmptyState from '../components/EmptyState';
 
@@ -207,6 +208,7 @@ export default function BoardPage() {
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState<WorkflowScope>('b2b');
   const [productFilter, setProductFilter] = useState<number | undefined>();
+  const [dates, setDates] = useState<DateRangeValue>({});
   const [products, setProducts] = useState<ITProduct[]>([]);
   const [activeCard, setActiveCard] = useState<InteractionCard | null>(null);
   const [mobileStage, setMobileStage] = useState<number | undefined>();
@@ -216,7 +218,15 @@ export default function BoardPage() {
   const load = async () => {
     setLoading(true);
     try {
-      setData(await getBoard({ search: search || undefined, product_id: productFilter, scope }));
+      setData(
+        await getBoard({
+          search: search || undefined,
+          product_id: productFilter,
+          scope,
+          date_from: dates.date_from,
+          date_to: dates.date_to,
+        })
+      );
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось загрузить доску'));
     } finally {
@@ -234,7 +244,7 @@ export default function BoardPage() {
     }, FILTER_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, search, productFilter]);
+  }, [scope, search, productFilter, dates.date_from, dates.date_to]);
 
   useEffect(() => {
     void listProducts().then(setProducts).catch(() => undefined);
@@ -321,6 +331,14 @@ export default function BoardPage() {
               value={productFilter}
               onChange={setProductFilter}
               options={products.map((p) => ({ value: p.id, label: p.name }))}
+            />
+          </Col>
+          <Col className="board-filter-dates">
+            <DateRangeFilter
+              id="board-date-range"
+              value={dates}
+              onChange={setDates}
+              style={{ minWidth: 240 }}
             />
           </Col>
           <Col>
