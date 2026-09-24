@@ -179,8 +179,14 @@ export default function HelpPage() {
                   src={src}
                   alt={alt ?? ''}
                   loading="lazy"
+                  // Скриншоты в руководствах — 1440×900. Явные размеры дают
+                  // браузеру соотношение сторон, поэтому место резервируется
+                  // до загрузки (нет сдвига вёрстки, CLS).
+                  width={1440}
+                  height={900}
                   style={{
                     maxWidth: '100%',
+                    height: 'auto',
                     border: '1px solid var(--atmr-border-soft)',
                     borderRadius: 8,
                   }}

@@ -1,5 +1,6 @@
 import { App as AntApp, ColorPicker, Form, Input, InputNumber, Modal } from 'antd';
 import { useEffect } from 'react';
+import { DEFAULT_STAGE_COLOR } from '../../theme/theme';
 
 interface StageEditorProps {
   open: boolean;
@@ -24,7 +25,7 @@ export default function StageEditor({ open, stage, onCancel, onSave }: StageEdit
         form.setFieldsValue(stage);
       } else {
         form.resetFields();
-        form.setFieldsValue({ order: 1, color: '#6E41F2' });
+        form.setFieldsValue({ order: 1, color: DEFAULT_STAGE_COLOR });
       }
     }
   }, [open, stage, form]);
@@ -37,7 +38,7 @@ export default function StageEditor({ open, stage, onCancel, onSave }: StageEdit
         code: values.code,
         name: values.name,
         order: values.order,
-        color: color ?? '#6E41F2',
+        color: color ?? DEFAULT_STAGE_COLOR,
       });
       form.resetFields();
     } catch (error) {
@@ -93,7 +94,7 @@ export default function StageEditor({ open, stage, onCancel, onSave }: StageEdit
             autoComplete="off"
           />
         </Form.Item>
-        <Form.Item name="color" label="Цвет" initialValue="#6E41F2">
+        <Form.Item name="color" label="Цвет" initialValue={DEFAULT_STAGE_COLOR}>
           <ColorPicker showText format="hex" />
         </Form.Item>
       </Form>

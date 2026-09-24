@@ -17,6 +17,43 @@
   --atmr-error-default: #E5484D;
   --atmr-info-default: #3B82F6;
   --atmr-accent-muted: #8B5CF6;
+  --atmr-shadow-popover: 0 8px 24px rgba(28, 29, 34, 0.12);
+  /* Подписи внутри секторов диаграммы: цвет текста и контур-гало.
+     Сектора используют разные токены палитры, поэтому без гало белая
+     подпись теряется на светлых долях (например, на warning). */
+  --atmr-chart-label: #FFFFFF;
+  --atmr-chart-label-halo: rgba(28, 29, 34, 0.6);
+}
+
+/* Автоопределение темы ОС: если пользователь не задал тему вручную,
+   подстраиваемся под prefers-color-scheme. Ручной выбор (data-theme)
+   всегда приоритетнее — правило исключает явные light/dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --atmr-bg-page: #17181C;
+    --atmr-bg-container: #1F2025;
+    --atmr-bg-elevated: #2A2B32;
+    --atmr-bg-soft: #26272E;
+    --atmr-fg-default: #E6E6EB;
+    --atmr-fg-muted: #A9A9B4;
+    --atmr-fg-subtle: #C4C4CD;
+    --atmr-border-default: #33343B;
+    --atmr-border-soft: #2C2D34;
+    --atmr-border-muted: #2C2D34;
+    --atmr-bg-dropzone: #2E2743;
+    --atmr-accent-default: #A78BFA;
+    --atmr-accent-hover: #B9A5F5;
+    --atmr-accent-gradient-start: #8B6FE0;
+    --atmr-accent-gradient-mid: #B9A5F5;
+    --atmr-success-default: #4FB477;
+    --atmr-warning-default: #D9A441;
+    --atmr-error-default: #E8808A;
+    --atmr-info-default: #7FA6E8;
+    --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --atmr-chart-label: #17181C;
+    --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
+  }
 }
 
 .Theme_root_rtk_purple_light {
@@ -24,32 +61,40 @@
 }
 
 /* Тёмная тема: переменные переопределяются на корне документа по data-theme,
-   чтобы охватить порталы antd (модалки, dropdown) вне Layout. */
+   чтобы охватить порталы antd (модалки, dropdown) вне Layout.
+   Палитра: фон не чистый чёрный, глубина — светлотой поверхностей,
+   акценты десатурированы. Значения синхронизированы с darkPalette в theme.ts. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --atmr-bg-page: #1C1D22;
-  --atmr-bg-container: #2A2B31;
-  --atmr-fg-default: #FFFFFF;
-  --atmr-fg-muted: #B8B8C0;
-  --atmr-fg-subtle: #D5D5DC;
-  --atmr-border-default: #474850;
-  --atmr-border-soft: #3A3B42;
-  --atmr-border-muted: #3A3B42;
-  --atmr-bg-soft: #33343B;
-  --atmr-bg-dropzone: #3A2E5C;
-  --atmr-accent-default: #A88BFA;
-  --atmr-accent-gradient-start: #6E41F2;
-  --atmr-accent-gradient-mid: #A88BFA;
-  --atmr-accent-muted: #A88BFA;
+  --atmr-bg-page: #17181C;
+  --atmr-bg-container: #1F2025;
+  --atmr-bg-elevated: #2A2B32;
+  --atmr-bg-soft: #26272E;
+  --atmr-fg-default: #E6E6EB;
+  --atmr-fg-muted: #A9A9B4;
+  --atmr-fg-subtle: #C4C4CD;
+  --atmr-border-default: #33343B;
+  --atmr-border-soft: #2C2D34;
+  --atmr-border-muted: #2C2D34;
+  --atmr-bg-dropzone: #2E2743;
+  --atmr-accent-default: #A78BFA;
+  --atmr-accent-hover: #B9A5F5;
+  --atmr-accent-gradient-start: #8B6FE0;
+  --atmr-accent-gradient-mid: #B9A5F5;
+  --atmr-accent-muted: #A78BFA;
+  --atmr-success-default: #4FB477;
+  --atmr-warning-default: #D9A441;
+  --atmr-error-default: #E8808A;
+  --atmr-info-default: #7FA6E8;
+  --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --atmr-chart-label: #17181C;
+  --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
 }
 
+/* Легаси-обёртка Layout: оставлена для совместимости, значения берёт
+   от корня, чтобы не дублировать палитру в двух местах. */
 .Theme_root_rtk_purple_dark {
   color-scheme: dark;
-  --atmr-bg-page: #1C1D22;
-  --atmr-bg-container: #2A2B31;
-  --atmr-fg-default: #FFFFFF;
-  --atmr-fg-muted: #B8B8C0;
-  --atmr-border-default: #474850;
 }
 
 /* Базовая адаптивность для всех устройств */
@@ -59,6 +104,17 @@ img, svg, video {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* В тёмной теме яркие изображения «выжигают» глаза: слегка приглушаем.
+   Иконки не трогаем — они наследуют цвет текста через currentColor. */
+:root[data-theme='dark'] img:not([data-theme-keep-bright]) {
+  filter: brightness(0.85) contrast(1.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) img:not([data-theme-keep-bright]) {
+    filter: brightness(0.85) contrast(1.05);
+  }
 }
 
 /* Локальный скролл для сложных схем и таблиц */
@@ -326,19 +382,76 @@ img, svg, canvas, video, table { max-width: 100%; }
   .mobile-menu-btn { display: none !important; }
 }
 
-/* ═══════ KANBAN НА МОБИЛЬНОМ ═══════ */
+/* ═══════ KANBAN НА МОБИЛЬНОМ ═══════
+   На телефоне активна ровно одна колонка (выбор чипами выше), поэтому
+   вертикальный скролл страницы вместо вложенного скролла доски. */
 @media (max-width: 767px) {
   .kanban-board {
     flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: visible;
     height: auto;
+    gap: 10px;
   }
   .kanban-column {
+    width: 100% !important;
     min-width: 100%;
     max-width: 100%;
     max-height: none;
+    border-right-width: 1px !important;
   }
+}
+
+/* ═══════ ЧИПЫ ЭТАПОВ (МОБИЛЬНЫЕ) ═══════ */
+.stage-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--atmr-border-default);
+  border-radius: 18px;
+  background: var(--atmr-bg-container);
+  color: var(--atmr-fg-default);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.stage-chip:hover {
+  border-color: var(--atmr-accent-default);
+}
+.stage-chip--active {
+  border-color: var(--atmr-accent-default);
+  background: var(--atmr-bg-dropzone);
+  color: var(--atmr-accent-default);
+}
+.stage-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.stage-chip__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--atmr-bg-soft);
+  color: var(--atmr-fg-muted);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* ═══════ ФУТЕР НЕ ПЕРЕКРЫВАЕТ КОНТЕНТ ═══════ */
@@ -404,24 +517,6 @@ img, svg, canvas, video, table { max-width: 100%; }
   }
   .ant-page-header {
     padding: 12px;
-  }
-
-  /* Kanban на мобильном - вертикальный список */
-  .kanban-board {
-    flex-direction: column !important;
-    overflow-x: hidden !important;
-    overflow-y: auto;
-    height: auto;
-  }
-  .kanban-column {
-    min-width: 100% !important;
-    max-width: 100% !important;
-    max-height: none !important;
-  }
-
-  /* Скрыть пустые колонки */
-  .kanban-column:has(.empty-column) {
-    display: none;
   }
 
   /* Модалки на всю ширину */

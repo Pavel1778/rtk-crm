@@ -36,6 +36,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Тема применяется до отрисовки, иначе при перезагрузке видна вспышка
+      // светлой темы (FOUC). Дублирует логику themeStore: stored 'light'/'dark'
+      // — явный выбор, иначе следуем настройке ОС.
+      (function () {
+        try {
+          var stored = localStorage.getItem('rtk-theme-mode');
+          var mode =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.dataset.theme = mode;
+          document.documentElement.style.colorScheme = mode;
+        } catch (e) {
+          /* приватный режим: оставляем тему по умолчанию */
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -8,6 +8,7 @@ import {
   Input,
   InputNumber,
   Popconfirm,
+  Segmented,
   Select,
   Space,
   Switch,
@@ -22,17 +23,19 @@ import { errorMessage } from '../api/client';
 import {
   createStage,
   createUser,
-  deleteStage,
   deleteUser,
   listStages,
   listUsers,
   updateStage,
   updateUser,
 } from '../api/endpoints';
-import type { User, UserRole, WorkflowStage } from '../types';
+import type { User, UserRole, WorkflowScope, WorkflowStage } from '../types';
 import { useAuthStore, useRole } from '../stores/authStore';
 
 import StageTable from '../components/workflow/StageTable';
+import DeleteStageModal from '../components/workflow/DeleteStageModal';
+import { useDeleteStage } from '../hooks/useStages';
+import { DEFAULT_STAGE_COLOR } from '../theme/theme';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Администратор',
@@ -271,7 +274,10 @@ function WorkflowPanel() {
   const [stages, setStages] = useState<WorkflowStage[]>([]);
   const [saving, setSaving] = useState(false);
   const [togglingStageId, setTogglingStageId] = useState<number | null>(null);
+  const [deletingStage, setDeletingStage] = useState<WorkflowStage | undefined>();
+  const [funnel, setFunnel] = useState<WorkflowScope>('b2b');
   const [form] = Form.useForm();
+  const deleteStageMutation = useDeleteStage();
 
   const load = () => {
     listStages(true)
@@ -279,6 +285,8 @@ function WorkflowPanel() {
       .catch((e) => message.error(errorMessage(e)));
   };
   useEffect(load, []);
+
+  const funnelStages = stages.filter((stage) => stage.scope === funnel);
 
   const toggleStage = async (id: number, checked: boolean) => {
     setTogglingStageId(id);
@@ -304,6 +312,7 @@ function WorkflowPanel() {
         name: values.name,
         order: values.order,
         color: color ?? null,
+        scope: funnel,
       });
       form.resetFields();
       message.success('Этап добавлен');
@@ -317,6 +326,23 @@ function WorkflowPanel() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Card title="Воронка" style={{ border: '1px solid var(--atmr-border-soft)' }}>
+          <Segmented
+            id="settings-funnel"
+            value={funnel}
+            onChange={(value) => {
+              setFunnel(value as WorkflowScope);
+              form.resetFields();
+            }}
+            options={[
+              { value: 'b2b', label: 'B2B' },
+              { value: 'b2c', label: 'B2C' },
+            ]}
+          />
+          <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+            Этапы, добавленные ниже, попадут в выбранную воронку.
+          </Typography.Text>
+        </Card>
         <Card title="Новый этап" style={{ border: '1px solid var(--atmr-border-soft)' }}>
         <Form form={form} layout={isMobile ? 'vertical' : 'inline'} className="responsive-form">
           <Form.Item
@@ -356,7 +382,7 @@ function WorkflowPanel() {
               autoComplete="off"
             />
           </Form.Item>
-          <Form.Item name="color" initialValue="#6E41F2">
+          <Form.Item name="color" initialValue={DEFAULT_STAGE_COLOR}>
             <ColorPicker showText format="hex" />
           </Form.Item>
           <Form.Item>
@@ -369,14 +395,10 @@ function WorkflowPanel() {
 
       <Card title="Этапы воркфлоу" style={{ border: '1px solid var(--atmr-border-soft)' }}>
         <StageTable
-          stages={stages}
+          stages={funnelStages}
           onToggle={(stage, next) => toggleStage(stage.id, next)}
           togglingId={togglingStageId}
-          onDelete={(stage) => {
-            void deleteStage(stage.id)
-              .then(load)
-              .catch((e) => message.error(errorMessage(e)));
-          }}
+          onDelete={setDeletingStage}
           renderName={(stage) => (
             <EditableText
               value={stage.name}
@@ -390,6 +412,26 @@ function WorkflowPanel() {
           )}
         />
       </Card>
+
+      <DeleteStageModal
+        open={Boolean(deletingStage)}
+        stageId={deletingStage?.id ?? null}
+        onCancel={() => setDeletingStage(undefined)}
+        onConfirm={async (targetStageId) => {
+          if (!deletingStage) return;
+          try {
+            await deleteStageMutation.mutateAsync({
+              id: deletingStage.id,
+              targetStageId,
+            });
+            setDeletingStage(undefined);
+            load();
+          } catch {
+            // сообщение об ошибке показывает мутация
+          }
+        }}
+        confirmLoading={deleteStageMutation.isPending}
+      />
     </Space>
   );
 }

@@ -11,9 +11,15 @@ const PDF_MARGIN = 24;
 
 async function render(node: HTMLElement): Promise<HTMLCanvasElement> {
   const { default: html2canvas } = await import('html2canvas');
+  // Фолбэк для прозрачного фона — фон карточки текущей темы, иначе в тёмной
+  // теме PNG/PDF получил бы белый прямоугольник.
+  const themeBg = getComputedStyle(document.documentElement)
+    .getPropertyValue('--atmr-bg-container')
+    .trim();
   return html2canvas(node, {
     scale: PNG_SCALE,
-    backgroundColor: getComputedStyle(node).backgroundColor || '#ffffff',
+    backgroundColor:
+      getComputedStyle(node).backgroundColor || themeBg || undefined,
     useCORS: true,
     logging: false,
     onclone: (document_) => {

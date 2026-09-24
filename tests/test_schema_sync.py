@@ -36,6 +36,26 @@ CREATE TABLE interactions (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE attached_files (
+  id INTEGER NOT NULL PRIMARY KEY,
+  interaction_id INTEGER NOT NULL,
+  filename VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  size INTEGER NOT NULL,
+  mime_type VARCHAR(100) NOT NULL,
+  uploaded_by INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE TABLE action_logs (
+  id INTEGER NOT NULL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  action VARCHAR(50) NOT NULL,
+  entity_type VARCHAR(50) NOT NULL,
+  entity_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 """
 
 
@@ -146,6 +166,29 @@ def test_schema_sync_allows_same_code_in_other_scope(legacy_engine) -> None:
         total = conn.execute(text("SELECT COUNT(*) FROM workflow_stages")).scalar()
 
     assert total == 3
+
+
+def test_schema_sync_relaxes_not_null_user_fks(legacy_engine) -> None:
+    """NOT NULL на FK к users снимается: иначе удаление пользователя падает."""
+    with legacy_engine.begin() as conn:
+        _apply(conn)
+
+    insp = inspect(legacy_engine)
+    files = {c["name"]: c for c in insp.get_columns("attached_files")}
+    logs = {c["name"]: c for c in insp.get_columns("action_logs")}
+    assert files["uploaded_by"]["nullable"] is True
+    assert logs["user_id"]["nullable"] is True
+
+
+def test_schema_sync_nullable_rewrite_is_idempotent(legacy_engine) -> None:
+    """Повторная сверка после снятия NOT NULL больше ничего не меняет."""
+    with legacy_engine.begin() as conn:
+        first = _apply(conn)
+    with legacy_engine.begin() as conn:
+        second = _apply(conn)
+    assert first
+    assert second == []
+
 
 
 def test_schema_sync_rejects_duplicate_in_same_scope(legacy_engine) -> None:

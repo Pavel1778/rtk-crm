@@ -52,7 +52,10 @@ function ProductSliceLabel({
       <text
         x={cx + r * cos}
         y={cy + r * sin}
-        fill="#fff"
+        fill="var(--atmr-chart-label)"
+        stroke="var(--atmr-chart-label-halo)"
+        strokeWidth={2.5}
+        paintOrder="stroke"
         fontSize={font}
         fontWeight={600}
         textAnchor="middle"
