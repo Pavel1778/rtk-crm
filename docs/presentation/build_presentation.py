@@ -58,7 +58,7 @@ TEAM = [
 ]
 
 # Слайды шаблона, которые остаются в презентации (1-based), в нужном порядке.
-KEEP = [7, 8, 9, 10, 11, 13, 17, 19, 20, 16, 25, 23, 27, 29]
+KEEP = [7, 8, 9, 10, 11, 13, 17, 19, 20, 16, 27]
 
 
 def keep_only(prs: Presentation, keep: list[int]) -> None:
@@ -444,6 +444,13 @@ def slide_unique(s):
         {"text": "Две воронки в одном продукте", "size": 20, "bold": True,
          "color": VIOLET, "space_after": 10},
         {"text": "B2B строится на 14 этапах, B2C — на 4. Фильтры доски, создание заявок и отчёты учитывают scope, поэтому воронки не смешиваются ни в UI, ни в API.", "size": 13, "space_after": 0}])
+    # Ближайшие шаги — коротко, чтобы раздел развития не терялся при сжатии
+    # презентации до 11 слайдов.
+    add_card(s, 0.75, 6.15, 11.8, 0.95, fill=SOFT)
+    add_text(s, 1.0, 6.28, 11.3, 0.75, [
+        {"text": "Планы по развитию", "size": 12, "bold": True,
+         "color": VIOLET, "space_after": 3},
+        {"text": "Браузерный smoke-тест сценариев · нагрузка Locust на стенде · резервное восстановление в CI · подтверждение контура хранения данных в РФ · перенос production после согласования.", "size": 10.5, "color": MUTED, "space_after": 0}])
 
 
 def drop_text(slide, prefixes=(), exact=()):
@@ -456,83 +463,42 @@ def drop_text(slide, prefixes=(), exact=()):
             sh._element.getparent().remove(sh._element)
 
 
-def slide_plans(s):
-    add_pill(s, 0.38, 0.35, 4.3, 0.52, "06 · Планы по развитию")
-    steps = ["Браузерный smoke-тест\nосновных сценариев",
-             "Замер нагрузки\nLocust на стенде",
-             "Резервное восстановление\nв CI-конвейере",
-             "Подтверждение контура\nхранения данных в РФ",
-             "Перенос production\nпосле согласования"]
-    # Кружки с номерами 1-5 из макета остаются; подписи размещаем под ними.
-    for x, text in zip((1.30, 3.73, 6.19, 8.63, 11.06), steps):
-        add_text(s, x - 0.55, 4.52, 2.6, 1.5, [
-            {"text": text, "size": 10, "align": PP_ALIGN.CENTER, "space_after": 0}])
-
-
-def drop_shapes(slide, *, pics=False, prefixes=(), exact=()):
-    """Удалить из слайда служебные фигуры шаблона."""
-    for sh in list(slide.shapes):
-        if sh.has_text_frame:
-            t = sh.text_frame.text.strip()
-            if t in exact or any(t.startswith(p) for p in prefixes):
-                sh._element.getparent().remove(sh._element)
-        elif pics and str(sh.shape_type).startswith("PICTURE"):
-            sh._element.getparent().remove(sh._element)
-
-
-def slide_metrics(s):
-    # Заголовок и донат-диаграмма — служебная графика макета без данных.
-    drop_text(s, exact={"23%", "58%"}, prefixes=("9\n",))
-    add_text(s, 0.75, 1.30, 11.9, 4.6, [
-        {"text": "Нагрузочный прогон (локально)", "size": 20, "bold": True,
-         "color": VIOLET, "space_after": 14},
-        {"text": "Сценарий Locust: вход и пять API-операций — создание заявки, смена этапа, комментарий, загрузка файла и экспорт отчёта.", "size": 13, "space_after": 16},
-        {"text": "•  50 пользователей / 60 секунд: 1613 запросов, 0 ошибок, aggregate p95 — 93 мс.", "size": 13, "space_after": 10},
-        {"text": "•  Смешанный read/write за 3 минуты: 4673 запроса, 0 ошибок, p95 создания — 32 мс, экспорт PDF — 210 мс.", "size": 13, "space_after": 10},
-        {"text": "•  Отдельный прогон отчётов: p95 XLSX — 37 мс, XLS — 60 мс, PDF — 180 мс.", "size": 13, "space_after": 14},
-        {"text": "Значения получены на локальном SQLite и не являются SLA production Render/Supabase.", "size": 11, "color": MUTED, "space_after": 0}])
-
-
 def slide_demo(s):
     # Заголовки-заглушки макетов браузера из шаблона.
     drop_text(s, exact={"www.lider.com"})
-    add_pill(s, 0.38, 0.35, 3.6, 0.52, "Демонстрация")
+    add_pill(s, 0.38, 0.35, 5.4, 0.52, "Демонстрация и результаты")
     # В экраны браузерных макетов шаблона подставляем реальные скриншоты.
-    add_picture_contained(s, IMG_DIR / "02-kanban-board.png", 1.33, 1.76, 4.53, 2.53)
-    add_picture_contained(s, IMG_DIR / "07-reports.png", 7.50, 1.76, 4.53, 2.53)
-    add_text(s, 1.30, 4.60, 4.8, 1.9, [
-        {"text": "Kanban-доска", "size": 13, "bold": True, "color": VIOLET, "space_after": 5},
-        {"text": "Портфель взаимодействий с фильтрами по вузу и продукту, переключением B2B/B2C и перемещением карточек по этапам.", "size": 10.5, "space_after": 4},
+    add_picture_contained(s, IMG_DIR / "02-kanban-board.png", 1.33, 1.62, 4.53, 2.41)
+    add_picture_contained(s, IMG_DIR / "07-reports.png", 7.50, 1.62, 4.53, 2.41)
+    add_text(s, 1.30, 4.16, 4.8, 1.6, [
+        {"text": "Kanban-доска", "size": 13, "bold": True, "color": VIOLET, "space_after": 4},
+        {"text": "Портфель взаимодействий с фильтрами по вузу и продукту, переключением B2B/B2C и перемещением карточек по этапам.", "size": 10.5, "space_after": 3},
         {"text": "Демо: " + DEMO, "size": 10.5, "bold": True, "color": PINK, "space_after": 0}])
-    add_text(s, 7.47, 4.60, 4.8, 1.9, [
-        {"text": "Отчёты и экспорт", "size": 13, "bold": True, "color": VIOLET, "space_after": 5},
-        {"text": "Ключевые показатели, распределение по этапам и выгрузка в XLSX, XLS, PDF и JSON с учётом выбранной воронки.", "size": 10.5, "space_after": 4},
+    add_text(s, 7.47, 4.16, 4.8, 1.6, [
+        {"text": "Отчёты и экспорт", "size": 13, "bold": True, "color": VIOLET, "space_after": 4},
+        {"text": "Ключевые показатели, распределение по этапам и выгрузка в XLSX, XLS, PDF и JSON с учётом выбранной воронки.", "size": 10.5, "space_after": 3},
         {"text": "API: " + API, "size": 10.5, "bold": True, "color": PINK, "space_after": 0}])
 
+    # Результаты нагрузочного прогона — короткой строкой под скриншотами.
+    add_card(s, 0.38, 5.72, 9.9, 1.25, fill=SOFT)
+    add_text(s, 0.62, 5.87, 9.4, 1.0, [
+        {"text": "Нагрузочный прогон (локально)", "size": 12, "bold": True,
+         "color": VIOLET, "space_after": 3},
+        {"text": "50 пользователей / 60 с: 1613 запросов, 0 ошибок, p95 — 93 мс. Смешанный read/write: 4673 запроса, 0 ошибок; экспорт PDF — 210 мс. Не является SLA production.", "size": 10, "color": MUTED, "space_after": 0}])
 
-def slide_contacts(s):
-    add_pill(s, 0.38, 0.35, 3.2, 0.52, "Контакты")
-    add_text(s, 0.75, 1.60, 8.0, 3.4, [
-        {"text": "RTK CRM · ИТ Школа Ростелекома", "size": 26, "bold": True,
-         "color": VIOLET, "space_after": 10},
-        {"text": "ЛЦТ 2026, кейс №6 · команда из 5 человек", "size": 14,
-         "color": BODY, "space_after": 16},
-        {"text": "Репозиторий: " + REPO, "size": 13, "space_after": 8},
-        {"text": "Демо: " + DEMO, "size": 13, "space_after": 8},
-        {"text": "Контакт капитана: " + CONTACT, "size": 13, "space_after": 8}])
-    add_text(s, 9.4, 1.95, 3.2, 0.5, [
-        {"text": "Репозиторий", "size": 11, "bold": True, "color": VIOLET,
+    # Контакты и QR на репозиторий — в правом нижнем углу.
+    add_text(s, 10.45, 5.62, 2.5, 0.32, [
+        {"text": "Репозиторий", "size": 10, "bold": True, "color": VIOLET,
          "align": PP_ALIGN.CENTER, "space_after": 0}])
-    s.shapes.add_picture(qr_stream("https://" + REPO), Inches(9.75), Inches(2.45),
-                         Inches(2.5), Inches(2.5))
-    add_text(s, 0.75, 5.62, 8.0, 1.0, [
-        {"text": "Спасибо за вопросы", "size": 20, "bold": True, "color": PINK,
-         "space_after": 0}])
+    s.shapes.add_picture(qr_stream("https://" + REPO), Inches(10.92), Inches(5.92),
+                         Inches(1.45), Inches(1.45))
+    add_text(s, 0.38, 7.05, 9.9, 0.3, [
+        {"text": f"{CITY} · {CONTACT}", "size": 9, "color": MUTED, "space_after": 0}])
 
 
 BUILDERS = [slide_title, slide_about, slide_team, slide_history, slide_short,
             slide_detail, slide_tech, slide_marketing, slide_business,
-            slide_unique, slide_plans, slide_metrics, slide_demo, slide_contacts]
+            slide_unique, slide_demo]
 
 
 def set_metadata(prs: Presentation) -> None:
