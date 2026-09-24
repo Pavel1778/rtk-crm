@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,57 @@ except ImportError:  # pragma: no cover
     load_workbook = None
 
 
+# Типы проблем отчёта о валидации: ошибка блокирует строку, предупреждение — нет.
+SEVERITY_ERROR = "error"
+SEVERITY_WARNING = "warning"
+SEVERITY_OK = "ok"
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# Схема верхнего уровня: массив объектов каталога либо {"data": [...]}.
+_CATALOG_PAYLOAD_SCHEMA: dict[str, Any] = {
+    "oneOf": [
+        {"type": "array", "items": {"type": "object"}},
+        {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+                "data": {"type": "array", "items": {"type": "object"}},
+            },
+        },
+    ],
+}
+_CATALOG_PAYLOAD_VALIDATOR = (
+    Draft7Validator(_CATALOG_PAYLOAD_SCHEMA) if Draft7Validator is not None else None
+)
+
+
+def _json_error_message(error: Any) -> str:
+    """Приводит ошибку JSON Schema к читаемому виду с путём до поля."""
+    path = "/".join(str(part) for part in error.path) or "корень"
+    return f"Ошибка структуры JSON ({path}): {error.message}"
+
+
+@dataclass
+class ValidationIssue:
+    """Одна проблема в строке импорта: где, что и почему."""
+
+    row: int | None
+    field: str
+    problem: str
+    severity: str = SEVERITY_ERROR
+    value: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "row": self.row,
+            "field": self.field,
+            "problem": self.problem,
+            "severity": self.severity,
+            "value": self.value,
+        }
+
+
 class CatalogImportResult:
     """Нормализованный результат импорта каталога."""
 
@@ -32,11 +85,30 @@ class CatalogImportResult:
         data: list[dict[str, Any]],
         errors: list[str] | None = None,
         headers: list[str] | None = None,
+        issues: list[ValidationIssue] | None = None,
+        total_rows: int | None = None,
     ):
         self.success = success
         self.data = data
         self.errors = errors or []
         self.headers = headers or []
+        self.issues = list(issues) if issues is not None else []
+        # Если отчёт не передан, синтезируем его из плоского списка ошибок,
+        # чтобы потребители старых вызовов видели те же данные.
+        if issues is None:
+            self.issues = [
+                ValidationIssue(row=None, field="", problem=message)
+                for message in self.errors
+            ]
+        self.total_rows = total_rows if total_rows is not None else len(data)
+
+    @property
+    def error_count(self) -> int:
+        return sum(1 for issue in self.issues if issue.severity == SEVERITY_ERROR)
+
+    @property
+    def warning_count(self) -> int:
+        return sum(1 for issue in self.issues if issue.severity == SEVERITY_WARNING)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -45,6 +117,27 @@ class CatalogImportResult:
             "data": self.data,
             "errors": self.errors,
             "count": len(self.data),
+            "issues": [issue.to_dict() for issue in self.issues],
+            "summary": {
+                "total_rows": self.total_rows,
+                "valid_rows": len(self.data),
+                "warning_rows": len(
+                    {
+                        issue.row
+                        for issue in self.issues
+                        if issue.severity == SEVERITY_WARNING
+                    }
+                ),
+                "error_rows": len(
+                    {
+                        issue.row
+                        for issue in self.issues
+                        if issue.severity == SEVERITY_ERROR
+                    }
+                ),
+                "error_count": self.error_count,
+                "warning_count": self.warning_count,
+            },
         }
 
 
@@ -89,25 +182,16 @@ def parse_catalog_json(
         return CatalogImportResult(False, [], [f"Некорректный JSON: {exc}"])
 
     records = payload.get("data") if isinstance(payload, dict) else payload
-    if Draft7Validator is not None:
-        validation = Draft7Validator({
-            "oneOf": [
-                {"type": "array", "items": {"type": "object"}},
-                {
-                    "type": "object",
-                    "required": ["data"],
-                    "properties": {
-                        "data": {"type": "array", "items": {"type": "object"}},
-                    },
-                },
-            ],
-        })
-        errors = sorted(validation.iter_errors(payload), key=lambda error: list(error.path))
+    if _CATALOG_PAYLOAD_VALIDATOR is not None:
+        errors = sorted(
+            _CATALOG_PAYLOAD_VALIDATOR.iter_errors(payload),
+            key=lambda error: list(error.path),
+        )
         if errors:
             return CatalogImportResult(
                 False,
                 [],
-                [f"Ошибка структуры JSON: {errors[0].message}"],
+                [_json_error_message(error) for error in errors[:10]],
             )
     if not isinstance(records, list) or not all(isinstance(item, dict) for item in records):
         return CatalogImportResult(
@@ -117,6 +201,12 @@ def parse_catalog_json(
         )
     if not records:
         return CatalogImportResult(False, [], ["JSON-массив пуст"])
+    if any(not record for record in records):
+        return CatalogImportResult(
+            False,
+            [],
+            ["В JSON есть пустой объект записи (нет ни одного поля)"],
+        )
 
     headers = list(records[0].keys())
     rows = [[record.get(header) for header in headers] for record in records]
@@ -209,6 +299,13 @@ def _parse_universities(
         fields=("name", "city", "contact_person", "contact_email", "contact_phone"),
         required="name",
         error_label="Название",
+        field_labels={
+            "name": "Название",
+            "city": "Город",
+            "contact_person": "Контактное лицо",
+            "contact_email": "Email",
+            "contact_phone": "Телефон",
+        },
     )
 
 
@@ -231,7 +328,47 @@ def _parse_products(
         fields=("name", "direction"),
         required="name",
         error_label="Название",
+        field_labels={"name": "Название", "direction": "Направление"},
     )
+
+
+def _validate_optional_fields(
+    row_number: int,
+    item: dict[str, Any],
+    field_labels: dict[str, str],
+) -> list[ValidationIssue]:
+    """Проверки необязательных полей: формат и нестандартные значения.
+
+    Такие строки импортируются, но попадают в отчёт как предупреждения.
+    """
+    issues: list[ValidationIssue] = []
+
+    email = item.get("contact_email")
+    if email not in (None, "") and not _EMAIL_RE.match(str(email).strip()):
+        issues.append(
+            ValidationIssue(
+                row=row_number,
+                field=field_labels.get("contact_email", "Email"),
+                problem="Некорректный email",
+                severity=SEVERITY_WARNING,
+                value=str(email),
+            )
+        )
+
+    for field_name in ("city", "contact_person", "contact_phone", "direction"):
+        value = item.get(field_name)
+        if value not in (None, "") and not isinstance(value, (str, int, float)):
+            issues.append(
+                ValidationIssue(
+                    row=row_number,
+                    field=field_labels.get(field_name, field_name),
+                    problem="Нестандартное значение",
+                    severity=SEVERITY_WARNING,
+                    value=str(value),
+                )
+            )
+
+    return issues
 
 
 def _parse_rows(
@@ -241,24 +378,64 @@ def _parse_rows(
     fields: tuple[str, ...],
     required: str,
     error_label: str,
+    field_labels: dict[str, str] | None = None,
 ) -> CatalogImportResult:
+    field_labels = field_labels or {required: error_label}
+
     if required not in indices:
+        issue = ValidationIssue(
+            row=None,
+            field=error_label,
+            problem=f"Не найдена обязательная колонка '{error_label}'",
+        )
         return CatalogImportResult(
             success=False,
             data=[],
             headers=headers,
-            errors=[f"Не найдена обязательная колонка '{error_label}'"],
+            errors=[issue.problem],
+            issues=[issue],
         )
 
     data: list[dict[str, Any]] = []
     errors: list[str] = []
+    issues: list[ValidationIssue] = []
+    total_rows = 0
+    # Названия, уже встречавшиеся в файле: повтор — предупреждение.
+    seen_names: dict[str, int] = {}
+
     for row_number, row in enumerate(rows, start=2):
         if not any(value not in (None, "") for value in row):
             continue
+        total_rows += 1
         item = {field: _cell(row, indices, field) for field in fields}
+
         if item[required] in (None, ""):
-            errors.append(f"Строка {row_number}: отсутствует {error_label.lower()}")
+            message = f"Строка {row_number}: отсутствует {error_label.lower()}"
+            errors.append(message)
+            issues.append(
+                ValidationIssue(
+                    row=row_number,
+                    field=field_labels.get(required, error_label),
+                    problem="Пусто",
+                )
+            )
             continue
+
+        name = str(item[required]).strip()
+        if name in seen_names:
+            issues.append(
+                ValidationIssue(
+                    row=row_number,
+                    field=field_labels.get(required, error_label),
+                    problem=f"Дубль в файле (строка {seen_names[name]})",
+                    severity=SEVERITY_WARNING,
+                    value=name,
+                )
+            )
+        else:
+            seen_names[name] = row_number
+
+        issues.extend(_validate_optional_fields(row_number, item, field_labels))
         data.append(item)
 
     return CatalogImportResult(
@@ -266,4 +443,6 @@ def _parse_rows(
         data=data,
         errors=errors,
         headers=headers,
+        issues=issues,
+        total_rows=total_rows,
     )

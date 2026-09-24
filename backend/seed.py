@@ -1,12 +1,7 @@
 """Загрузка справочников и демо-данных. Идемпотентна: при данных пропускается."""
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.security import hash_password
-from app.models.enums import UserRole
 from app.models.entities import (
-
     Action,
     Comment,
     Interaction,
@@ -16,6 +11,9 @@ from app.models.entities import (
     User,
     WorkflowStageRef,
 )
+from app.models.enums import B2C_STAGES, UserRole, WorkflowScope
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # 14 этапов воркфлоу по ТЗ (код, название, цвет колонки канбан-доски).
 # Порядок списка = порядок этапов 1..14.
@@ -95,30 +93,39 @@ async def seed_demo(session: AsyncSession) -> bool:
 async def _seed_stages(session: AsyncSession) -> bool:
     """Дозаполняет отсутствующие этапы, не трогая уже созданные.
 
-    Сравнение по коду: базу, созданную в 13-этапной версии, можно дополнить
-    недостающими этапами. Порядок существующих этапов не меняется, чтобы не
-    ломать уже расставленные карточки.
+    Сравнение по (scope, код): базу, созданную в 13-этапной версии, можно
+    дополнить недостающими этапами. Порядок существующих этапов не меняется,
+    чтобы не ломать уже расставленные карточки. B2B-набор — 14 этапов ТЗ,
+    B2C-набор — упрощённая воронка (заявка → оплата → обучение → завершено).
     """
-    existing_codes = set(await session.scalars(select(WorkflowStageRef.code)))
-    if not existing_codes:
-        for order, (code, name, color) in enumerate(WORKFLOW_STAGES, start=1):
-            session.add(
-                WorkflowStageRef(code=code, name=name, order=order, color=color)
-            )
-        return True
-
-    max_order = await session.scalar(
-        select(func.max(WorkflowStageRef.order))
-    ) or 0
     created = False
-    for code, name, color in WORKFLOW_STAGES:
-        if code in existing_codes:
-            continue
-        max_order += 1
-        session.add(
-            WorkflowStageRef(code=code, name=name, order=max_order, color=color)
-        )
-        created = True
+    existing = {
+        (row.scope, row.code)
+        for row in await session.scalars(select(WorkflowStageRef))
+    }
+
+    for scope, stage_set in (
+        (WorkflowScope.B2B, WORKFLOW_STAGES),
+        (WorkflowScope.B2C, B2C_STAGES),
+    ):
+        max_order = await session.scalar(
+            select(func.max(WorkflowStageRef.order)).where(
+                WorkflowStageRef.scope == scope
+            )
+        ) or 0
+        for order_in_set, (code, name, color) in enumerate(stage_set, start=1):
+            if (scope, code) in existing:
+                continue
+            # Сохраняем исходную нумерацию набора, если порядок свободен,
+            # иначе продолжаем с максимального (защита от unique-конфликта).
+            order = order_in_set if order_in_set > max_order else max_order + 1
+            max_order = max(max_order, order)
+            session.add(
+                WorkflowStageRef(
+                    code=code, name=name, order=order, color=color, scope=scope
+                )
+            )
+            created = True
     return created
 
 
@@ -145,25 +152,36 @@ async def _seed_users(session: AsyncSession) -> bool:
 
 
 async def _seed_directories(session: AsyncSession) -> bool:
-    existing = await session.scalar(
-        select(func.count(ITDirection.id)).where(ITDirection.name == DIRECTIONS[0])
-    )
-    if existing:
-        return False
+    """Дозаполняет направления и продукты независимо друг от друга.
 
+    Справочники сидятся раздельно: база может содержать направления без
+    продуктов (прерванный сид, ручное удаление продуктов). Привязка к первому
+    направлению в этом случае заблокировала бы создание продуктов.
+    """
+    created = False
+
+    existing_directions = set(await session.scalars(select(ITDirection.name)))
     for name in DIRECTIONS:
-        session.add(ITDirection(name=name))
-    await session.flush()
+        if name not in existing_directions:
+            session.add(ITDirection(name=name))
+            created = True
+    if created:
+        await session.flush()
 
     directions = {
         d.name: d.id
         for d in await session.scalars(select(ITDirection))
     }
+
+    existing_products = set(await session.scalars(select(ITProduct.name)))
     for name, direction_name in PRODUCTS:
+        if name in existing_products:
+            continue
         session.add(
             ITProduct(name=name, direction_id=directions.get(direction_name))
         )
-    return True
+        created = True
+    return created
 
 
 async def _seed_demo_interactions(session: AsyncSession) -> bool:
@@ -204,7 +222,13 @@ async def _seed_demo_interactions(session: AsyncSession) -> bool:
         (1, 3, "stage_control", "РТК-2025-114"),
     ]
     for university_idx, product_idx, stage_code, contract in demo_cards:
-        product = products[product_idx] if product_idx is not None else None
+        # Индексы зашиты в демо-карточках: при неполном справочнике продукт
+        # может отсутствовать, поэтому берём его безопасно, а не по индексу.
+        product = (
+            products[product_idx]
+            if product_idx is not None and 0 <= product_idx < len(products)
+            else None
+        )
         session.add(
             Interaction(
                 university_id=universities[university_idx].id,

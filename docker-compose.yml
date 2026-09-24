@@ -13,6 +13,62 @@ services:
     networks:
       - rtk_network
 
+  redis:
+    image: redis:7-alpine
+    container_name: rtk_redis
+    restart: always
+    command: redis-server --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - rtk_network
+
+  minio:
+    image: minio/minio:latest
+    container_name: rtk_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-rtk_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rtk_network
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: rtk_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/$${S3_BUCKET} &&
+      mc anonymous set none local/$${S3_BUCKET} &&
+      echo 'MinIO bucket ready'
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-rtk_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      S3_BUCKET: ${S3_BUCKET:-rtk-crm}
+    networks:
+      - rtk_network
+
   backend:
     build:
       context: ./backend
@@ -28,9 +84,22 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
       REDIS_URL: "redis://redis:6379/0"
+      S3_ENDPOINT: "minio:9000"
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-rtk_minio}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      S3_BUCKET: ${S3_BUCKET:-rtk-crm}
+      S3_SECURE: "false"
       KEYCLOAK_URL: "http://keycloak:8080"
       PYTHONPATH: "/"
-      CORS_ORIGINS: "http://localhost:3000,http://localhost,http://127.0.0.1:3000"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1}"
+    depends_on:
+      - redis
+      - minio
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - rtk_network
 
@@ -66,6 +135,9 @@ services:
       - frontend
     networks:
       - rtk_network
+
+volumes:
+  minio_data:
 
 networks:
   rtk_network:

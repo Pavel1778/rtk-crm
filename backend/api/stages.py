@@ -1,8 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.security import get_current_user
 from app.db.session import get_db
 from app.models.entities import (
@@ -10,12 +5,16 @@ from app.models.entities import (
     User,
     WorkflowStageRef,
 )
-from app.models.enums import UserRole
+from app.models.enums import UserRole, WorkflowScope
 from app.schemas.entities import (
     WorkflowStageCreate,
     WorkflowStageRead,
     WorkflowStageUpdate,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class StageReorderRequest(BaseModel):
@@ -61,12 +60,19 @@ async def _with_counts(
 
 @router.get("", response_model=list[WorkflowStageRead])
 async def list_stages(
+    scope: WorkflowScope | None = Query(
+        default=None, description="b2b или b2c; без параметра — все этапы"
+    ),
     include_inactive: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[WorkflowStageRead]:
     """Этапы воркфлоу в порядке следования с числом активных взаимодействий."""
-    stmt = select(WorkflowStageRef).order_by(WorkflowStageRef.order)
+    stmt = select(WorkflowStageRef).order_by(
+        WorkflowStageRef.scope, WorkflowStageRef.order
+    )
+    if scope is not None:
+        stmt = stmt.where(WorkflowStageRef.scope == scope)
     if not include_inactive:
         stmt = stmt.where(WorkflowStageRef.is_active.is_(True))
     stages = list(await db.scalars(stmt))
@@ -86,14 +92,15 @@ async def create_stage(
         )
     clash = await db.scalar(
         select(WorkflowStageRef.id).where(
+            WorkflowStageRef.scope == payload.scope,
             (WorkflowStageRef.code == payload.code)
-            | (WorkflowStageRef.order == payload.order)
+            | (WorkflowStageRef.order == payload.order),
         )
     )
     if clash:
         raise HTTPException(
             status_code=409,
-            detail="Этап с таким кодом или порядком уже существует",
+            detail="Этап с таким кодом или порядком уже существует в этом workflow",
         )
     stage = WorkflowStageRef(**payload.model_dump())
     db.add(stage)
@@ -131,7 +138,7 @@ async def update_stage(
 
     for field, value in update_data.items():
         setattr(stage, field, value)
-    
+
     await db.commit()
     await db.refresh(stage)
     return await _with_counts(db, stage)
@@ -222,14 +229,29 @@ async def reorder_stages(
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> list[WorkflowStageRead]:
-    """Пересортировка этапов. Только для admin."""
+    """Пересортировка этапов. Только для admin.
+
+    Уникальность (scope, order) неотложна, поэтому присваивать новые порядки
+    напрямую нельзя: промежуточное состояние нарушит ограничение. Сначала
+    уводим затронутые этапы в отрицательные временные значения, затем
+    выставляем итоговые.
+    """
     if current.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=403, detail="Только администраторы могут редактировать этапы"
         )
+
+    stages: list[tuple[WorkflowStageRef, int]] = []
     for item in payload.stages:
         stage = await db.get(WorkflowStageRef, item["id"])
-        if stage:
-            stage.order = item["order"]
+        if stage is not None:
+            stages.append((stage, item["order"]))
+
+    for offset, (stage, _) in enumerate(stages, start=1):
+        stage.order = -offset
+    await db.flush()
+
+    for stage, order in stages:
+        stage.order = order
     await db.commit()
-    return await list_stages(False, db, current)
+    return await list_stages(None, False, db, current)

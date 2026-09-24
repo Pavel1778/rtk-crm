@@ -1,7 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.security import get_current_user, require_manager_or_admin
 from app.db.session import get_db
 from app.models.entities import Interaction, University, User
@@ -10,6 +6,9 @@ from app.schemas.entities import (
     UniversityRead,
     UniversityUpdate,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/universities", tags=["universities"])
 

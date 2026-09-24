@@ -1,7 +1,9 @@
 import {
   AppstoreOutlined,
   BarChartOutlined,
+  BulbOutlined,
   DatabaseOutlined,
+  HistoryOutlined,
   LogoutOutlined,
   MenuOutlined,
   QuestionCircleOutlined,
@@ -12,6 +14,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 import { useAuthStore, useRole } from '../stores/authStore';
+import { useThemeStore } from '../stores/themeStore';
 import AppFooter from './AppFooter';
 
 const { Header, Content } = Layout;
@@ -30,6 +33,12 @@ const ADMIN_ITEM = {
   label: 'Пользователи',
 };
 
+const AUDIT_ITEM = {
+  key: '/audit',
+  icon: <HistoryOutlined />,
+  label: 'Журнал',
+};
+
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,10 +46,12 @@ export default function MainLayout() {
   const signOut = useAuthStore((s) => s.signOut);
   const role = useRole();
   const screens = Grid.useBreakpoint();
+  const themeMode = useThemeStore((s) => s.mode);
+  const toggleTheme = useThemeStore((s) => s.toggle);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const items = role === 'admin'
-    ? [...MENU_ITEMS, ADMIN_ITEM]
+    ? [...MENU_ITEMS, ADMIN_ITEM, AUDIT_ITEM]
     : MENU_ITEMS;
 
   return (
@@ -84,6 +95,14 @@ export default function MainLayout() {
           {screens.md && (
             <Typography.Text type="secondary">{user?.full_name}</Typography.Text>
           )}
+          <Tooltip title={themeMode === 'dark' ? 'Светлая тема' : 'Тёмная тема'}>
+            <Button
+              type="text"
+              aria-label="Переключить тему"
+              icon={<BulbOutlined />}
+              onClick={toggleTheme}
+            />
+          </Tooltip>
           <Tooltip title="Выйти">
             <Button
               type="text"

@@ -1,12 +1,13 @@
+from collections.abc import AsyncGenerator
+
+from app.core.config import get_settings
+from app.db.base import Base
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.pool import NullPool
-
-from app.core.config import get_settings
-from app.db.base import Base
 
 engine = create_async_engine(
     get_settings().database_url,
@@ -20,7 +21,7 @@ SessionLocal = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Зависимость FastAPI: сессия БД на время обработки запроса."""
     async with SessionLocal() as session:
         try:

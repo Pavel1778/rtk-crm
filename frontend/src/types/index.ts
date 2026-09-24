@@ -1,5 +1,8 @@
 export type UserRole = 'user' | 'manager' | 'admin';
 
+// Тип воронки: B2B (вузы/юрлица) и B2C (физлица) — независимые workflow.
+export type WorkflowScope = 'b2b' | 'b2c';
+
 export interface User {
   id: number;
   email: string;
@@ -14,6 +17,23 @@ export interface Token {
   access_token: string;
   token_type: string;
   user: User;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  user_id: number | null;
+  user_name: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: number;
+  ip_address: string | null;
+  new_value: string | null;
+  created_at: string;
+}
+
+export interface AuditLogPage {
+  total: number;
+  items: AuditLogEntry[];
 }
 
 export interface University {
@@ -44,6 +64,7 @@ export interface WorkflowStage {
   order: number;
   color: string | null;
   is_active: boolean;
+  scope: WorkflowScope;
   interaction_count: number;
 }
 
@@ -82,6 +103,7 @@ export interface InteractionCard {
   stage_id: number;
   stage_name: string | null;
   stage_code: string | null;
+  scope: WorkflowScope;
   contract_number: string | null;
   university_specialist: string | null;
   assigned_kam_name: string | null;
@@ -149,6 +171,21 @@ export interface ReportProduct {
 export interface ReportDynamicsPoint {
   date: string;
   count: number;
+}
+
+/** Колонка отчёта из общего конфига (config/report_columns.json). */
+export interface ReportColumn {
+  key: string;
+  label: string;
+  short_label: string;
+  width: number;
+  align: string;
+}
+
+/** Строка отчёта: ключи соответствуют key из ReportColumn. */
+export interface ReportTableRow {
+  id: number;
+  [key: string]: string | number | null | undefined;
 }
 
 export interface ReportResponse {

@@ -35,6 +35,31 @@ class UserRole(str, enum.Enum):
         return self.value
 
 
+class WorkflowScope(str, enum.Enum):
+    """Тип взаимодействия: B2B (вузы/юрлица) и B2C (физлица).
+
+    По Q&A Крылова это два независимых workflow, а не флаг на одном наборе
+    этапов, поэтому наборы этапов и колонки канбана разделены по scope.
+    """
+
+    B2B = "b2b"
+    B2C = "b2c"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+WORKFLOW_SCOPE_VALUES: list[str] = [scope.value for scope in WorkflowScope]
+
+# Упрощённая воронка B2C: заявка → оплата → обучение → завершено.
+B2C_STAGES: list[tuple[str, str, str]] = [
+    ("b2c_request", "Заявка", "#1677ff"),
+    ("b2c_payment", "Оплата", "#faad14"),
+    ("b2c_training", "Обучение", "#52c41a"),
+    ("b2c_completed", "Завершено", "#8c8c8c"),
+]
+
+
 # Явные значения для колонки БД: без values_callable SQLAlchemy пишет
 # имена членов перечисления (ADMIN), а не значения (admin).
 USER_ROLE_VALUES: list[str] = [role.value for role in UserRole]

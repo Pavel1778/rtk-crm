@@ -1,8 +1,22 @@
-from sqlalchemy import Boolean, Enum, ForeignKey, Index, Integer, String, Text, text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.db.base import Base, TimestampMixin
-from app.models.enums import USER_ROLE_VALUES, UserRole
+from app.models.enums import (
+    USER_ROLE_VALUES,
+    WORKFLOW_SCOPE_VALUES,
+    UserRole,
+    WorkflowScope,
+)
+from sqlalchemy import (
+    Boolean,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class User(Base, TimestampMixin):
@@ -85,14 +99,33 @@ class ITProduct(Base, TimestampMixin):
 
 
 class WorkflowStageRef(Base, TimestampMixin):
-    """Этап воркфлоу (справочник из 14 этапов, настраивается пользователем)."""
+    """Этап воркфлоу (набор этапов зависит от scope: b2b или b2c)."""
 
     __tablename__ = "workflow_stages"
+    __table_args__ = (
+        UniqueConstraint("scope", "code", name="uq_workflow_stages_scope_code"),
+        UniqueConstraint("scope", "order", name="uq_workflow_stages_scope_order"),
+        Index("ix_workflow_stages_scope_order", "scope", "order"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    code: Mapped[str] = mapped_column(String(50), unique=True)
+    # Код уникален в пределах scope: b2b-набор содержит 14 этапов ТЗ,
+    # b2c-набор — упрощённую воронку. Уникальность по (scope, code) и
+    # (scope, order) задаётся в миграции/создаётся через create_all.
+    code: Mapped[str] = mapped_column(String(50))
+    scope: Mapped[WorkflowScope] = mapped_column(
+        Enum(
+            WorkflowScope,
+            name="workflow_scope",
+            native_enum=False,
+            length=10,
+            values_callable=lambda enum_cls: WORKFLOW_SCOPE_VALUES,
+        ),
+        default=WorkflowScope.B2B,
+        server_default=WorkflowScope.B2B.value,
+    )
     name: Mapped[str] = mapped_column(String(255))
-    order: Mapped[int] = mapped_column(Integer, unique=True)
+    order: Mapped[int] = mapped_column(Integer)
     color: Mapped[str | None] = mapped_column(String(20))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -126,6 +159,20 @@ class Interaction(Base, TimestampMixin):
     )
     stage_id: Mapped[int] = mapped_column(
         ForeignKey("workflow_stages.id", ondelete="RESTRICT"), index=True
+    )
+    # Скоуп должен совпадать со scope этапа: карточка B2C не может стоять
+    # в колонке B2B-воронки. Проверяется в API при создании/перемещении.
+    scope: Mapped[WorkflowScope] = mapped_column(
+        Enum(
+            WorkflowScope,
+            name="workflow_scope",
+            native_enum=False,
+            length=10,
+            values_callable=lambda enum_cls: WORKFLOW_SCOPE_VALUES,
+        ),
+        default=WorkflowScope.B2B,
+        server_default=WorkflowScope.B2B.value,
+        index=True,
     )
     contract_number: Mapped[str | None] = mapped_column(String(100))
     contract_date: Mapped[str | None] = mapped_column(String(30))

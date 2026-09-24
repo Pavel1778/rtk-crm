@@ -1,42 +1,42 @@
 """Middleware для аудита действий (152-ФЗ)."""
 
 import json
-from typing import Callable
-
-from fastapi import Request, Response
-from sqlalchemy.ext.asyncio import AsyncSession
+from collections.abc import Callable
+from contextlib import suppress
 
 from app.db.session import SessionLocal
-from app.models.entities import ActionLog, User
+from app.models.entities import ActionLog
+from fastapi import Request, Response
 
 
 async def audit_middleware(request: Request, call_next: Callable) -> Response:
     """Логирование POST/PUT/PATCH/DELETE запросов."""
-    
+
     # Пропускаем GET и OPTIONS запросы
     if request.method in ["GET", "OPTIONS", "HEAD"]:
         return await call_next(request)
-    
+
     # Пропускаем эндпоинты логина и health
     if request.url.path in ["/api/auth/login", "/api/health", "/health"]:
         return await call_next(request)
-    
+
     # Сохраняем тело запроса для логирования
     body = await request.body()
-    
+
     # Выполняем запрос
     response = await call_next(request)
-    
+
     # Логируем только успешные запросы
     if response.status_code < 400:
-        try:
+        # Ошибка логирования не должна прерывать запрос пользователя.
+        with suppress(Exception):
             # Получаем пользователя из контекста (если есть)
             user = getattr(request.state, "user", None)
             user_id = user.id if user else None
-            
+
             # Определяем тип сущности и ID из пути
             entity_type, entity_id = _parse_entity_from_path(request.url.path)
-            
+
             if entity_type:
                 # Определяем действие
                 action_map = {
@@ -46,31 +46,26 @@ async def audit_middleware(request: Request, call_next: Callable) -> Response:
                     "DELETE": "DELETE",
                 }
                 action = action_map.get(request.method, request.method)
-                
+
                 # Получаем IP адрес
                 ip_address = request.client.host if request.client else None
-                
+
                 # Логируем в БД
                 async with SessionLocal() as session:
-                    try:
-                        # Ограничиваем размер тела для логирования
-                        body_str = _safe_body(body)
-                        
-                        log_entry = ActionLog(
-                            user_id=user_id,
-                            action=action,
-                            entity_type=entity_type,
-                            entity_id=entity_id,
-                            new_value=body_str,
-                            ip_address=ip_address,
-                        )
-                        session.add(log_entry)
-                        await session.commit()
-                    except Exception:
-                        pass  # Не прерываем запрос при ошибке логирования
-        except Exception:
-            pass  # Не прерываем запрос при ошибках логирования
-    
+                    # Ограничиваем размер тела для логирования
+                    body_str = _safe_body(body)
+
+                    log_entry = ActionLog(
+                        user_id=user_id,
+                        action=action,
+                        entity_type=entity_type,
+                        entity_id=entity_id,
+                        new_value=body_str,
+                        ip_address=ip_address,
+                    )
+                    session.add(log_entry)
+                    await session.commit()
+
     return response
 
 
@@ -80,7 +75,7 @@ def _parse_entity_from_path(path: str) -> tuple[str | None, int | None]:
     # /api/interactions/123 -> ("Interaction", 123)
     # /api/universities/456 -> ("University", 456)
     # /api/files/789 -> ("AttachedFile", 789)
-    
+
     parts = path.strip("/").split("/")
     if len(parts) >= 2:
         entity_name = parts[1]

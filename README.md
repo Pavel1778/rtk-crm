@@ -4,6 +4,8 @@ CRM для кейса «ИТ Школа» хакатона «Лидеры циф
 Визуализирует многоэтапный процесс взаимодействия с вузами-партнёрами,
 ведёт учёт договоров, задач и комментариев по каждому взаимодействию.
 
+[![CI](https://github.com/Pavel1778/rtk-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/rtk-crm/actions/workflows/ci.yml)
+
 ## Что реализовано
 
 - **Kanban-доска** взаимодействий с перемещением карточек между этапами
@@ -111,6 +113,50 @@ http://127.0.0.1:5173 — dev-сервер проксирует `/api` на `loc
 - [SECURITY.md](docs/SECURITY.md) — безопасность, 152-ФЗ и privacy
 - [pitch.md](docs/pitch.md) — презентационный сценарий
 - [qa-jury.md](docs/qa-jury.md) — вопросы жюри и ответы
+
+## Интерфейс
+
+Скриншоты актуальной сборки лежат в [docs/images](docs/images).
+
+### Вход в систему
+
+![Вход в систему](docs/images/01-login.png)
+
+### Доска взаимодействий (Kanban)
+
+![Доска взаимодействий](docs/images/02-kanban-board.png)
+
+### Карточка вуза
+
+![Карточка вуза](docs/images/03-interaction-card.png)
+
+### Фильтры на доске
+
+![Фильтры на доске](docs/images/04-board-filters.png)
+
+### Справочники
+
+![Справочники](docs/images/05-directories.png)
+
+### Импорт XLSX и сопоставление полей
+
+![Импорт XLSX](docs/images/06-import-xlsx-mapping.png)
+
+### Отчёты с экспортом диаграмм в PNG/PDF
+
+![Отчёты](docs/images/07-reports.png)
+
+### Конструктор воркфлоу
+
+![Конструктор воркфлоу](docs/images/08-workflow-constructor.png)
+
+### Настройки
+
+![Настройки](docs/images/09-settings.png)
+
+### Встроенная документация `/help`
+
+![Документация /help](docs/images/10-help-docs.png)
 
 ## Production
 

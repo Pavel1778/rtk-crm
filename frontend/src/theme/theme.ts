@@ -48,3 +48,42 @@ export const antTheme: ThemeConfig = {
     },
   },
 };
+
+/**
+ * Тёмная вариация «Атомаро». Значения совпадают с CSS-переменными
+ * `.Theme_root_rtk_purple_dark`, чтобы antd-компоненты и собственные
+ * стили не расходились по палитре.
+ */
+export const antDarkTheme: ThemeConfig = {
+  ...antTheme,
+  token: {
+    ...atmrTokens,
+    colorPrimary: '#A88BFA',
+    colorInfo: '#A88BFA',
+    colorText: '#FFFFFF',
+    colorTextSecondary: '#B8B8C0',
+    colorBorder: '#474850',
+    colorBorderSecondary: '#3A3B42',
+    colorBgLayout: '#1C1D22',
+    colorBgContainer: '#2A2B31',
+    colorBgElevated: '#2A2B31',
+  },
+  components: {
+    ...antTheme.components,
+    Card: {
+      boxShadowTertiary: 'none',
+      colorBorderSecondary: '#3A3B42',
+    },
+    Table: {
+      headerBg: '#33343B',
+    },
+    Layout: {
+      headerBg: '#2A2B31',
+      bodyBg: '#1C1D22',
+    },
+    Menu: {
+      itemSelectedBg: '#3A2E5C',
+      itemSelectedColor: '#A88BFA',
+    },
+  },
+};

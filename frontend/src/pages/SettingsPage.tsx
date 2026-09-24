@@ -8,45 +8,270 @@ import {
   Input,
   InputNumber,
   Popconfirm,
+  Select,
   Space,
   Switch,
   Table,
+  Tabs,
   Tag,
+  Typography,
 } from 'antd';
 import { useEffect, useState } from 'react';
 
 import { errorMessage } from '../api/client';
 import {
   createStage,
+  createUser,
   deleteStage,
+  deleteUser,
   listStages,
+  listUsers,
   updateStage,
+  updateUser,
 } from '../api/endpoints';
-import type { WorkflowStage } from '../types';
-import { useRole } from '../stores/authStore';
+import type { User, UserRole, WorkflowStage } from '../types';
+import { useAuthStore, useRole } from '../stores/authStore';
+
+import StageTable from '../components/workflow/StageTable';
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Администратор',
+  manager: 'Руководитель',
+  user: 'КАМ',
+};
 
 /**
- * Настройка воркфлоу: этапы можно добавлять, переименовывать,
- * менять цвет колонки и порядок. Удаление доступно, если на этапе
- * нет взаимодействий. Только для admin.
+ * Настройки администратора: управление пользователями и этапами воркфлоу.
+ * Каждая вкладка доступна только администратору.
  */
 export default function SettingsPage() {
-  const { message } = AntApp.useApp();
   const role = useRole();
+
+  if (role !== 'admin') {
+    return (
+      <Card>
+        <p>Доступ запрещён. Только администраторы могут управлять настройками.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Tabs
+      items={[
+        { key: 'users', label: 'Пользователи', children: <UsersPanel /> },
+        { key: 'workflow', label: 'Этапы воркфлоу', children: <WorkflowPanel /> },
+      ]}
+    />
+  );
+}
+
+function UsersPanel() {
+  const { message } = AntApp.useApp();
+  const currentUser = useAuthStore((s) => s.user);
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
+  const [users, setUsers] = useState<User[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [form] = Form.useForm();
+
+  const load = () => {
+    listUsers()
+      .then(setUsers)
+      .catch((e) => message.error(errorMessage(e)));
+  };
+  useEffect(load, []);
+
+  const addUser = async () => {
+    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      await createUser({
+        email: values.email,
+        full_name: values.full_name,
+        password: values.password,
+        role: values.role,
+        is_admin: values.role === 'admin',
+      });
+      form.resetFields();
+      message.success('Пользователь добавлен');
+      load();
+    } catch (e) {
+      message.error(errorMessage(e, 'Не удалось добавить пользователя'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const patch = async (id: number, payload: Record<string, unknown>, text: string) => {
+    try {
+      await updateUser(id, payload);
+      message.success(text);
+      load();
+    } catch (e) {
+      message.error(errorMessage(e, 'Не удалось сохранить'));
+    }
+  };
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Card title="Новый пользователь" style={{ border: '1px solid var(--atmr-border-soft)' }}>
+        <Form form={form} layout={isMobile ? 'vertical' : 'inline'} className="responsive-form">
+          <Form.Item
+            name="full_name"
+            rules={[{ required: true, message: 'Укажите имя' }]}
+          >
+            <Input
+              id="settings-user-name"
+              name="full_name"
+              placeholder="ФИО"
+              style={{ width: isMobile ? '100%' : 200 }}
+              autoComplete="off"
+            />
+          </Form.Item>
+          <Form.Item
+            name="email"
+            rules={[
+              { required: true, message: 'Укажите email' },
+              { type: 'email', message: 'Некорректный email' },
+            ]}
+          >
+            <Input
+              id="settings-user-email"
+              name="email"
+              placeholder="email@example.com"
+              style={{ width: isMobile ? '100%' : 220 }}
+              autoComplete="off"
+            />
+          </Form.Item>
+          <Form.Item
+            name="password"
+            rules={[
+              { required: true, message: 'Укажите пароль' },
+              { min: 6, message: 'Минимум 6 символов' },
+            ]}
+          >
+            <Input.Password
+              id="settings-user-password"
+              name="password"
+              placeholder="Пароль"
+              style={{ width: isMobile ? '100%' : 180 }}
+              autoComplete="new-password"
+            />
+          </Form.Item>
+          <Form.Item name="role" initialValue="user">
+            <Select
+              id="settings-user-role"
+              style={{ width: isMobile ? '100%' : 160 }}
+              options={[
+                { value: 'user', label: ROLE_LABELS.user },
+                { value: 'manager', label: ROLE_LABELS.manager },
+                { value: 'admin', label: ROLE_LABELS.admin },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" onClick={addUser} loading={saving} block={isMobile}>
+              Добавить
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <Card title="Сотрудники" style={{ border: '1px solid var(--atmr-border-soft)' }}>
+        <Table<User>
+          rowKey="id"
+          size="small"
+          dataSource={users}
+          pagination={false}
+          scroll={{ x: 640 }}
+          locale={{ emptyText: 'Пользователей нет' }}
+          columns={[
+            {
+              title: 'ФИО',
+              dataIndex: 'full_name',
+              render: (name: string) => <Typography.Text strong>{name}</Typography.Text>,
+            },
+            { title: 'Email', dataIndex: 'email' },
+            {
+              title: 'Роль',
+              dataIndex: 'role',
+              render: (role: UserRole, record) => (
+                <Select
+                  size="small"
+                  value={role}
+                  style={{ width: 150 }}
+                  disabled={record.id === currentUser?.id}
+                  onChange={(next) =>
+                    patch(
+                      record.id,
+                      { role: next, is_admin: next === 'admin' },
+                      'Роль обновлена',
+                    )
+                  }
+                  options={[
+                    { value: 'user', label: ROLE_LABELS.user },
+                    { value: 'manager', label: ROLE_LABELS.manager },
+                    { value: 'admin', label: ROLE_LABELS.admin },
+                  ]}
+                />
+              ),
+            },
+            {
+              title: 'Активен',
+              dataIndex: 'is_active',
+              render: (active: boolean, record) => (
+                <Switch
+                  checked={active}
+                  disabled={record.id === currentUser?.id}
+                  onChange={(next) =>
+                    patch(record.id, { is_active: next }, 'Статус обновлён')
+                  }
+                />
+              ),
+            },
+            {
+              title: 'Действия',
+              key: 'actions',
+              render: (_, record) => {
+                if (record.id === currentUser?.id) {
+                  return <Tag>Это вы</Tag>;
+                }
+                return (
+                  <Popconfirm
+                    title="Удалить пользователя?"
+                    okText="Удалить"
+                    cancelText="Отмена"
+                    onConfirm={() =>
+                      deleteUser(record.id)
+                        .then(() => {
+                          message.success('Пользователь удалён');
+                          load();
+                        })
+                        .catch((e) => message.error(errorMessage(e)))
+                    }
+                  >
+                    <Button danger size="small">
+                      Удалить
+                    </Button>
+                  </Popconfirm>
+                );
+              },
+            },
+          ]}
+        />
+      </Card>
+    </Space>
+  );
+}
+
+function WorkflowPanel() {
+  const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [stages, setStages] = useState<WorkflowStage[]>([]);
   const [saving, setSaving] = useState(false);
   const [togglingStageId, setTogglingStageId] = useState<number | null>(null);
   const [form] = Form.useForm();
-
-  if (role !== 'admin') {
-    return (
-      <Card>
-        <p>Доступ запрещён. Только администраторы могут редактировать этапы воркфлоу.</p>
-      </Card>
-    );
-  }
 
   const load = () => {
     listStages(true)
@@ -142,92 +367,28 @@ export default function SettingsPage() {
         </Form>
       </Card>
 
-        <Card title="Этапы воркфлоу" style={{ border: '1px solid var(--atmr-border-soft)' }}>
-        <div className="scroll-box">
-          <Table<WorkflowStage>
-            rowKey="id"
-            dataSource={stages}
-            pagination={false}
-            size="small"
-            scroll={{ x: 'max-content' }}
-            columns={[
-              { title: 'Порядок', dataIndex: 'order', width: 80 },
-              {
-                title: 'Этап',
-                dataIndex: 'name',
-                render: (name: string, record) => (
-                  <Space>
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 5,
-                        background: record.color ?? 'var(--atmr-accent-default)',
-                        display: 'inline-block',
-                      }}
-                    />
-                    <EditableText
-                      value={name}
-                      onSave={(value) =>
-                        updateStage(record.id, { name: value })
-                          .then(() => message.success('Название обновлено'))
-                          .then(load)
-                          .catch((e) => message.error(errorMessage(e)))
-                      }
-                    />
-                  </Space>
-                ),
-              },
-              {
-                title: 'Код',
-                dataIndex: 'code',
-                width: 150,
-                render: (code: string) => <Tag>{code}</Tag>,
-              },
-              {
-                title: 'Взаимодействий',
-                dataIndex: 'interaction_count',
-                width: 120,
-              },
-              {
-                title: 'Активен',
-                dataIndex: 'is_active',
-                width: 100,
-                render: (active: boolean, record) => (
-                  <Switch
-                    checked={active}
-                    loading={togglingStageId === record.id}
-                    onChange={(checked) => toggleStage(record.id, checked)}
-                  />
-                ),
-              },
-              {
-                title: '',
-                width: 80,
-                render: (_, record) => (
-                  <Popconfirm
-                    title="Удалить этап?"
-                    disabled={record.interaction_count > 0}
-                    onConfirm={() =>
-                      deleteStage(record.id)
-                        .then(load)
-                        .catch((e) => message.error(errorMessage(e)))
-                    }
-                  >
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      disabled={record.interaction_count > 0}
-                    >
-                      Удалить
-                    </Button>
-                  </Popconfirm>
-                ),
-              },
-            ]}
-          />
-        </div>
+      <Card title="Этапы воркфлоу" style={{ border: '1px solid var(--atmr-border-soft)' }}>
+        <StageTable
+          stages={stages}
+          onToggle={(stage, next) => toggleStage(stage.id, next)}
+          togglingId={togglingStageId}
+          onDelete={(stage) => {
+            void deleteStage(stage.id)
+              .then(load)
+              .catch((e) => message.error(errorMessage(e)));
+          }}
+          renderName={(stage) => (
+            <EditableText
+              value={stage.name}
+              onSave={(value) =>
+                updateStage(stage.id, { name: value })
+                  .then(() => message.success('Название обновлено'))
+                  .then(load)
+                  .catch((e) => message.error(errorMessage(e)))
+              }
+            />
+          )}
+        />
       </Card>
     </Space>
   );

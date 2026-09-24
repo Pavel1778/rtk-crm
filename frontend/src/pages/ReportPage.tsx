@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, Empty, Result, Skeleton, message } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -7,11 +7,19 @@ import {
   LineChart, Line,
 } from 'recharts';
 import { downloadBlob, errorMessage } from '../api/client';
-import { downloadReport, getReport, type ReportFilters } from '../api/endpoints';
+import {
+  downloadReport,
+  getReport,
+  getReportPreview,
+  type ReportFilters,
+} from '../api/endpoints';
 import { useDevice } from '../hooks/useDevice';
 import EmptyState from '../components/EmptyState';
 import MetricCard from '../components/dashboard/MetricCard';
-import type { ReportResponse } from '../types';
+import ChartExportButtons from '../components/dashboard/ChartExportButtons';
+import DateRangeFilter, { type DateRangeValue } from '../components/DateRangeFilter';
+import ReportTable from '../components/report/ReportTable';
+import type { ReportResponse, ReportTableRow } from '../types';
 
 const COLORS = [
   'var(--atmr-accent-default)',
@@ -22,21 +30,96 @@ const COLORS = [
   'var(--atmr-accent-muted)',
 ];
 
+const RADIAN = Math.PI / 180;
+// Сектора уже 5% слишком тонкие для подписи внутри — выносим их с выноской.
+const SMALL_SLICE = 0.05;
+
+function ProductSliceLabel({
+  cx = 0, cy = 0, midAngle, innerRadius = 0, outerRadius = 0, percent, compact,
+}: {
+  cx?: number; cy?: number; midAngle?: number; innerRadius?: number;
+  outerRadius?: number; percent?: number; compact: boolean;
+}) {
+  if (!percent || midAngle === undefined) return null;
+  const pct = `${Math.round(percent * 100)}%`;
+  const cos = Math.cos(-midAngle * RADIAN);
+  const sin = Math.sin(-midAngle * RADIAN);
+  const font = compact ? 10 : 11;
+
+  if (percent >= SMALL_SLICE) {
+    const r = innerRadius + (outerRadius - innerRadius) * 0.5;
+    return (
+      <text
+        x={cx + r * cos}
+        y={cy + r * sin}
+        fill="#fff"
+        fontSize={font}
+        fontWeight={600}
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        {pct}
+      </text>
+    );
+  }
+
+  const lead = compact ? 10 : 16;
+  const sx = cx + (outerRadius + 1) * cos;
+  const sy = cy + (outerRadius + 1) * sin;
+  const ex = cx + (outerRadius + lead) * cos;
+  const ey = cy + (outerRadius + lead) * sin;
+  const right = cos >= 0;
+  return (
+    <g>
+      <polyline
+        points={`${sx},${sy} ${ex},${ey}`}
+        stroke="var(--atmr-fg-subtle)"
+        strokeWidth={1}
+        fill="none"
+      />
+      <text
+        x={ex + (right ? 4 : -4)}
+        y={ey}
+        fill="var(--atmr-fg-subtle)"
+        fontSize={font}
+        textAnchor={right ? 'start' : 'end'}
+        dominantBaseline="central"
+      >
+        {pct}
+      </text>
+    </g>
+  );
+}
+
 export default function ReportPage() {
   const device = useDevice();
   const isMobile = device === 'mobile';
   const [exporting, setExporting] = useState<string | null>(null);
-  const [draftDates, setDraftDates] = useState({ date_from: '', date_to: '' });
+  const [draftDates, setDraftDates] = useState<DateRangeValue>({});
   const [filters, setFilters] = useState<ReportFilters>({});
+  const stageChartRef = useRef<HTMLDivElement>(null);
+  const productChartRef = useRef<HTMLDivElement>(null);
+  const dynamicsChartRef = useRef<HTMLDivElement>(null);
 
   const reportQuery = useQuery<ReportResponse>({
     queryKey: ['report', filters],
     queryFn: () => getReport(filters),
   });
+  const previewQuery = useQuery<ReportTableRow[]>({
+    queryKey: ['report-preview', filters],
+    queryFn: () => getReportPreview(filters),
+  });
   const { data, isError: error, isLoading: loading } = reportQuery;
   const stageChartHeight = Math.max(
     360,
     data?.by_stage.length ? data.by_stage.length * 42 + 48 : 360,
+  );
+  const productTotal =
+    data?.by_product.reduce((sum, p) => sum + p.count, 0) || 0;
+  // Легенда recharts отдаёт имя продукта, а не исходный элемент — по имени
+  // достаём count, чтобы посчитать долю. Имена продуктов уникальны.
+  const legendByName = new Map(
+    (data?.by_product ?? []).map((p) => [p.name, p]),
   );
 
   useEffect(() => {
@@ -112,22 +195,11 @@ export default function ReportPage() {
         </div>
       </div>
       <div className="responsive-form report-filters" role="search" aria-label="Фильтры отчёта">
-        <label>
-          С даты
-          <input
-            type="date"
-            value={draftDates.date_from}
-            onChange={(event) => setDraftDates({ ...draftDates, date_from: event.target.value })}
-          />
-        </label>
-        <label>
-          По дату
-          <input
-            type="date"
-            value={draftDates.date_to}
-            onChange={(event) => setDraftDates({ ...draftDates, date_to: event.target.value })}
-          />
-        </label>
+        <DateRangeFilter
+          id="report-date-range"
+          value={draftDates}
+          onChange={setDraftDates}
+        />
         <button
           className="btn-export"
           onClick={() => setFilters({
@@ -140,7 +212,7 @@ export default function ReportPage() {
         <button
           className="btn-export"
           onClick={() => {
-            setDraftDates({ date_from: '', date_to: '' });
+            setDraftDates({});
             setFilters({});
           }}
         >
@@ -162,17 +234,29 @@ export default function ReportPage() {
       {/* График: Распределение по этапам */}
       <Card
         title="Распределение по этапам"
+        extra={
+          data.by_stage.length > 0 && (
+            <ChartExportButtons
+              target={() => stageChartRef.current}
+              filename="report-by-stage"
+              title="Распределение взаимодействий по этапам"
+            />
+          )
+        }
         style={{ borderRadius: 12, marginBottom: 24 }}
       >
         {data.by_stage.length === 0 ? (
           <EmptyState title="Нет данных" />
         ) : (
           <div
+            ref={stageChartRef}
+            data-chart-export="report-by-stage"
             className="chart-container report-stage-chart"
             style={{
               height: isMobile
                 ? Math.max(420, data.by_stage.length * 38)
                 : stageChartHeight,
+              background: 'var(--atmr-bg-container)',
             }}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -228,11 +312,28 @@ export default function ReportPage() {
         className="report-chart-grid"
       >
         {/* Доля продуктов */}
-        <Card title="Доля продуктов" style={{ borderRadius: 12 }}>
+        <Card
+          title="Доля продуктов"
+          extra={
+            data.by_product.length > 0 && (
+              <ChartExportButtons
+                target={() => productChartRef.current}
+                filename="report-by-product"
+                title="Доля продуктов"
+              />
+            )
+          }
+          style={{ borderRadius: 12 }}
+        >
           {data.by_product.length === 0 ? (
             <EmptyState title="Нет активных взаимодействий с указанным продуктом" />
           ) : (
-            <div className="chart-container" style={{ height: 320 }}>
+            <div
+              ref={productChartRef}
+              data-chart-export="report-by-product"
+              className="chart-container"
+              style={{ height: 320, background: 'var(--atmr-bg-container)' }}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -244,20 +345,36 @@ export default function ReportPage() {
                     innerRadius={60}
                     outerRadius={100}
                     paddingAngle={2}
+                    labelLine={false}
+                    label={(props) => (
+                      <ProductSliceLabel {...props} compact={isMobile} />
+                    )}
                   >
                     {data.by_product.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [value, 'Взаимодействий']} />
+                  <Tooltip
+                    formatter={(value) => {
+                      const n = Number(value);
+                      const pct = productTotal
+                        ? Math.round((n / productTotal) * 100)
+                        : 0;
+                      return [`${n} (${pct}%)`, 'Взаимодействий'];
+                    }}
+                  />
                   <Legend
                     layout={isMobile ? 'horizontal' : 'vertical'}
                     align={isMobile ? 'center' : 'right'}
                     verticalAlign={isMobile ? 'bottom' : 'middle'}
                     wrapperStyle={{ fontSize: 11 }}
-                    formatter={(value: string) =>
-                      value.length > 24 ? `${value.slice(0, 22)}…` : value
-                    }
+                    formatter={(value: string) => {
+                      const item = legendByName.get(value);
+                      const pct = item
+                        ? Math.round((item.count / productTotal) * 100)
+                        : 0;
+                      return `${value} — ${pct}%`;
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -266,11 +383,28 @@ export default function ReportPage() {
         </Card>
 
         {/* Динамика за 30 дней */}
-        <Card title="Динамика за 30 дней" style={{ borderRadius: 12 }}>
+        <Card
+          title="Динамика за 30 дней"
+          extra={
+            data.dynamics.length > 0 && (
+              <ChartExportButtons
+                target={() => dynamicsChartRef.current}
+                filename="report-dynamics"
+                title="Динамика взаимодействий за 30 дней"
+              />
+            )
+          }
+          style={{ borderRadius: 12 }}
+        >
           {data.dynamics.length === 0 ? (
             <EmptyState title="Нет данных за последние 30 дней" />
           ) : (
-            <div className="chart-container" style={{ height: 320 }}>
+            <div
+              ref={dynamicsChartRef}
+              data-chart-export="report-dynamics"
+              className="chart-container"
+              style={{ height: 320, background: 'var(--atmr-bg-container)' }}
+            >
               <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.dynamics} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--atmr-border-default)" />
@@ -294,6 +428,15 @@ export default function ReportPage() {
             </div>
           )}
         </Card>
+      </div>
+
+      {/* Таблица: те же строки и колонки, что в PDF/XLS-выгрузке */}
+      <div style={{ marginTop: 24 }}>
+        <ReportTable
+          rows={previewQuery.data ?? []}
+          loading={previewQuery.isLoading}
+          title="Данные отчёта"
+        />
       </div>
     </div>
   );

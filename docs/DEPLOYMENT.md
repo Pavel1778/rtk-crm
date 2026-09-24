@@ -55,6 +55,7 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
 | `DATABASE_URL` | значение из Supabase, хранить только в Render Environment |
 | `SECRET_KEY` | уникальная строка не менее 32 символов |
 | `CORS_ORIGINS` | `https://rtk-crm-nx4r.vercel.app,http://localhost:5173` |
+| `CORS_ORIGIN_REGEX` | регулярное выражение для хостов предпросмотра (необязательно), напр. `https://[a-z0-9-]+\.preview\.example\.com`; пусто = выключено |
 | `SEED_DEMO_DATA` | `true` |
 | `MOCK_MODE` | `true` |
 

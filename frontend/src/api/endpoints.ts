@@ -1,16 +1,21 @@
 import { api } from './client';
 import type {
   ActionItem,
+  AuditLogPage,
   BoardResponse,
   CommentItem,
   ITDirection,
   ITProduct,
   Interaction,
+  ReportColumn,
   ReportResponse,
+  ReportTableRow,
   StageImpact,
   Token,
   University,
   User,
+  UserRole,
+  WorkflowScope,
   WorkflowStage,
 } from '../types';
 
@@ -23,10 +28,68 @@ export const me = () => api.get<User>('/api/auth/me').then((r) => r.data);
 export const listUsers = () =>
   api.get<User[]>('/api/auth/users').then((r) => r.data);
 
+export const createUser = (payload: {
+  email: string;
+  full_name: string;
+  password: string;
+  role: UserRole;
+  is_admin?: boolean;
+}) => api.post<User>('/api/auth/users', payload).then((r) => r.data);
+
+export const updateUser = (id: number, payload: Partial<{
+  email: string;
+  full_name: string;
+  password: string;
+  role: UserRole;
+  is_admin: boolean;
+  is_active: boolean;
+}>) => api.patch<User>(`/api/auth/users/${id}`, payload).then((r) => r.data);
+
+export const deleteUser = (id: number) =>
+  api.delete(`/api/auth/users/${id}`);
+
+// --- Журнал аудита (152-ФЗ) ---
+export const listAuditLogs = (params?: {
+  action?: string;
+  entity_type?: string;
+  user_id?: number;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+  offset?: number;
+}) => api.get<AuditLogPage>('/api/audit', { params }).then((r) => r.data);
+
+/** URL выгрузки журнала в CSV с теми же фильтрами, что и в таблице. */
+export type AuditFilters = {
+  action?: string;
+  entity_type?: string;
+  user_id?: number;
+  date_from?: string;
+  date_to?: string;
+};
+
+export const exportAuditLog = async (params: AuditFilters = {}) => {
+  const response = await api.get('/api/audit/export', {
+    params,
+    responseType: 'blob',
+    timeout: 60_000,
+  });
+  const disposition = response.headers['content-disposition'] as string | undefined;
+  const plainName = disposition?.match(/filename="?([^"]+)"?/i)?.[1];
+  return {
+    blob: response.data as Blob,
+    filename: plainName ?? `audit-log-${Date.now()}.csv`,
+  };
+};
+
+export const listAuditEntityTypes = () =>
+  api.get<string[]>('/api/audit/entity-types').then((r) => r.data);
+
 // --- Взаимодействия и доска ---
 export const getBoard = (params?: {
   search?: string;
   product_id?: number;
+  scope?: WorkflowScope;
 }) => api.get<BoardResponse>('/api/interactions/board', { params }).then((r) => r.data);
 
 export const getInteraction = (id: number) =>
@@ -36,6 +99,8 @@ export const createInteraction = (payload: {
   university_id: number;
   product_id?: number | null;
   stage_id?: number | null;
+  assigned_kam_id?: number | null;
+  scope?: WorkflowScope;
 }) => api.post<Interaction>('/api/interactions', payload).then((r) => r.data);
 
 export const updateInteraction = (
@@ -93,9 +158,8 @@ export const listFiles = (interactionId: number) =>
 export const uploadFile = (interactionId: number, file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post(`/api/files/interactions/${interactionId}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }).then((r) => r.data);
+  // Content-Type выставляет интерцептор: ручное значение ломает boundary.
+  return api.post(`/api/files/interactions/${interactionId}/upload`, formData).then((r) => r.data);
 };
 
 export const downloadFile = (fileId: number) =>
@@ -141,6 +205,14 @@ export const createProduct = (payload: { name: string; direction_id?: number | n
 export const deleteProduct = (id: number) =>
   api.delete(`/api/products/${id}`);
 
+export type ImportIssue = {
+  row: number | null;
+  field: string;
+  problem: string;
+  severity: 'error' | 'warning' | 'ok';
+  value: string | null;
+};
+
 export type CatalogImportResult = {
   success: boolean;
   headers: string[];
@@ -148,6 +220,16 @@ export type CatalogImportResult = {
   errors: string[];
   count: number;
   created?: number;
+  total?: number;
+  issues?: ImportIssue[];
+  summary?: {
+    total_rows: number;
+    valid_rows: number;
+    warning_rows: number;
+    error_rows: number;
+    error_count: number;
+    warning_count: number;
+  };
 };
 
 export const previewCatalogImport = (
@@ -186,11 +268,30 @@ export const executeCatalogImport = (
     .then((r) => r.data);
 };
 
+export const downloadCatalogImportReport = (
+  catalogType: 'universities' | 'products',
+  file: File,
+  mapping: Record<string, string>,
+) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mapping', JSON.stringify(mapping));
+  return api
+    .post<Blob>('/api/catalogs/import/report', formData, {
+      params: { catalog_type: catalogType },
+      responseType: 'blob',
+    })
+    .then((r) => r.data);
+};
+
 // --- Воркфлоу ---
-export const listStages = (includeInactive = false) =>
+export const listStages = (includeInactive = false, scope?: WorkflowScope) =>
   api
     .get<WorkflowStage[]>('/api/stages', {
-      params: includeInactive ? { include_inactive: true } : undefined,
+      params: {
+        ...(includeInactive ? { include_inactive: true } : {}),
+        ...(scope ? { scope } : {}),
+      },
     })
     .then((r) => r.data);
 
@@ -202,6 +303,12 @@ export const createStage = (payload: Record<string, unknown>) =>
 
 export const updateStage = (id: number, payload: Record<string, unknown>) =>
   api.patch<WorkflowStage>(`/api/stages/${id}`, payload).then((r) => r.data);
+
+/** Атомарная пересортировка: backend меняет порядки за одну транзакцию. */
+export const reorderStages = (stages: { id: number; order: number }[]) =>
+  api
+    .post<WorkflowStage[]>('/api/stages/reorder', { stages })
+    .then((r) => r.data);
 
 export const deleteStage = (id: number, targetStageId?: number) =>
   api.delete(`/api/stages/${id}`, { params: targetStageId ? { target_stage_id: targetStageId } : undefined });
@@ -219,6 +326,14 @@ export type ReportFilters = {
 
 export const getReport = (params?: ReportFilters) =>
   api.get<ReportResponse>('/api/reports', { params }).then((r) => r.data);
+
+/** Колонки отчёта из общего конфига — тот же список, что и в PDF/XLS-выгрузках. */
+export const getReportColumns = () =>
+  api.get<ReportColumn[]>('/api/reports/columns').then((r) => r.data);
+
+/** Строки отчёта для предпросмотра — те же данные, что в PDF/XLS-выгрузке. */
+export const getReportPreview = (params?: ReportFilters) =>
+  api.get<ReportTableRow[]>('/api/reports/preview', { params }).then((r) => r.data);
 
 export const exportXlsx = (params?: ReportFilters) =>
   api.get('/api/reports/xlsx', {

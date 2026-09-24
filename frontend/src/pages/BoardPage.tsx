@@ -20,6 +20,7 @@ import {
   Grid,
   Input,
   Row,
+  Segmented,
   Select,
   Space,
   Spin,
@@ -40,6 +41,7 @@ import {
   getBoard,
   listProducts,
   listUniversities,
+  listUsers,
   moveInteraction,
 } from '../api/endpoints';
 import type {
@@ -47,12 +49,16 @@ import type {
   InteractionCard,
   ITProduct,
   University,
+  User,
+  WorkflowScope,
   WorkflowStage,
 } from '../types';
 import { useRole } from '../stores/authStore';
 import InteractionDrawer from '../components/interaction/InteractionDrawer';
 import MobileStageFilter from '../components/kanban/MobileStageFilter';
 import EmptyState from '../components/EmptyState';
+
+const FILTER_DEBOUNCE_MS = 300;
 
 interface DragData {
   card: InteractionCard;
@@ -199,6 +205,7 @@ export default function BoardPage() {
   const [data, setData] = useState<BoardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [scope, setScope] = useState<WorkflowScope>('b2b');
   const [productFilter, setProductFilter] = useState<number | undefined>();
   const [products, setProducts] = useState<ITProduct[]>([]);
   const [activeCard, setActiveCard] = useState<InteractionCard | null>(null);
@@ -209,7 +216,7 @@ export default function BoardPage() {
   const load = async () => {
     setLoading(true);
     try {
-      setData(await getBoard({ search: search || undefined, product_id: productFilter }));
+      setData(await getBoard({ search: search || undefined, product_id: productFilter, scope }));
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось загрузить доску'));
     } finally {
@@ -217,10 +224,20 @@ export default function BoardPage() {
     }
   };
 
+  // Раньше фильтры применялись через setTimeout(load, 0): замыкание load
+  // захватывало старое значение search/productFilter, поэтому запрос уходил
+  // без фильтров. Эффект с зависимостями пересоздаёт load с актуальными
+  // значениями; debounce защищает от лишних запросов при быстрой смене.
   useEffect(() => {
-    void load();
-    void listProducts().then(setProducts).catch(() => undefined);
+    const timer = setTimeout(() => {
+      void load();
+    }, FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, search, productFilter]);
+
+  useEffect(() => {
+    void listProducts().then(setProducts).catch(() => undefined);
   }, []);
 
   const sensors = useSensors(
@@ -270,31 +287,39 @@ export default function BoardPage() {
       
       <div className="page-filters">
         <Row gutter={[12, 12]} align="middle" style={{ width: '100%' }}>
-          <Col flex="auto">
+          <Col>
+            <Segmented
+              id="board-scope"
+              value={scope}
+              onChange={(value) => {
+                setScope(value as WorkflowScope);
+                setMobileStage(undefined);
+              }}
+              options={[
+                { value: 'b2b', label: 'B2B' },
+                { value: 'b2c', label: 'B2C' },
+              ]}
+            />
+          </Col>
+          <Col flex="auto" className="board-filter-search">
             <Input.Search
               id="board-search"
               name="search"
               placeholder="Поиск по вузу"
               allowClear
-              style={{ width: 220 }}
+              className="board-search-input"
               autoComplete="off"
-              onSearch={(value) => {
-                setSearch(value);
-                setTimeout(load, 0);
-              }}
+              onSearch={setSearch}
             />
           </Col>
-          <Col>
+          <Col className="board-filter-product">
             <Select
               id="board-product-filter"
               placeholder="Продукт"
               allowClear
-              style={{ width: 180 }}
+              className="board-product-select"
               value={productFilter}
-              onChange={(value) => {
-                setProductFilter(value);
-                setTimeout(load, 0);
-              }}
+              onChange={setProductFilter}
               options={products.map((p) => ({ value: p.id, label: p.name }))}
             />
           </Col>
@@ -365,6 +390,7 @@ export default function BoardPage() {
 
       <CreateInteractionModal
         open={creating}
+        scope={scope}
         onClose={() => setCreating(false)}
         onCreated={async () => {
           setCreating(false);
@@ -383,24 +409,34 @@ export default function BoardPage() {
 
 function CreateInteractionModal({
   open,
+  scope,
   onClose,
   onCreated,
 }: {
   open: boolean;
+  scope: WorkflowScope;
   onClose: () => void;
   onCreated: () => void;
 }) {
   const { message } = AntApp.useApp();
+  const role = useRole();
   const [universities, setUniversities] = useState<University[]>([]);
   const [products, setProducts] = useState<ITProduct[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [universityId, setUniversityId] = useState<number | null>(null);
   const [productId, setProductId] = useState<number | null>(null);
+  const [kamId, setKamId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const canAssign = role === 'admin' || role === 'manager';
 
   useEffect(() => {
     if (open) {
       void listUniversities().then(setUniversities).catch(() => undefined);
       void listProducts().then(setProducts).catch(() => undefined);
+      if (canAssign) {
+        void listUsers().then(setUsers).catch(() => undefined);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -415,10 +451,13 @@ function CreateInteractionModal({
       await createInteraction({
         university_id: universityId,
         product_id: productId,
+        assigned_kam_id: kamId,
+        scope,
       });
       message.success('Взаимодействие создано');
       setUniversityId(null);
       setProductId(null);
+      setKamId(null);
       onCreated();
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось создать'));
@@ -475,6 +514,21 @@ function CreateInteractionModal({
           optionFilterProp="label"
           options={products.map((p) => ({ value: p.id, label: p.name }))}
         />
+        {canAssign && (
+          <Select
+            id="drawer-kam"
+            showSearch
+            allowClear
+            placeholder="Ответственный КАМ"
+            style={{ width: '100%' }}
+            value={kamId}
+            onChange={(value) => setKamId(value ?? null)}
+            optionFilterProp="label"
+            options={users
+              .filter((u) => u.role === 'user')
+              .map((u) => ({ value: u.id, label: u.full_name }))}
+          />
+        )}
         <Button type="primary" block loading={saving} onClick={submit}>
           Создать
         </Button>

@@ -1,9 +1,8 @@
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.api.access import (
+    get_accessible_interaction,
+    get_interaction_or_404,
+)
 from app.auth.security import get_current_user
 from app.db.session import get_db
 from app.models.entities import (
@@ -15,7 +14,7 @@ from app.models.entities import (
     User,
     WorkflowStageRef,
 )
-from app.models.enums import UserRole
+from app.models.enums import UserRole, WorkflowScope
 from app.schemas.entities import (
     ActionCreate,
     ActionRead,
@@ -30,34 +29,73 @@ from app.schemas.entities import (
     InteractionUpdate,
 )
 from app.services.report_cache import invalidate_report_cache
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/interactions", tags=["interactions"])
+
+# Бизнес-правило из Q&A: у одного вуза не более двух параллельных
+# взаимодействий. Больше — коллапс учёта, поэтому третий запрос отклоняем.
+MAX_PARALLEL_INTERACTIONS = 2
 
 
 # ---------- Вспомогательные функции ----------
 async def _get_or_404(db: AsyncSession, interaction_id: int) -> Interaction:
-    interaction = await db.get(Interaction, interaction_id)
-    if interaction is None:
-        raise HTTPException(status_code=404, detail="Взаимодействие не найдено")
-    return interaction
+    return await get_interaction_or_404(db, interaction_id)
 
 
-async def _default_stage(db: AsyncSession) -> WorkflowStageRef:
+async def _get_accessible(
+    db: AsyncSession, interaction_id: int, current: User
+) -> Interaction:
+    """Взаимодействие, если пользователь имеет к нему доступ."""
+    return await get_accessible_interaction(db, interaction_id, current)
+
+
+async def _default_stage(
+    db: AsyncSession, scope: WorkflowScope = WorkflowScope.B2B
+) -> WorkflowStageRef:
     stage = await db.scalar(
         select(WorkflowStageRef)
-        .where(WorkflowStageRef.is_active.is_(True))
+        .where(
+            WorkflowStageRef.is_active.is_(True),
+            WorkflowStageRef.scope == scope,
+        )
         .order_by(WorkflowStageRef.order)
     )
     if stage is None:
         raise HTTPException(
             status_code=409,
-            detail="Воркфлоу не настроен: добавьте хотя бы один этап",
+            detail=f"Воркфлоу {scope.value} не настроен: добавьте хотя бы один этап",
         )
     return stage
 
 
+async def _ensure_parallel_limit(
+    db: AsyncSession,
+    university_id: int,
+    exclude_id: int | None = None,
+) -> None:
+    """Не более MAX_PARALLEL_INTERACTIONS активных взаимодействий на вуз."""
+    stmt = select(func.count(Interaction.id)).where(
+        Interaction.university_id == university_id,
+        Interaction.is_active.is_(True),
+    )
+    if exclude_id is not None:
+        stmt = stmt.where(Interaction.id != exclude_id)
+    active = await db.scalar(stmt) or 0
+    if active >= MAX_PARALLEL_INTERACTIONS:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"У вуза уже {active} активных взаимодействия. "
+                f"Максимум — {MAX_PARALLEL_INTERACTIONS}."
+            ),
+        )
+
+
 async def _card(db: AsyncSession, interaction: Interaction) -> InteractionCard:
-    """Карточка канбан-доски с tên вуза/продукта/этапа и счётчиками."""
+    """Карточка канбан-доски с названием вуза/продукта/этапа и счётчиками."""
     university = await db.get(University, interaction.university_id)
     product = (
         await db.get(ITProduct, interaction.product_id)
@@ -93,6 +131,7 @@ async def _card(db: AsyncSession, interaction: Interaction) -> InteractionCard:
         stage_id=interaction.stage_id,
         stage_name=stage.name if stage else None,
         stage_code=stage.code if stage else None,
+        scope=interaction.scope,
         contract_number=interaction.contract_number,
         university_specialist=interaction.university_specialist,
         assigned_kam_name=specialist.full_name if specialist else None,
@@ -157,17 +196,23 @@ async def get_board(
     search: str | None = Query(default=None, description="Поиск по названию вуза"),
     product_id: int | None = None,
     assigned_kam_id: int | None = None,
+    scope: WorkflowScope = Query(
+        default=WorkflowScope.B2B, description="Тип воронки: b2b или b2c"
+    ),
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> BoardResponse:
-    """Колонки = этапы воркфлоу, карточки = взаимодействия."""
+    """Колонки = этапы выбранного workflow, карточки = взаимодействия."""
     stmt = (
         select(WorkflowStageRef)
-        .where(WorkflowStageRef.is_active.is_(True))
+        .where(
+            WorkflowStageRef.is_active.is_(True),
+            WorkflowStageRef.scope == scope,
+        )
         .order_by(WorkflowStageRef.order)
     )
 
-    filters: list = [Interaction.is_active.is_(True)]
+    filters: list = [Interaction.is_active.is_(True), Interaction.scope == scope]
     if product_id is not None:
         filters.append(Interaction.product_id == product_id)
     if assigned_kam_id is not None:
@@ -217,6 +262,7 @@ async def list_interactions(
     stage_id: int | None = None,
     university_id: int | None = None,
     product_id: int | None = None,
+    scope: WorkflowScope | None = None,
     include_inactive: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
@@ -230,6 +276,8 @@ async def list_interactions(
         filters.append(Interaction.university_id == university_id)
     if product_id is not None:
         filters.append(Interaction.product_id == product_id)
+    if scope is not None:
+        filters.append(Interaction.scope == scope)
     if current.role == UserRole.USER:
         filters.append(Interaction.assigned_kam_id == current.id)
 
@@ -244,37 +292,58 @@ async def list_interactions(
 async def get_interaction(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
-    return await _read(db, await _get_or_404(db, interaction_id))
+    return await _read(
+        db, await _get_accessible(db, interaction_id, current)
+    )
 
 
 @router.post("", response_model=InteractionRead, status_code=201)
 async def create_interaction(
     payload: InteractionCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
-    """Регистрация взаимодействия «вуз + продукт» на первом этапе."""
+    """Регистрация взаимодействия на первом этапе выбранного workflow."""
     if await db.get(University, payload.university_id) is None:
         raise HTTPException(status_code=404, detail="Вуз не найден")
-    if payload.product_id is not None:
-        if await db.get(ITProduct, payload.product_id) is None:
-            raise HTTPException(status_code=404, detail="Продукт не найден")
+    if (
+        payload.product_id is not None
+        and await db.get(ITProduct, payload.product_id) is None
+    ):
+        raise HTTPException(status_code=404, detail="Продукт не найден")
 
     await _ensure_unique(db, payload.university_id, payload.product_id)
+    await _ensure_parallel_limit(db, payload.university_id)
 
     if payload.stage_id is not None:
         stage = await db.get(WorkflowStageRef, payload.stage_id)
         if stage is None:
             raise HTTPException(status_code=404, detail="Этап не найден")
+        if stage.scope != payload.scope:
+            raise HTTPException(
+                status_code=409,
+                detail="Этап принадлежит другому workflow",
+            )
     else:
-        stage = await _default_stage(db)
+        stage = await _default_stage(db, payload.scope)
+
+    # КАМ всегда становится ответственным за созданную им карточку —
+    # иначе она сразу выпадает из его доски. Руководитель и администратор
+    # могут назначить любого КАМ явно.
+    assigned_kam_id = payload.assigned_kam_id
+    if current.role == UserRole.USER:
+        assigned_kam_id = current.id
+    elif assigned_kam_id is not None and await db.get(User, assigned_kam_id) is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     interaction = Interaction(
         university_id=payload.university_id,
         product_id=payload.product_id,
         stage_id=stage.id,
+        assigned_kam_id=assigned_kam_id,
+        scope=payload.scope,
     )
     db.add(interaction)
     await db.commit()
@@ -288,10 +357,19 @@ async def update_interaction(
     interaction_id: int,
     payload: InteractionUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
-    interaction = await _get_or_404(db, interaction_id)
+    interaction = await _get_accessible(db, interaction_id, current)
     data = payload.model_dump(exclude_unset=True)
+
+    # Передача карточки другому сотруднику — управленческое действие.
+    if current.role == UserRole.USER:
+        data.pop("assigned_kam_id", None)
+    elif (
+        data.get("assigned_kam_id") is not None
+        and await db.get(User, data["assigned_kam_id"]) is None
+    ):
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     if "product_id" in data or "stage_id" in data:
         product_id = data.get("product_id", interaction.product_id)
@@ -301,8 +379,21 @@ async def update_interaction(
         if product_id is not None and await db.get(ITProduct, product_id) is None:
             raise HTTPException(status_code=404, detail="Продукт не найден")
         stage_id = data.get("stage_id", interaction.stage_id)
-        if stage_id is not None and await db.get(WorkflowStageRef, stage_id) is None:
-            raise HTTPException(status_code=404, detail="Этап не найден")
+        if stage_id is not None:
+            stage = await db.get(WorkflowStageRef, stage_id)
+            if stage is None:
+                raise HTTPException(status_code=404, detail="Этап не найден")
+            if stage.scope != interaction.scope:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Этап принадлежит другому workflow",
+                )
+
+    # Возврат карточки в активные не должен превышать лимит параллельных.
+    if data.get("is_active") is True and not interaction.is_active:
+        await _ensure_parallel_limit(
+            db, interaction.university_id, exclude_id=interaction.id
+        )
 
     for field, value in data.items():
         setattr(interaction, field, value)
@@ -316,9 +407,9 @@ async def update_interaction(
 async def delete_interaction(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> None:
-    interaction = await _get_or_404(db, interaction_id)
+    interaction = await _get_accessible(db, interaction_id, current)
     await db.delete(interaction)
     await db.commit()
     await invalidate_report_cache()
@@ -330,20 +421,24 @@ async def move_interaction(
     interaction_id: int,
     stage_id: int = Query(description="Целевой этап"),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> InteractionRead:
     """Перемещение карточки на другой этап (drag-and-drop на доске)."""
-    interaction = await _get_or_404(db, interaction_id)
+    interaction = await _get_accessible(db, interaction_id, current)
     stage = await db.get(WorkflowStageRef, stage_id)
     if stage is None:
         raise HTTPException(status_code=404, detail="Этап не найден")
     if not stage.is_active:
         raise HTTPException(status_code=409, detail="Этап отключён")
-    
+    if stage.scope != interaction.scope:
+        raise HTTPException(
+            status_code=409, detail="Этап принадлежит другому workflow"
+        )
+
     # Идемпотентность: если уже на этом этапе, возвращаем текущее состояние
     if interaction.stage_id == stage_id:
         return await _read(db, interaction)
-    
+
     interaction.stage_id = stage_id
     await db.commit()
     await invalidate_report_cache()
@@ -356,9 +451,9 @@ async def move_interaction(
 async def list_actions(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> list[ActionRead]:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     rows = (
         await db.execute(
             select(Action, User.full_name)
@@ -388,7 +483,7 @@ async def create_action(
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> ActionRead:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     action = Action(
         interaction_id=interaction_id,
         author_id=current.id,
@@ -414,11 +509,12 @@ async def update_action(
     action_id: int,
     payload: ActionUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> ActionRead:
     action = await db.get(Action, action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="Задача не найдена")
+    await _get_accessible(db, action.interaction_id, current)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(action, field, value)
     await db.commit()
@@ -439,11 +535,12 @@ async def update_action(
 async def delete_action(
     action_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> None:
     action = await db.get(Action, action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="Задача не найдена")
+    await _get_accessible(db, action.interaction_id, current)
     await db.delete(action)
     await db.commit()
     await invalidate_report_cache()
@@ -454,9 +551,9 @@ async def delete_action(
 async def list_comments(
     interaction_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> list[CommentRead]:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     rows = (
         await db.execute(
             select(Comment, User.full_name)
@@ -486,7 +583,7 @@ async def create_comment(
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ) -> CommentRead:
-    await _get_or_404(db, interaction_id)
+    await _get_accessible(db, interaction_id, current)
     comment = Comment(
         interaction_id=interaction_id, text=payload.text, author_id=current.id
     )

@@ -1,0 +1,51 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["frontend", "node_modules", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM", "C4"]
+ignore = [
+    # FastAPI объявляет зависимости и Query-параметры прямо в сигнатуре —
+    # вызов Depends()/Query() в значении по умолчанию здесь норма.
+    "B008",
+    # Координатная длина строки проверяется форматтерами, а не линтером.
+    "E501",
+    # `(str, Enum)` оставляем осознанно: StrEnum меняет поведение
+    # сериализации SQLAlchemy/Pydantic, миграция не входит в эту задачу.
+    "UP042",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/alembic/versions/*.py" = ["I001", "F401", "UP007", "UP035"]
+# Alembic env.py и скрипты вынуждены импортировать после настройки sys.path.
+"backend/alembic/env.py" = ["E402"]
+"scripts/*.py" = ["E402"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI-зависимости не входят в список B008 по умолчанию.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.File", "fastapi.Form", "fastapi.Header", "fastapi.Cookie", "fastapi.Security"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+exclude = ["frontend/", "\\.venv/"]
+# Строгий режим включаем постепенно: сейчас бэкенд аннотирован частично,
+# а миграции Alembic и тестовые фикстуры типы не несут.
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[tool.bandit]
+# Каталоги и правила, исключаемые из SAST-прогона (см. docs/security/SAST-SCA.md).
+exclude_dirs = ["frontend", "tests", ".venv"]
+skips = [
+    # B101: assert используется только в тестах и локальных проверках.
+    "B101",
+    # B105: значение по умолчанию для dev-окружения — совпадение с шаблоном
+    #             пароля; в production валидатор запрещает дефолт и короткие ключи.
+    "B105",
+    # B406: xml.sax.saxutils.escape экранирует текст перед вставкой в reportlab,
+    #             это не разбор недоверенного XML.
+    "B406",
+]
