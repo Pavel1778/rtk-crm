@@ -193,10 +193,9 @@ def markdown_to_story(markdown: str, base_dir: Path) -> list:
                     flush_list()
                 ordered = True
                 items.append(ordered_match.group("text").strip())
-            else:
+            elif bullet_match is not None:
                 if items and ordered:
                     flush_list()
-                assert bullet_match is not None
                 items.append(bullet_match.group("text").strip())
             continue
 

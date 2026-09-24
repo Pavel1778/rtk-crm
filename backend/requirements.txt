@@ -1,9 +1,9 @@
 # RTK CRM - backend dependencies (Python 3.11)
 
 # Web framework
-fastapi==0.115.6
+fastapi==0.141.1
 uvicorn[standard]==0.34.0
-python-multipart==0.0.20
+python-multipart==0.0.31
 
 # Settings and validation
 pydantic==2.10.4
@@ -18,10 +18,10 @@ aiosqlite==0.20.0
 psycopg2-binary==2.9.9
 
 # Auth and crypto
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
-cryptography==44.0.0
+cryptography==50.0.1
 
 # HTTP client (Keycloak, LMS/Laravel)
 httpx==0.28.1
@@ -36,7 +36,7 @@ minio==7.2.10
 APScheduler==3.11.0
 
 # Metrics
-prometheus-fastapi-instrumentator==7.0.0
+prometheus-fastapi-instrumentator==8.1.0
 
 # Files and exports
 openpyxl==3.1.5
@@ -53,6 +53,6 @@ python-dateutil==2.9.0
 jsonschema==4.23.0
 
 # Tests
-pytest==8.3.4
-pytest-asyncio==0.25.0
-pypdf==5.1.0
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pypdf==6.19.0
