@@ -18,6 +18,12 @@
 - Экспорт и файлы доступны только авторизованным пользователям.
 - Загрузка файлов ограничена расширениями, MIME-типами и размером 50 МБ.
 - Ограничение попыток входа: 5 неуспешных за 60 секунд с одного IP → `429`.
+- Заголовки безопасности на всех ответах: `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`,
+  `Permissions-Policy`, а в production — `Strict-Transport-Security`. Для API
+  дополнительно `Content-Security-Policy: default-src 'none'; frame-ancestors
+  'none'`; `/docs` и `/redoc` из CSP исключены, потому что Swagger UI
+  использует инлайновые скрипты.
 
 ## 152-ФЗ «О персональных данных»
 

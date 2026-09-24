@@ -72,12 +72,16 @@ class Settings(BaseSettings):
         return bool(self.s3_endpoint)
 
     @property
+    def is_production(self) -> bool:
+        return self.environment.lower() in {"production", "prod"}
+
+    @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @model_validator(mode="after")
     def validate_production_secret(self) -> "Settings":
-        if self.environment.lower() in {"production", "prod"} and (
+        if self.is_production and (
             self.secret_key == "development-only-change-me-32-chars"
             or len(self.secret_key) < 32
         ):
