@@ -61,14 +61,17 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
 
 ### Как это работает при старте
 
-1. `Dockerfile` ставит зависимости из `backend/requirements.txt`.
-2. `start.sh` (CMD в образе):
-   - создаёт схему БД (`create_tables()`);
-   - загружает справочники (`seed_reference()`: 14 этапов, пользователи,
-     направления, продукты) — идемпотентно;
-   - запускает `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`.
+1. `Dockerfile` ставит зависимости из `backend/requirements.txt` и запускает
+   `uvicorn app.main:app --host 0.0.0.0 --port 8000` (код лежит в `/app`,
+   `PYTHONPATH=/`).
+2. При старте приложение (`app.main:lifespan`) создаёт схему БД
+   (`create_tables()`) и загружает справочники (`seed_reference()`: 14 этапов,
+   пользователи, направления, продукты) — идемпотентно.
 3. Если `SEED_DEMO_DATA=true`, приложение при старте дополнительно
    заполняет демо-вузы/взаимодействия (только для пустой базы).
+
+`backend/start.sh` — вспомогательный скрипт для Render-деплоя без Docker
+(задаётся вручную как Start Command); в образ он не встроен.
 
 ### Режимы аутентификации
 
@@ -131,8 +134,8 @@ Frontend — SPA на React Router, поэтому нужен rewrite всех �
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r backend/requirements.txt
-# в backend/.env: DATABASE_URL=sqlite+aiosqlite:///./dev.db
-uvicorn backend.main:app --reload
+# .env в корне репозитория: DATABASE_URL=sqlite+aiosqlite:///./dev.db
+python scripts/run_dev.py
 
 # Frontend
 cd frontend

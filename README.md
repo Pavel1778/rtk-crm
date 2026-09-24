@@ -64,7 +64,8 @@ frontend/         React-приложение (Vite)
   src/pages/        BoardPage, ReportPage, DirectoryPage,
                     SettingsPage, LoginPage
   src/components/   MainLayout, kanban, interaction
-docs/             DEPLOYMENT.md, ARCHITECTURE.md, USER_GUIDE.md
+docs/             DEPLOYMENT.md, STACK.md, USER_GUIDE.md,
+                  architecture/, security/, pitch.md
 ```
 
 ## Локальный запуск
@@ -75,9 +76,18 @@ docs/             DEPLOYMENT.md, ARCHITECTURE.md, USER_GUIDE.md
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r backend\requirements.txt
-# в backend\.env: DATABASE_URL=sqlite+aiosqlite:///./dev.db
-uvicorn backend.main:app --reload
+# создать .env в корне репозитория:
+# DATABASE_URL=sqlite+aiosqlite:///./dev.db
+python scripts\run_dev.py
 ```
+
+`Settings` читает `.env` из текущего каталога, поэтому файл кладётся в корень
+репозитория (рядом с `README.md`), а не в `backend/`.
+
+Запускать нужно через `scripts/run_dev.py`: приложение живёт как пакет `app`
+(в контейнере — `/app`, в репозитории — `backend/`), поэтому
+`uvicorn backend.main:app` из корня падает с `ModuleNotFoundError: app`.
+Скрипт делает пакет импортируемым и поднимает uvicorn с автоперезагрузкой.
 
 Swagger: http://127.0.0.1:8000/docs
 

@@ -31,8 +31,11 @@ cd rtk-crm
 # Backend запускается по инструкции в корневом README
 pip install -r backend/requirements.txt
 
-# Инициализировать БД тестовыми данными
-docker exec rtk_backend python seed.py
+# Инициализировать БД справочниками и демо-данными
+python scripts/seed.py
+
+# В контейнере код лежит в /app, поэтому путь другой:
+docker exec rtk_backend python /app/seed.py
 
 # Проверить статус
 docker-compose ps
@@ -42,17 +45,23 @@ docker-compose ps
 
 ```
 rtk-crm/
-├── backend/           # FastAPI приложение
-│   ├── api/
-│   │   ├── models/   # SQLAlchemy модели
-│   │   ├── schemas/  # Pydantic схемы
-│   │   ├── api/      # API роутеры
-│   │   └── services/ # Бизнес-логика
-│   └── seed.py       # Тестовые данные
-├── frontend/          # React приложение
+├── backend/           # FastAPI приложение (пакет backend)
+│   ├── core/         #   настройки из окружения
+│   ├── db/           #   база и сессии
+│   ├── models/       #   SQLAlchemy модели и перечисления
+│   ├── schemas/      #   Pydantic схемы
+│   ├── api/          #   API-роутеры
+│   ├── auth/         #   JWT, пароли, RBAC
+│   ├── middleware/   #   аудит и ограничение попыток входа
+│   ├── services/     #   бизнес-логика и экспорты
+│   ├── alembic/      #   миграции
+│   └── seed.py       #   справочники и демо-данные
+├── frontend/          # React приложение (Vite)
 │   └── src/
 │       ├── components/
+│       ├── pages/
 │       └── api/
+├── config/           # общий конфиг колонок отчёта
 ├── nginx/            # Конфигурация Nginx
 ├── docs/             # Документация
 └── docker-compose.yml
@@ -60,10 +69,13 @@ rtk-crm/
 
 ## 🔐 Безопасность
 
-- Аутентификация через Keycloak (OAuth2/JWT)
-- RBAC (User, Manager, Admin)
-- Логирование действий (152-ФЗ, ФСТЭК)
-- HTTPS (через Nginx)
+- JWT Bearer-аутентификация (HS256), пароли — bcrypt.
+- RBAC (`user`, `manager`, `admin`).
+- Логирование действий (152-ФЗ, приказ ФСТЭК № 117).
+- HTTPS на целевом контуре (Nginx в Yandex Cloud).
+
+Keycloak в текущей сборке не используется: интеграция описана как
+альтернатива для целевого контура, активный режим — JWT.
 
 ## 📊 Воркфлоу (14 этапов)
 
@@ -86,12 +98,12 @@ rtk-crm/
 
 | Компонент | Технология | Версия |
 |-----------|------------|--------|
-| Backend | Python + FastAPI | 3.11 / 0.104 |
+| Backend | Python + FastAPI | 3.11 / 0.141 |
 | Frontend | React + TypeScript | 18 / 5.x |
-| Database | PostgreSQL | 16 |
-| Cache | Redis | 7 |
-| Auth | Keycloak | 24.0 |
-| Web Server | Nginx | Alpine |
+| Database | PostgreSQL (текущая: Supabase) | 16 |
+| Cache | Redis / KeyDB (отчёты, TTL 30 с) | 5.2 |
+| Auth | JWT (HS256) + bcrypt | — |
+| Web Server | Nginx (целевой контур Yandex Cloud) | Alpine |
 
 ## 📞 Контакты
 

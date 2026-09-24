@@ -356,11 +356,57 @@ read-only mount `./config:/config`. Покрыто тестами в
 
 ### Проверки
 
-- `python -m pytest` — 106 тестов, все зелёные (было 98);
+- `python -m pytest` — 110 тестов, все зелёные (было 98);
 - `ruff check backend/ tests/ scripts/ conftest.py` — All checks passed;
 - `mypy backend/` — no issues found in 40 source files;
 - `npx tsc --noEmit` — 0 ошибок; `npm run build` — успешно;
-- `python scripts/sync_public_docs.py` — идемпотентен, зеркало совпадает с `docs/`.
+- `python scripts/sync_public_docs.py` — идемпотентен, зеркало совпадает с `docs/`;
+- `bash backend/start.sh` — поднимается и отдаёт `{"status":"ok"}` на `/api/health`.
+
+## Актуализация: документация запуска (24.09, второй проход)
+
+Проверка команд из README и `docs/DEPLOYMENT.md` на исполняемость выявила,
+что документированный локальный запуск backend не работает.
+
+### 3. `uvicorn backend.main:app` не мог запуститься
+
+Приложение импортируется как пакет `app` (в контейнере — `/app`, в репозитории
+— `backend/`), при этом `backend/main.py` импортирует `app.*`. Поэтому
+`uvicorn backend.main:app` из корня падал с `ModuleNotFoundError: app`.
+Именно поэтому тесты и `scripts/_bootstrap.py` создают временный алиас
+`app -> backend`.
+
+Добавлен `scripts/run_dev.py` — делает пакет импортируемым и поднимает uvicorn
+с автоперезагрузкой (проверено: `/api/health` отвечает 200). README и
+`docs/DEPLOYMENT.md` переведены на него.
+
+### 4. `backend/start.sh` использовал тот же нерабочий путь
+
+Render-скрипт импортировал `backend.db.session` / `backend.seed` и запускал
+`uvicorn backend.main:app`. Теперь он создаёт алиас `app -> backend` (как в
+`conftest.py`) и работает через `app.*`; проверено запуском.
+
+### 5. Расхождения в документации
+
+- `docs/README.md`: дерево проекта описывало несуществующий вид
+  (`backend/api/models/`, `backend/api/api/`, отсутствие `auth/`,
+  `middleware/`, `services/`, `config/`); технологическая таблица указывала
+  FastAPI 0.104 (фактически 0.141) и активный Keycloak 24.0 (фактически JWT);
+  команда инициализации БД была `docker exec rtk_backend python seed.py` —
+  в контейнере код в `/app`, поэтому верно `python /app/seed.py` или
+  `python scripts/seed.py` из репозитория.
+- `README.md` и `docs/DEPLOYMENT.md`: `.env` предлагалось класть в `backend/`,
+  но `Settings` читает `.env` из текущего каталога — при запуске из корня файл
+  игнорировался.
+- `README.md`: ссылка на `docs/ARCHITECTURE.md`, которого нет (`docs/README.md`
+  и `docs/architecture/` вместо него).
+- `docs/DEPLOYMENT.md`: утверждалось, что `start.sh` — это CMD образа; на деле
+  CMD — `uvicorn app.main:app`, схема и справочники создаются в lifespan
+  приложения.
+- `docs/architecture/ARCHITECTURE.md`: Keycloak 24.0 был указан как активный
+  Auth Server; заменено на JWT + bcrypt с пометкой про целевой контур.
+
+За регрессиями следит `tests/test_dev_entrypoint.py`.
 
 ## Осталось
 
