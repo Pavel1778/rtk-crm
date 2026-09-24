@@ -189,3 +189,61 @@ async def test_entity_types_endpoint(client: AsyncClient) -> None:
     r = await client.get("/api/audit/entity-types", headers=headers)
     assert r.status_code == 200
     assert set(r.json()) == {"Interaction", "University"}
+
+
+async def test_audit_filters_by_date_range(client: AsyncClient) -> None:
+    admin_id = await _user_id("admin@a.ru")
+    now = datetime.utcnow()
+    await _add_log(admin_id, "CREATE", "Interaction", 1, now - timedelta(days=10))
+    await _add_log(admin_id, "CREATE", "Interaction", 2, now - timedelta(days=2))
+
+    headers = await _token(client, "admin@a.ru")
+    date_from = (now - timedelta(days=5)).isoformat()
+    r = await client.get("/api/audit", headers=headers, params={"date_from": date_from})
+    body = r.json()
+    assert body["total"] == 1
+    assert body["items"][0]["entity_id"] == 2
+
+    date_to = (now - timedelta(days=5)).isoformat()
+    r = await client.get("/api/audit", headers=headers, params={"date_to": date_to})
+    body = r.json()
+    assert body["total"] == 1
+    assert body["items"][0]["entity_id"] == 1
+
+
+async def test_audit_export_csv_requires_admin(client: AsyncClient) -> None:
+    headers = await _token(client, "kam@a.ru")
+    r = await client.get("/api/audit/export", headers=headers)
+    assert r.status_code == 403
+
+
+async def test_audit_export_csv_content(client: AsyncClient) -> None:
+    admin_id = await _user_id("admin@a.ru")
+    await _add_log(admin_id, "CREATE", "Interaction", 7)
+
+    headers = await _token(client, "admin@a.ru")
+    r = await client.get("/api/audit/export", headers=headers)
+    assert r.status_code == 200, r.text
+    assert "text/csv" in r.headers["content-type"]
+    assert "attachment" in r.headers["content-disposition"]
+    assert "Content-Disposition" in r.headers["access-control-expose-headers"]
+
+    text = r.content.decode("utf-8-sig")
+    assert text.startswith("Время;Сотрудник;Действие;Сущность;ID сущности;IP")
+    assert "Создание" in text
+    assert "Interaction" in text
+    assert "Админ" in text
+
+
+async def test_audit_export_csv_applies_filters(client: AsyncClient) -> None:
+    admin_id = await _user_id("admin@a.ru")
+    await _add_log(admin_id, "CREATE", "Interaction")
+    await _add_log(admin_id, "DELETE", "University")
+
+    headers = await _token(client, "admin@a.ru")
+    r = await client.get(
+        "/api/audit/export", headers=headers, params={"entity_type": "University"}
+    )
+    text = r.content.decode("utf-8-sig")
+    assert "University" in text
+    assert "Interaction" not in text
