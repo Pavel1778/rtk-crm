@@ -161,7 +161,7 @@ img, svg, canvas, video, table { max-width: 100%; }
 
 /* ═══════ КОНТЕНТ ═══════ */
 .page-content {
-  background: #fff;
+  background: var(--atmr-bg-container);
   border-radius: 12px;
   padding: clamp(12px, 2vw, 24px);
   min-height: 300px;
@@ -565,7 +565,7 @@ img, svg, canvas, video, table { max-width: 100%; }
   padding: 12px;
   border: 1px solid var(--atmr-border-muted);
   border-radius: 8px;
-  background: #fff;
+  background: var(--atmr-bg-container);
 }
 
 .stage-card--disabled,
@@ -619,7 +619,7 @@ img, svg, canvas, video, table { max-width: 100%; }
   justify-content: space-between;
   gap: 16px;
   padding: 16px clamp(12px, 3vw, 32px);
-  background: #fff;
+  background: var(--atmr-bg-container);
   border-top: 1px solid var(--atmr-border-soft);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
 }
