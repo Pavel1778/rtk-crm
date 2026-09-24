@@ -252,7 +252,11 @@ class AttachedFile(Base, TimestampMixin):
     file_path: Mapped[str] = mapped_column(String(500))
     size: Mapped[int] = mapped_column(Integer)
     mime_type: Mapped[str] = mapped_column(String(100))
-    uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # nullable: FK объявлен с ondelete="SET NULL", значит при удалении
+    # пользователя ссылка обнуляется. NOT NULL здесь ломает удаление.
+    uploaded_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
     interaction: Mapped["Interaction"] = relationship(back_populates="files")
     uploader: Mapped["User | None"] = relationship()
@@ -264,7 +268,9 @@ class ActionLog(Base, TimestampMixin):
     __tablename__ = "action_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     action: Mapped[str] = mapped_column(String(50))  # CREATE, UPDATE, DELETE
     entity_type: Mapped[str] = mapped_column(String(50))  # Interaction, University, etc.
     entity_id: Mapped[int] = mapped_column(Integer)

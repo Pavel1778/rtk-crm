@@ -36,6 +36,14 @@ _REQUIRED_INDEXES: dict[str, tuple[str, tuple[str, ...]]] = {
     "ix_interactions_scope": ("interactions", ("scope",)),
 }
 
+# Колонки, которые обязаны допускать NULL. FK на `users.id` объявлены с
+# ondelete="SET NULL", поэтому NOT NULL в старой схеме ломает удаление
+# пользователя: Postgres пытается обнулить ссылку и нарушает ограничение.
+_REQUIRED_NULLABLE: dict[str, tuple[str, ...]] = {
+    "attached_files": ("uploaded_by",),
+    "action_logs": ("user_id",),
+}
+
 # Устаревшая глобальная уникальность и её замена на составную по scope.
 # Ключ — таблица, значение — список пар: (старые колонки, новые колонки).
 _UNIQUE_REWRITE: dict[str, list[tuple[tuple[str, ...], tuple[str, ...]]]] = {
@@ -79,7 +87,24 @@ def _rebuild_sqlite(conn: Connection, table: str) -> None:
     existing_cols = {row["name"] for row in inspect(conn).get_columns(table)}
     tmp = f"{table}__schema_sync"
 
-    tmp_table = model_table.to_metadata(MetaData(), name=tmp)
+    # Временный MetaData должен содержать таблицы, на которые ссылаются FK
+    # пересоздаваемой таблицы: иначе CreateTable не соберёт DDL.
+    tmp_metadata = MetaData()
+    referenced: set[str] = set()
+    pending = [fk.target_fullname.split(".")[0] for fk in model_table.foreign_keys]
+    while pending:
+        name = pending.pop()
+        if name in referenced or name == table or name not in Base.metadata.tables:
+            continue
+        referenced.add(name)
+        pending.extend(
+            fk.target_fullname.split(".")[0]
+            for fk in Base.metadata.tables[name].foreign_keys
+        )
+    for name in sorted(referenced):
+        Base.metadata.tables[name].to_metadata(tmp_metadata)
+
+    tmp_table = model_table.to_metadata(tmp_metadata, name=tmp)
     conn.execute(text(f'DROP TABLE IF EXISTS "{tmp}"'))
     conn.execute(CreateTable(tmp_table))
     for index in tmp_table.indexes:
@@ -128,6 +153,33 @@ def _rewrite_uniques(conn: Connection, insp, table: str) -> list[str]:
     return applied
 
 
+def _nullable_relaxed(conn: Connection, insp, table: str) -> list[str]:
+    """Снимает NOT NULL с колонок, которые по модели допускают NULL."""
+    applied: list[str] = []
+    columns = _REQUIRED_NULLABLE.get(table)
+    if not columns or not insp.has_table(table):
+        return applied
+
+    actual = {row["name"]: row for row in insp.get_columns(table)}
+    to_relax = [
+        name
+        for name in columns
+        if name in actual and not actual[name].get("nullable", True)
+    ]
+    if not to_relax:
+        return applied
+
+    if conn.dialect.name == "sqlite":
+        # SQLite не умеет ALTER COLUMN: пересоздаём таблицу по модели.
+        _rebuild_sqlite(conn, table)
+        return [f"{table}.{name} NULL" for name in to_relax]
+
+    for name in to_relax:
+        conn.execute(text(f'ALTER TABLE "{table}" ALTER COLUMN "{name}" DROP NOT NULL'))
+        applied.append(f"{table}.{name} NULL")
+    return applied
+
+
 def _apply(conn: Connection) -> list[str]:
     insp = inspect(conn)
     applied: list[str] = []
@@ -141,6 +193,9 @@ def _apply(conn: Connection) -> list[str]:
                 continue
             conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {column} {ddl}'))
             applied.append(f"{table}.{column}")
+
+    for table in _REQUIRED_NULLABLE:
+        applied.extend(_nullable_relaxed(conn, insp, table))
 
     for table in _UNIQUE_REWRITE:
         if insp.has_table(table):
