@@ -13,13 +13,31 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-# В контейнере код лежит в /app (build context — backend/), а канонический
-# конфиг остаётся в корне репозитория и монтируется в /config. Поэтому
-# проверяем несколько кандидатов, а не один относительный путь.
-_CANDIDATES = (
-    Path(__file__).resolve().parents[2] / "config" / "report_columns.json",
-    Path("/config/report_columns.json"),
-)
+# Конфиг колонок отчёта читается на импорте модуля, поэтому путь обязан
+# существовать в любом окружении. В контейнере код лежит в /app (build
+# context — backend/), и корневой config/ в образ не попадает: при деплое на
+# Render (контекст backend/) приложение падало с FileNotFoundError на
+# /config/report_columns.json. Поэтому канонический файл дублируется внутрь
+# backend/config/ (см. scripts/sync_report_columns.py) и проверяется первым —
+# он гарантированно есть и в образе, и в репозитории.
+_CONFIG_NAME = "report_columns.json"
+
+
+def config_candidates(module_file: str | Path) -> tuple[Path, ...]:
+    """Пути-кандидаты к конфигу для конкретного расположения модуля.
+
+    Порядок: копия внутри пакета (`backend/config/`), корневой `config/`
+    репозитория, затем смонтированный `/config` в контейнере Compose.
+    """
+    module_path = Path(module_file).resolve()
+    return (
+        module_path.parents[1] / "config" / _CONFIG_NAME,
+        module_path.parents[2] / "config" / _CONFIG_NAME,
+        Path("/config") / _CONFIG_NAME,
+    )
+
+
+_CANDIDATES = config_candidates(__file__)
 
 
 def _config_path() -> Path:

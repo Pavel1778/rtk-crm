@@ -155,7 +155,7 @@ production Render/Supabase.
 | `Content-Disposition` и CORS expose headers | `✅ OK` | `backend/api/reports.py:351-359,388-397,425-433`; `backend/main.py:63-70` |
 | ASCII-имена `rtk-report-YYYYMMDD.ext` | `✅ OK` | `backend/api/reports.py:33-34` |
 | Bearer-защита `/api/reports*` | `✅ OK` | `backend/api/reports.py:74-85,326-336,363-373,400-410`; прямой запрос без токена ожидаемо даёт 401 |
-| In-memory экспорт | `✅ OK` | `scripts/test_export.py`; получены XLSX 5 KB, XLS 5 KB, PDF 47 KB; XLSX читается `openpyxl`, PDF имеет `%PDF` и DejaVu |
+| In-memory экспорт | `✅ OK` | `scripts/export_smoke.py`; получены XLSX 5 KB, XLS 5 KB, PDF 47 KB; XLSX читается `openpyxl`, PDF имеет `%PDF` и DejaVu |
 
 ## 2. Данные графиков и фильтрация
 
@@ -407,6 +407,38 @@ Render-скрипт импортировал `backend.db.session` / `backend.see
   Auth Server; заменено на JWT + bcrypt с пометкой про целевой контур.
 
 За регрессиями следит `tests/test_dev_entrypoint.py`.
+
+## Критично: падение деплоя на Render (24.09)
+
+Прод падал при старте с `FileNotFoundError: '/config/report_columns.json'` и
+`Exited with status 1`. Разбор:
+
+- `backend/services/report_columns.py` читает конфиг **на импорте модуля**;
+- Docker/Render собирают образ с build context `backend/`, поэтому корневой
+  `config/` в образ не попадает;
+- в Compose путь закрывался монтированием `./config:/config:ro`, а на Render
+  монтирования нет — `/config/report_columns.json` отсутствует, импорт
+  `app.main` падает, контейнер завершается с кодом 1.
+
+Исправление:
+
+- канонический конфиг дублируется в `backend/config/report_columns.json`
+  (`scripts/sync_report_columns.py`); копия попадает в образ;
+- `report_columns.config_candidates()` проверяет пути по порядку:
+  bundled `backend/config/` → корневой `config/` → `/config`;
+- `REPORT_COLUMNS_CONFIG` по-прежнему переопределяет путь.
+
+Проверено симуляцией layout образа (`app/` = только содержимое `backend/`,
+без корневого `config/`): импорт `app.main` и `PDF_COLUMNS` проходят.
+Регрессии — `tests/test_report_columns.py` (bundled-копия, порядок
+кандидатов, идемпотентность синхронизации).
+
+Дополнительно исправлено:
+
+- `scripts/test_export.py` → `scripts/export_smoke.py`: скрипт назывался
+  `test_*` (pytest его не собирает, т.к. лежит вне `tests/`) и падал с
+  `ModuleNotFoundError: app` — импортировал `backend.services.*` без
+  bootstrap-алиаса. Теперь использует `ensure_app_importable()` и запускается.
 
 ## Осталось
 

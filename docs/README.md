@@ -45,7 +45,7 @@ docker-compose ps
 
 ```
 rtk-crm/
-├── backend/           # FastAPI приложение (пакет backend)
+├── backend/           # FastAPI приложение (пакет app в контейнере)
 │   ├── core/         #   настройки из окружения
 │   ├── db/           #   база и сессии
 │   ├── models/       #   SQLAlchemy модели и перечисления
@@ -54,18 +54,27 @@ rtk-crm/
 │   ├── auth/         #   JWT, пароли, RBAC
 │   ├── middleware/   #   аудит и ограничение попыток входа
 │   ├── services/     #   бизнес-логика и экспорты
+│   ├── config/       #   копия конфига колонок (попадает в образ)
 │   ├── alembic/      #   миграции
-│   └── seed.py       #   справочники и демо-данные
+│   ├── seed.py       #   справочники и демо-данные
+│   └── start.sh      #   старт на Render без Docker
 ├── frontend/          # React приложение (Vite)
 │   └── src/
 │       ├── components/
 │       ├── pages/
 │       └── api/
-├── config/           # общий конфиг колонок отчёта
+├── config/           # канонический конфиг колонок отчёта
+├── scripts/          # утилиты (seed, sync, smoke, dev-сервер)
 ├── nginx/            # Конфигурация Nginx
+├── infra/            # Контур Yandex Cloud
 ├── docs/             # Документация
 └── docker-compose.yml
 ```
+
+Канонический `config/report_columns.json` дублируется в
+`backend/config/report_columns.json` скриптом `scripts/sync_report_columns.py`:
+backend собирается с build context `backend/`, поэтому корневой `config/` в
+образ не попадает и без копии приложение падает на старте.
 
 ## 🔐 Безопасность
 
