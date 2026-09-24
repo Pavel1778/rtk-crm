@@ -143,3 +143,60 @@ def test_pdf_column_count_matches_shared_config() -> None:
     from app.services.excel_export import PDF_COLUMNS
 
     assert len(PDF_COLUMNS) == len(load_report_columns())
+
+
+def test_backend_config_copy_matches_canonical() -> None:
+    """Копия в backend/config/ совпадает с корневым конфигом.
+
+    Backend собирается с build context `backend/`, поэтому этот файл попадает
+    в образ и конфиг не теряется при деплое на Render.
+    """
+    backend_copy = Path(__file__).resolve().parents[1] / "backend" / "config" / "report_columns.json"
+    assert backend_copy.is_file(), "запустите scripts/sync_report_columns.py"
+    assert backend_copy.read_bytes() == CONFIG_PATH.read_bytes()
+
+
+def test_container_layout_prefers_bundled_config(tmp_path) -> None:
+    """В образе (backend/ -> /app) первым кандидатом идёт bundled backend/config.
+
+    Корневой config/ в образ не попадает, смонтированного /config на Render
+    тоже нет — поэтому рабочей должна быть копия внутри пакета.
+    """
+    from app.services.report_columns import config_candidates
+
+    module_file = tmp_path / "app" / "services" / "report_columns.py"
+    candidates = config_candidates(module_file)
+    assert candidates[0] == tmp_path / "app" / "config" / "report_columns.json"
+    assert Path("/config/report_columns.json") in candidates
+
+
+def test_bundled_config_used_when_root_missing(tmp_path) -> None:
+    """Если существует только bundled-копия, выбирается именно она."""
+    from app.services.report_columns import config_candidates
+
+    module_file = tmp_path / "app" / "services" / "report_columns.py"
+    bundled = tmp_path / "app" / "config" / "report_columns.json"
+    bundled.parent.mkdir(parents=True)
+    bundled.write_text(CONFIG_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+
+    resolved = next(c for c in config_candidates(module_file) if c.exists())
+    assert resolved == bundled
+    assert json.loads(resolved.read_text(encoding="utf-8"))["columns"]
+
+
+def test_sync_script_is_idempotent() -> None:
+    import subprocess
+    import sys
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "sync_report_columns.py"
+    before = (Path(__file__).resolve().parents[1] / "backend" / "config" / "report_columns.json").read_bytes()
+    for _ in range(2):
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            cwd=script.parents[1],
+        )
+        assert result.returncode == 0, result.stderr
+    after = (Path(__file__).resolve().parents[1] / "backend" / "config" / "report_columns.json").read_bytes()
+    assert before == after

@@ -1,4 +1,12 @@
-"""Проверка генераторов XLSX, XLS и PDF без запуска приложения."""
+"""Проверка генераторов XLSX, XLS и PDF без запуска приложения.
+
+Запуск из корня репозитория:
+
+    python scripts/export_smoke.py
+
+Приложение импортируется как пакет `app` (в репозитории — `backend/`),
+поэтому используется тот же bootstrap-алиас, что и в остальных скриптах.
+"""
 
 import sys
 from io import BytesIO
@@ -7,10 +15,12 @@ from zipfile import ZipFile
 
 from openpyxl import load_workbook
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _bootstrap import ensure_app_importable  # noqa: E402
 
-from backend.services.excel_export import generate_pdf, generate_xls, generate_xlsx
+ensure_app_importable()
+
+from app.services.excel_export import generate_pdf, generate_xls, generate_xlsx  # noqa: E402
 
 SAMPLE = [
     {
