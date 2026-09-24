@@ -19,6 +19,7 @@ from app.db.schema_sync import ensure_schema
 from app.db.session import SessionLocal, create_tables, engine
 from app.middleware.audit import audit_middleware
 from app.middleware.rate_limit import login_rate_limit_middleware
+from app.middleware.security_headers import security_headers_middleware
 from app.schemas.entities import HealthResponse
 from app.services.report_cache import close_report_cache
 from app.services.scheduler import start_scheduler, stop_scheduler
@@ -101,6 +102,11 @@ app.add_middleware(
     expose_headers=["Content-Disposition", "Content-Length"],
     max_age=3600,
 )
+
+# Заголовки безопасности ставим последними, то есть самым внешним слоем:
+# тогда они попадают и на ответы, которые формируют внутренние middleware
+# (например, 429 из rate limiting или ошибки доступа из аудита).
+app.middleware("http")(security_headers_middleware)
 
 # Метрики Prometheus (RPS, latency, error rate) на /metrics. Инструментатор
 # не является обязательной зависимостью: без пакета маршрут не появляется.

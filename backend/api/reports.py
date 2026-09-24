@@ -13,6 +13,7 @@ from app.models.entities import (
     User,
     WorkflowStageRef,
 )
+from app.models.enums import WorkflowScope
 from app.schemas.entities import (
     ReportDynamicsPoint,
     ReportMetric,
@@ -45,8 +46,11 @@ def _report_filters(
     assigned_kam_id: int | None,
     date_from: date | None,
     date_to: date | None,
+    scope: WorkflowScope | None = None,
 ) -> list:
     filters: list = [Interaction.is_active.is_(True)]
+    if scope is not None:
+        filters.append(Interaction.scope == scope)
     if stage_id is not None:
         filters.append(Interaction.stage_id == stage_id)
     if university_id is not None:
@@ -81,6 +85,7 @@ async def get_report(
     product_id: int | None = Query(default=None),
     direction_id: int | None = Query(default=None),
     assigned_kam_id: int | None = Query(default=None),
+    scope: WorkflowScope | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -95,7 +100,7 @@ async def get_report(
     cache_key = (
         "reports:v1:"
         f"{stage_id}:{university_id}:{product_id}:{direction_id}:"
-        f"{assigned_kam_id}:{date_from}:{date_to}"
+        f"{assigned_kam_id}:{scope}:{date_from}:{date_to}"
     )
     cached = await get_report_cache(cache_key)
     if cached is not None:
@@ -109,6 +114,7 @@ async def get_report(
         assigned_kam_id,
         date_from,
         date_to,
+        scope,
     )
 
     total_universities = await db.scalar(
@@ -149,12 +155,13 @@ async def get_report(
         ),
     ]
 
+    stage_query = select(WorkflowStageRef).where(
+        WorkflowStageRef.is_active.is_(True)
+    )
+    if scope is not None:
+        stage_query = stage_query.where(WorkflowStageRef.scope == scope)
     stages = list(
-        await db.scalars(
-            select(WorkflowStageRef)
-            .where(WorkflowStageRef.is_active.is_(True))
-            .order_by(WorkflowStageRef.order)
-        )
+        await db.scalars(stage_query.order_by(WorkflowStageRef.scope, WorkflowStageRef.order))
     )
     rows = (
         await db.execute(
@@ -226,6 +233,7 @@ async def get_report(
         assigned_kam_id,
         dynamics_start,
         dynamics_end,
+        scope,
     )
     dynamics_rows = (
         await db.execute(
@@ -297,6 +305,7 @@ async def report_preview(
     product_id: int | None = Query(default=None),
     direction_id: int | None = Query(default=None),
     assigned_kam_id: int | None = Query(default=None),
+    scope: WorkflowScope | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=1000),
@@ -317,6 +326,7 @@ async def report_preview(
         assigned_kam_id,
         date_from,
         date_to,
+        scope,
     )
     return data[:limit]
 
@@ -340,6 +350,7 @@ async def _build_interaction_data(
     assigned_kam_id: int | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    scope: WorkflowScope | None = None,
 ) -> list[dict]:
     """Построение данных взаимодействий для экспорта."""
     filters = _report_filters(
@@ -350,6 +361,7 @@ async def _build_interaction_data(
         assigned_kam_id,
         date_from,
         date_to,
+        scope,
     )
 
     rows = (
@@ -382,7 +394,7 @@ async def _build_interaction_data(
         product_name,
         stage_name,
         assigned_kam_name,
-        scope,
+        stage_scope,
         direction_id,
     ) in rows:
         data.append({
@@ -399,7 +411,7 @@ async def _build_interaction_data(
             "is_active": interaction.is_active,
             # Ключи связи с БД: id сущностей и внешние ключи. Нужны LMS/CMS,
             # чтобы сопоставить выгрузку с записями на своей стороне.
-            "scope": scope.value if hasattr(scope, "value") else scope,
+            "scope": stage_scope.value if hasattr(stage_scope, "value") else stage_scope,
             "university_id": interaction.university_id,
             "product_id": interaction.product_id,
             "stage_id": interaction.stage_id,
@@ -417,6 +429,7 @@ async def export_xlsx(
     product_id: int | None = Query(default=None),
     direction_id: int | None = Query(default=None),
     assigned_kam_id: int | None = Query(default=None),
+    scope: WorkflowScope | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -432,6 +445,7 @@ async def export_xlsx(
         assigned_kam_id,
         date_from,
         date_to,
+        scope,
     )
     xlsx_data = generate_xlsx(data)
 
@@ -451,6 +465,7 @@ async def export_xls(
     product_id: int | None = Query(default=None),
     direction_id: int | None = Query(default=None),
     assigned_kam_id: int | None = Query(default=None),
+    scope: WorkflowScope | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -466,6 +481,7 @@ async def export_xls(
         assigned_kam_id,
         date_from,
         date_to,
+        scope,
     )
     xls_data = generate_xls(data)
 
@@ -485,6 +501,7 @@ async def export_pdf(
     product_id: int | None = Query(default=None),
     direction_id: int | None = Query(default=None),
     assigned_kam_id: int | None = Query(default=None),
+    scope: WorkflowScope | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -500,6 +517,7 @@ async def export_pdf(
         assigned_kam_id,
         date_from,
         date_to,
+        scope,
     )
     pdf_data = generate_pdf(data)
 
@@ -519,6 +537,7 @@ async def export_json(
     product_id: int | None = Query(default=None),
     direction_id: int | None = Query(default=None),
     assigned_kam_id: int | None = Query(default=None),
+    scope: WorkflowScope | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -539,6 +558,7 @@ async def export_json(
         assigned_kam_id,
         date_from,
         date_to,
+        scope,
     )
 
     interaction_ids = [item["id"] for item in data]
@@ -573,6 +593,7 @@ async def export_json(
             "product_id": product_id,
             "direction_id": direction_id,
             "assigned_kam_id": assigned_kam_id,
+            "scope": scope.value if scope else None,
             "date_from": date_from.isoformat() if date_from else None,
             "date_to": date_to.isoformat() if date_to else None,
         },

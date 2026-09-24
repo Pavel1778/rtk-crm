@@ -448,3 +448,35 @@ Render-скрипт импортировал `backend.db.session` / `backend.see
 2. Отдельно проверить production latency на Render/Supabase; локальный target достигнут.
 3. При необходимости заменить JWT на Keycloak/добавить явно документированный
    `MOCK_MODE`, если это обязательное условие комиссии, а не альтернативный вариант.
+
+## Прод-инцидент 24.09: схема БД без `scope` (исправлено)
+
+Симптом (лог Render): `Ошибка загрузки демо-данных: column
+workflow_stages.scope does not exist`; прод-база пустая; `GET /` → 404.
+
+Причина: прод-схема создана ранней версией приложения через
+`create_all(checkfirst=True)`, который существующие таблицы не изменяет.
+Alembic-миграция схему описывала, но не применялась: `alembic.ini` лежит в
+корне репозитория, а Docker build context — `backend/`, поэтому CLI в образе
+недоступен. В прод-БД отсутствовали `workflow_stages.scope`,
+`interactions.scope`, а уникальность задавалась глобально по `code`/`order`.
+
+Исправление (коммит `5cf3855`, PR #13):
+
+| Изменение | Что делает |
+|---|---|
+| `backend/db/schema_sync.py` | идемпотентная сверка схемы с моделями: добавляет `scope` (`DEFAULT 'b2b'`) и индексы, заменяет глобальные UNIQUE на составные `(scope, code)`/`(scope, order)`; SQLite — пересоздание с копированием данных, Postgres — `ALTER TABLE`; помечает головную ревизию Alembic |
+| `backend/main.py` | `ensure_schema()` в `lifespan`; `GET /` отдаёт ссылки вместо 404 |
+| `backend/start.sh` | тот же порядок инициализации без Docker |
+| `README.md`, `docs/DEPLOYMENT.md`, `LoginPage.tsx` | реальный демо-аккаунт КАМ `kam@rtk.ru`/`kam123` вместо несуществовавшего `user@rtk.ru` |
+
+Проверка после деплоя (24.09, Render/Supabase):
+
+- `GET /` → 200 `{"service":"RTK CRM",...}`;
+- `GET /healthz` → 200; `GET /readyz` → 200 (`database: ok`);
+- этапы: 18 (14 B2B + 4 B2C);
+- вузы: 5; взаимодействия: 7 — демо-данные загружены.
+
+Локальная верификация: 125 тестов зелёные, `ruff`/`mypy` чисто, `tsc` без
+ошибок; E2E на legacy-схеме — сверка применена, `compare_metadata` без
+расхождений.
