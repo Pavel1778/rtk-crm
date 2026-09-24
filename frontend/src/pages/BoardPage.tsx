@@ -250,6 +250,20 @@ export default function BoardPage() {
     void listProducts().then(setProducts).catch(() => undefined);
   }, []);
 
+  // На телефоне показываем первый этап, а не «все»: одна колонка читается
+  // лучше длинной простыни. Флаг touched не даёт вернуть выбор обратно,
+  // если пользователь сам выбрал «Все этапы».
+  const [stageTouched, setStageTouched] = useState(false);
+  useEffect(() => {
+    if (
+      !screens.md &&
+      !stageTouched &&
+      (data?.columns.length ?? 0) > 0
+    ) {
+      setMobileStage(data!.columns[0].stage.id);
+    }
+  }, [screens.md, stageTouched, data]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
@@ -341,13 +355,18 @@ export default function BoardPage() {
               style={{ minWidth: 240 }}
             />
           </Col>
-          <Col>
-            <MobileStageFilter
-              columns={columns}
-              value={mobileStage}
-              onChange={setMobileStage}
-            />
-          </Col>
+          {!screens.md && (
+            <Col flex="auto" style={{ minWidth: 0 }}>
+              <MobileStageFilter
+                columns={columns}
+                value={mobileStage}
+                onChange={(next) => {
+                  setStageTouched(true);
+                  setMobileStage(next);
+                }}
+              />
+            </Col>
+          )}
           <Col>
             <Button icon={<ReloadOutlined />} onClick={load}>
               Обновить
@@ -507,7 +526,7 @@ function CreateInteractionModal({
         right: 24,
         width: 340,
         zIndex: 1000,
-        boxShadow: '0 8px 24px rgba(28, 29, 34, 0.12)',
+        boxShadow: 'var(--atmr-shadow-popover)',
       }}
     >
       <Space direction="vertical" size={12} style={{ width: '100%' }}>

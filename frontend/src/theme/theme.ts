@@ -50,40 +50,71 @@ export const antTheme: ThemeConfig = {
 };
 
 /**
- * Тёмная вариация «Атомаро». Значения совпадают с CSS-переменными
- * `.Theme_root_rtk_purple_dark`, чтобы antd-компоненты и собственные
- * стили не расходились по палитре.
+ * Тёмная вариация «Атомаро».
+ *
+ * Правила тёмной темы:
+ * - фон не чистый чёрный: #17181C снижает контраст с текстом и усталость глаз;
+ * - глубина передаётся светлотой поверхности (#17181C → #1F2025 → #2A2B32),
+ *   а не тенями, которые на тёмном фоне не читаются;
+ * - акценты десатурированы, иначе неонят и «размываются» на тёмном фоне;
+ * - текст и акценты проверены на контраст WCAG AA (≥ 4.5:1) от каждой
+ *   поверхности, включая всплывающие слои (#2A2B32).
+ *
+ * Значения совпадают с CSS-переменными `:root[data-theme='dark']`,
+ * чтобы antd-компоненты и собственные стили не расходились по палитре.
  */
+export const darkPalette = {
+  bgPage: '#17181C',
+  bgContainer: '#1F2025',
+  bgElevated: '#2A2B32',
+  bgSoft: '#26272E',
+  text: '#E6E6EB',
+  textSecondary: '#A9A9B4',
+  border: '#33343B',
+  borderSoft: '#2C2D34',
+  accent: '#A78BFA',
+  accentHover: '#B9A5F5',
+  accentSoft: '#2E2743',
+  success: '#4FB477',
+  warning: '#D9A441',
+  error: '#E8808A',
+  info: '#7FA6E8',
+} as const;
+
 export const antDarkTheme: ThemeConfig = {
   ...antTheme,
   token: {
     ...atmrTokens,
-    colorPrimary: '#A88BFA',
-    colorInfo: '#A88BFA',
-    colorText: '#FFFFFF',
-    colorTextSecondary: '#B8B8C0',
-    colorBorder: '#474850',
-    colorBorderSecondary: '#3A3B42',
-    colorBgLayout: '#1C1D22',
-    colorBgContainer: '#2A2B31',
-    colorBgElevated: '#2A2B31',
+    colorPrimary: darkPalette.accent,
+    colorInfo: darkPalette.accent,
+    colorSuccess: darkPalette.success,
+    colorWarning: darkPalette.warning,
+    colorError: darkPalette.error,
+    colorText: darkPalette.text,
+    colorTextSecondary: darkPalette.textSecondary,
+    colorBorder: darkPalette.border,
+    colorBorderSecondary: darkPalette.borderSoft,
+    colorBgLayout: darkPalette.bgPage,
+    colorBgContainer: darkPalette.bgContainer,
+    colorBgElevated: darkPalette.bgElevated,
+    colorLink: darkPalette.accent,
   },
   components: {
     ...antTheme.components,
     Card: {
       boxShadowTertiary: 'none',
-      colorBorderSecondary: '#3A3B42',
+      colorBorderSecondary: darkPalette.borderSoft,
     },
     Table: {
-      headerBg: '#33343B',
+      headerBg: darkPalette.bgSoft,
     },
     Layout: {
-      headerBg: '#2A2B31',
-      bodyBg: '#1C1D22',
+      headerBg: darkPalette.bgContainer,
+      bodyBg: darkPalette.bgPage,
     },
     Menu: {
-      itemSelectedBg: '#3A2E5C',
-      itemSelectedColor: '#A88BFA',
+      itemSelectedBg: darkPalette.accentSoft,
+      itemSelectedColor: darkPalette.accentHover,
     },
   },
 };
