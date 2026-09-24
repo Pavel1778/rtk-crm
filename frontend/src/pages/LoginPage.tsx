@@ -56,7 +56,7 @@ export default function LoginPage() {
               id="login-email"
               name="email"
               prefix={<MailOutlined />} 
-              placeholder="user@rtk.ru" 
+              placeholder="kam@rtk.ru" 
               size="large"
               autoComplete="email"
             />
