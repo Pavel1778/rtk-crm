@@ -322,6 +322,7 @@ export type ReportFilters = {
   product_id?: number;
   direction_id?: number;
   assigned_kam_id?: number;
+  scope?: WorkflowScope;
   date_from?: string;
   date_to?: string;
 };

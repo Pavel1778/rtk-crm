@@ -58,7 +58,9 @@ async def set_report_cache(key: str, value: str, ttl: int = 30) -> None:
 
 
 async def invalidate_report_cache() -> None:
-    pattern = "reports:v1:*"
+    # Паттерн покрывает все версии ключей отчёта: жёсткая привязка к
+    # конкретной версии ломает инвалидацию после смены префикса.
+    pattern = "reports:*"
     client = _client()
     if client is not None:
         try:

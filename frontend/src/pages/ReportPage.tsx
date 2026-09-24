@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card, Empty, Result, Skeleton, message } from 'antd';
+import { Card, Empty, Result, Segmented, Skeleton, message } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -19,7 +19,7 @@ import MetricCard from '../components/dashboard/MetricCard';
 import ChartExportButtons from '../components/dashboard/ChartExportButtons';
 import DateRangeFilter, { type DateRangeValue } from '../components/DateRangeFilter';
 import ReportTable from '../components/report/ReportTable';
-import type { ReportResponse, ReportTableRow } from '../types';
+import type { ReportResponse, ReportTableRow, WorkflowScope } from '../types';
 
 const COLORS = [
   'var(--atmr-accent-default)',
@@ -97,17 +97,22 @@ export default function ReportPage() {
   const [exporting, setExporting] = useState<string | null>(null);
   const [draftDates, setDraftDates] = useState<DateRangeValue>({});
   const [filters, setFilters] = useState<ReportFilters>({});
+  // Воронка — часть фильтра отчёта: у B2B и B2C разные наборы этапов,
+  // и без явного scope график смешивал бы обе воронки.
+  const [scope, setScope] = useState<WorkflowScope>('b2b');
   const stageChartRef = useRef<HTMLDivElement>(null);
   const productChartRef = useRef<HTMLDivElement>(null);
   const dynamicsChartRef = useRef<HTMLDivElement>(null);
 
+  const appliedFilters: ReportFilters = { ...filters, scope };
+
   const reportQuery = useQuery<ReportResponse>({
-    queryKey: ['report', filters],
-    queryFn: () => getReport(filters),
+    queryKey: ['report', appliedFilters],
+    queryFn: () => getReport(appliedFilters),
   });
   const previewQuery = useQuery<ReportTableRow[]>({
-    queryKey: ['report-preview', filters],
-    queryFn: () => getReportPreview(filters),
+    queryKey: ['report-preview', appliedFilters],
+    queryFn: () => getReportPreview(appliedFilters),
   });
   const { data, isError: error, isLoading: loading } = reportQuery;
   const stageChartHeight = Math.max(
@@ -131,7 +136,7 @@ export default function ReportPage() {
   const handleExport = async (format: 'xlsx' | 'xls' | 'pdf') => {
     setExporting(format);
     try {
-      const result = await downloadReport(format, filters);
+      const result = await downloadReport(format, appliedFilters);
       downloadBlob(result.blob, result.filename);
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось скачать отчёт'));
@@ -195,6 +200,15 @@ export default function ReportPage() {
         </div>
       </div>
       <div className="responsive-form report-filters" role="search" aria-label="Фильтры отчёта">
+        <Segmented
+          id="report-scope"
+          value={scope}
+          onChange={(value) => setScope(value as WorkflowScope)}
+          options={[
+            { value: 'b2b', label: 'B2B' },
+            { value: 'b2c', label: 'B2C' },
+          ]}
+        />
         <DateRangeFilter
           id="report-date-range"
           value={draftDates}
