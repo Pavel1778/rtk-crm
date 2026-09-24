@@ -129,10 +129,16 @@ async def get_report(
         )
     ) or 0
     open_actions = await db.scalar(
-        select(func.count(Action.id)).where(Action.is_completed.is_(False))
+        select(func.count(Action.id)).where(
+            Action.is_completed.is_(False),
+            Action.interaction_id.in_(select(Interaction.id).where(*filters)),
+        )
     ) or 0
     done_actions = await db.scalar(
-        select(func.count(Action.id)).where(Action.is_completed.is_(True))
+        select(func.count(Action.id)).where(
+            Action.is_completed.is_(True),
+            Action.interaction_id.in_(select(Interaction.id).where(*filters)),
+        )
     ) or 0
 
     metrics = [

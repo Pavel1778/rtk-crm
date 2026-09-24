@@ -25,7 +25,7 @@ export default function MetricCard({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        background: '#fff',
+        background: 'var(--atmr-bg-container)',
         border: '1px solid var(--atmr-border-soft)',
         borderRadius: 12,
         padding: 'clamp(12px, 2vw, 20px)',

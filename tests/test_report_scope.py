@@ -11,6 +11,7 @@ from app.auth.security import create_access_token, hash_password
 from app.db.session import SessionLocal, create_tables
 from app.main import app
 from app.models.entities import (
+    Action,
     Interaction,
     ITProduct,
     University,
@@ -31,7 +32,7 @@ def _client() -> AsyncClient:
 async def _prepare_db():
     await create_tables()
     async with SessionLocal() as session:
-        for model in (Interaction, ITProduct, WorkflowStageRef, University, User):
+        for model in (Action, Interaction, ITProduct, WorkflowStageRef, University, User):
             await session.execute(delete(model))
         await session.commit()
         await seed_reference(session)
@@ -60,6 +61,50 @@ async def _university(name: str) -> int:
         await session.commit()
         await session.refresh(university)
         return university.id
+
+
+async def test_report_actions_follow_scope() -> None:
+    """Счётчики задач относятся только к взаимодействиям выбранной воронки."""
+    token = await _admin_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    b2b_university = await _university("B2B-Вуз")
+    b2c_university = await _university("B2C-Физлицо")
+
+    async with _client() as client:
+        b2b_resp = await client.post(
+            "/api/interactions",
+            json={"university_id": b2b_university, "scope": "b2b"},
+            headers=headers,
+        )
+        b2c_resp = await client.post(
+            "/api/interactions",
+            json={"university_id": b2c_university, "scope": "b2c"},
+            headers=headers,
+        )
+
+    b2b_id = b2b_resp.json()["id"]
+    b2c_id = b2c_resp.json()["id"]
+    async with SessionLocal() as session:
+        session.add(Action(interaction_id=b2b_id, title="Задача B2B", is_completed=False))
+        session.add(Action(interaction_id=b2b_id, title="Закрытая B2B", is_completed=True))
+        session.add(Action(interaction_id=b2c_id, title="Задача B2C", is_completed=False))
+        await session.commit()
+
+    async with _client() as client:
+        b2b = (
+            await client.get("/api/reports", params={"scope": "b2b"}, headers=headers)
+        ).json()
+        b2c = (
+            await client.get("/api/reports", params={"scope": "b2c"}, headers=headers)
+        ).json()
+
+    def metric(report: dict, key: str) -> int:
+        return next(m for m in report["metrics"] if m["key"] == key)["value"]
+
+    assert metric(b2b, "actions_open") == 1
+    assert metric(b2b, "actions_done") == 1
+    assert metric(b2c, "actions_open") == 1
+    assert metric(b2c, "actions_done") == 0
 
 
 async def test_report_stage_list_follows_scope() -> None:
