@@ -74,8 +74,8 @@ RTK CRM — это B2B CRM-система для менеджеров Росте
 
 ### Инфраструктура
 - **Контейнеризация**: Docker, Docker Compose
-- **Web Server**: Nginx (Alpine)
-- **Auth Server**: Keycloak 24.0
+- **Web Server**: Nginx (Alpine) — целевой контур Yandex Cloud
+- **Auth**: JWT (HS256) + bcrypt; Keycloak — вариант целевого контура
 
 ### Почему именно этот стек
 
@@ -176,9 +176,12 @@ backend/
 
 ### Аутентификация
 
-- Keycloak (OAuth2 / OpenID Connect)
-- JWT токены (access + refresh)
+- JWT Bearer-токены (HS256), пароли — bcrypt
+- RBAC: `user` / `manager` / `admin`
 - HTTPS обязательный
+
+Keycloak (OAuth2 / OpenID Connect) — вариант целевого контура, в текущей
+сборке не используется (см. `docs/DEPLOYMENT.md`, режимы аутентификации).
 
 ## API Endpoints
 
