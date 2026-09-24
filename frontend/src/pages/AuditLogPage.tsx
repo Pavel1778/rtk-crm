@@ -1,9 +1,10 @@
-import { App as AntApp, Card, Select, Space, Table, Tag, Typography } from 'antd';
+import { App as AntApp, Button, Card, Select, Space, Table, Tag, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 
-import { errorMessage } from '../api/client';
-import { listAuditEntityTypes, listAuditLogs } from '../api/endpoints';
-import type { AuditLogEntry } from '../types';
+import { downloadBlob, errorMessage } from '../api/client';
+import { exportAuditLog, listAuditEntityTypes, listAuditLogs, listUsers } from '../api/endpoints';
+import DateRangeFilter, { type DateRangeValue } from '../components/DateRangeFilter';
+import type { AuditLogEntry, User } from '../types';
 import { useRole } from '../stores/authStore';
 
 const ACTION_LABELS: Record<string, string> = {
@@ -44,13 +45,17 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [action, setAction] = useState<string | undefined>();
   const [entityType, setEntityType] = useState<string | undefined>();
+  const [userId, setUserId] = useState<number | undefined>();
+  const [range, setRange] = useState<DateRangeValue>({});
   const [entityTypes, setEntityTypes] = useState<string[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    if (role === 'admin') {
-      void listAuditEntityTypes().then(setEntityTypes).catch(() => undefined);
-    }
+    if (role !== 'admin') return;
+    void listAuditEntityTypes().then(setEntityTypes).catch(() => undefined);
+    void listUsers().then(setUsers).catch(() => undefined);
   }, [role]);
 
   useEffect(() => {
@@ -59,6 +64,9 @@ export default function AuditLogPage() {
     listAuditLogs({
       action,
       entity_type: entityType,
+      user_id: userId,
+      date_from: range.date_from,
+      date_to: range.date_to,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     })
@@ -69,7 +77,25 @@ export default function AuditLogPage() {
       .catch((e) => message.error(errorMessage(e, 'Не удалось загрузить журнал')))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [action, entityType, page, role]);
+  }, [action, entityType, userId, range.date_from, range.date_to, page, role]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { blob, filename } = await exportAuditLog({
+        action,
+        entity_type: entityType,
+        user_id: userId,
+        date_from: range.date_from,
+        date_to: range.date_to,
+      });
+      downloadBlob(blob, filename);
+    } catch (e) {
+      message.error(errorMessage(e, 'Не удалось выгрузить журнал'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (role !== 'admin') {
     return (
@@ -115,6 +141,29 @@ export default function AuditLogPage() {
               label: ENTITY_LABELS[value] ?? value,
             }))}
           />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Сотрудник"
+            style={{ width: 220 }}
+            value={userId}
+            onChange={(value) => {
+              setUserId(value);
+              setPage(1);
+            }}
+            options={users.map((user) => ({ value: user.id, label: user.full_name }))}
+          />
+          <DateRangeFilter
+            value={range}
+            onChange={(value) => {
+              setRange(value);
+              setPage(1);
+            }}
+          />
+          <Button onClick={handleExport} loading={exporting}>
+            Экспорт CSV
+          </Button>
         </Space>
         <Table<AuditLogEntry>
           rowKey="id"

@@ -53,9 +53,34 @@ export const listAuditLogs = (params?: {
   action?: string;
   entity_type?: string;
   user_id?: number;
+  date_from?: string;
+  date_to?: string;
   limit?: number;
   offset?: number;
 }) => api.get<AuditLogPage>('/api/audit', { params }).then((r) => r.data);
+
+/** URL выгрузки журнала в CSV с теми же фильтрами, что и в таблице. */
+export type AuditFilters = {
+  action?: string;
+  entity_type?: string;
+  user_id?: number;
+  date_from?: string;
+  date_to?: string;
+};
+
+export const exportAuditLog = async (params: AuditFilters = {}) => {
+  const response = await api.get('/api/audit/export', {
+    params,
+    responseType: 'blob',
+    timeout: 60_000,
+  });
+  const disposition = response.headers['content-disposition'] as string | undefined;
+  const plainName = disposition?.match(/filename="?([^"]+)"?/i)?.[1];
+  return {
+    blob: response.data as Blob,
+    filename: plainName ?? `audit-log-${Date.now()}.csv`,
+  };
+};
 
 export const listAuditEntityTypes = () =>
   api.get<string[]>('/api/audit/entity-types').then((r) => r.data);
