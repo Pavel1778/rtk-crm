@@ -197,6 +197,17 @@ body {
 }
 img, svg, canvas, video, table { max-width: 100%; }
 
+/* ═══════ ВЫСОТА ОБОЛОЧКИ ═══════
+   Оболочка приложения и страница входа растягиваются на экран. 100vh на
+   мобильных считается по максимальной высоте панели адреса, поэтому
+   нижний край уезжает под неё (и под системную полосу). dvh берёт
+   фактическую высоту вьюпорта; vh — запасной вариант для старых браузеров. */
+.app-shell,
+.auth-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 /* ═══════ КОНТЕЙНЕР СТРАНИЦЫ ═══════ */
 .page-container {
   width: 100%;
@@ -224,6 +235,15 @@ img, svg, canvas, video, table { max-width: 100%; }
   .page-header { flex-direction: column; align-items: stretch; }
   .page-header h1 { font-size: 20px; }
   .page-header .ant-btn-primary { width: 100%; }
+}
+
+/* Заголовок и блок действий в .page-header — flex-элементы с min-width: auto,
+   поэтому длинный заголовок или ряд кнопок экспорта распирал страницу
+   (горизонтальный скролл на экранах до 320px). Ограничиваем их шириной
+   контейнера: ряд кнопок при этом скроллится внутри себя. */
+.page-header > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ═══════ ФИЛЬТРЫ ═══════ */
@@ -398,6 +418,26 @@ img, svg, canvas, video, table { max-width: 100%; }
   gap: 24px;
 }
 
+/* flex/grid-элементы по умолчанию имеют min-width: auto и не сжимаются ниже
+   своего содержимого. Карточка отчёта с заголовком и кнопками экспорта
+   упиралась в этот минимум и на узких экранах (до 360px) вылезала за
+   контейнер, давая горизонтальный скролл всей странице. */
+.stats-grid > *,
+.report-chart-grid > * {
+  min-width: 0;
+}
+
+/* Заголовок карточки — flex-строка; на узких экранах заголовок и блок
+   действий переносятся на вторую строку вместо распирания карточки. */
+.ant-card-head-wrapper {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.ant-card-head-title,
+.ant-card-extra {
+  min-width: 0;
+}
+
 .report-stage-chart .recharts-yAxis .recharts-cartesian-axis-tick-value {
   fill: var(--atmr-fg-subtle);
 }
@@ -459,6 +499,15 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 @media (min-width: 768px) {
   .mobile-menu-btn { display: none !important; }
+}
+
+/* Высота колонки ограничена видимой частью экрана. 100vh на мобильных
+   считается по самой высокой панели адреса, из-за чего низ колонки
+   уходит под неё; dvh отражает фактическую высоту вьюпорта. vh оставлен
+   первым как запасной вариант для браузеров без поддержки dvh. */
+.kanban-column {
+  max-height: calc(100vh - 180px);
+  max-height: calc(100dvh - 180px);
 }
 
 /* ═══════ KANBAN НА МОБИЛЬНОМ ═══════
@@ -619,6 +668,29 @@ img, svg, canvas, video, table { max-width: 100%; }
   .ant-btn {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Пагинация: ячейки 27x27 не попадали под палец. Даём минимальную
+     область нажатия. Селектор скопирован с antd (`.ant-pagination ...`),
+     иначе его собственные правила перебивают ширину по специфичности. */
+  .ant-pagination .ant-pagination-item,
+  .ant-pagination .ant-pagination-prev .ant-pagination-item-link,
+  .ant-pagination .ant-pagination-next .ant-pagination-item-link {
+    min-width: 44px;
+    width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ant-pagination .ant-pagination-item a {
+    line-height: 44px;
+  }
+
+  /* Переключатель этапа: дорожка 44x22 ниже минимальной области касания.
+     Увеличиваем высоту, не трогая длину. */
+  .ant-switch {
+    min-height: 28px;
   }
 
   /* Расстояние между кнопками минимум 8px */

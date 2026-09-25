@@ -162,7 +162,6 @@ function KanbanColumn({
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        maxHeight: 'calc(100vh - 180px)',
         transition: 'background 0.2s',
       }}
     >

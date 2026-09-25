@@ -72,7 +72,7 @@ export default function MainLayout() {
     : MENU_ITEMS;
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="app-shell">
       <Header
         style={{
           display: 'flex',
