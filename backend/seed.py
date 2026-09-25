@@ -40,6 +40,9 @@ DIRECTIONS: list[str] = [
     "Data Science",
     "Сетевые технологии",
     "Искусственный интеллект",
+    # Продукты вендоров из каталога кейсодержателя идут отдельным
+    # направлением: это партнёрские решения, а не продукты РТК.
+    "Партнёрские продукты вендоров",
 ]
 
 PRODUCTS: list[tuple[str, str | None]] = [
@@ -50,12 +53,45 @@ PRODUCTS: list[tuple[str, str | None]] = [
     ("AI Studio", "Искусственный интеллект"),
 ]
 
+# Продукты из «Вендоры.xlsx» (каталог кейсодержателя). Контакты вендоров в
+# справочник не переносятся: ИТ-продукт хранит только название и направление,
+# а телефоны и почты вендоров в демо-данных не нужны.
+VENDOR_PRODUCTS: list[str] = [
+    "Базис Dynamix",
+    "RT.DataLake",
+    "RT.Warehouse",
+    "RT.DataVision",
+    "AKOLA",
+    "Яга",
+    "Web3Gate",
+    "Аврора SDK",
+    "Нейрошлюз",
+]
+
+VENDOR_DIRECTION = "Партнёрские продукты вендоров"
+
 UNIVERSITIES: list[tuple[str, str, str]] = [
     ("МГТУ им. Н. Э. Баумана", "Москва", "Иванов И. И."),
     ("ИТМО", "Санкт-Петербург", "Петров П. П."),
     ("Университет ИТЭГ", "Казань", "Сидоров С. С."),
     ("МГУ им. М. В. Ломоносова", "Москва", "Кузнецова А. А."),
     ("НГУ", "Новосибирск", "Смирнова Е. В."),
+]
+
+# Курсы B2C из «Данные оплат.json» (выгрузка заявок кейсодержателя).
+# Переносятся только названия курсов и этапы воронки: ФИО, телефоны и адреса
+# почты заявителей в демо-данные не попадают, вместо них — синтетические
+# записи «Физлицо N». Так демонстрируется B2C-воронка без персональных данных.
+B2C_COURSES: list[tuple[str, str]] = [
+    ("Анализ данных без программирования", "b2c_payment"),
+    ("Инженер-тестировщик", "b2c_training"),
+    (
+        "Управление ИТ-проектами на базе программного продукта "
+        "ПАО «Ростелеком»",
+        "b2c_request",
+    ),
+    ("Промпт-инжиниринг", "b2c_training"),
+    ("Python-разработчик с использованием инструментов ИИ", "b2c_completed"),
 ]
 
 DEMO_USERS: list[tuple[str, str, str, UserRole]] = [
@@ -181,6 +217,16 @@ async def _seed_directories(session: AsyncSession) -> bool:
             ITProduct(name=name, direction_id=directions.get(direction_name))
         )
         created = True
+
+    # Продукты вендоров из каталога кейсодержателя. Направление
+    # фиксированное, поэтому отдельного сопоставления не требуется.
+    for name in VENDOR_PRODUCTS:
+        if name in existing_products:
+            continue
+        session.add(
+            ITProduct(name=name, direction_id=directions.get(VENDOR_DIRECTION))
+        )
+        created = True
     return created
 
 
@@ -238,6 +284,33 @@ async def _seed_demo_interactions(session: AsyncSession) -> bool:
                 university_specialist=universities[university_idx].contact_person,
                 assigned_kam_id=kam.id if kam else None,
 
+            )
+        )
+
+    await session.flush()
+
+    # B2C-воронка: заявки физлиц на курсы. Заявитель хранится как «Физлицо N»
+    # (без ФИО, телефона и почты), название курса — в заметке карточки.
+    # Так на доске видно обе воронки, но персональные данные не попадают в базу.
+    for index, (course, stage_code) in enumerate(B2C_COURSES, start=1):
+        stage = stages.get(stage_code)
+        if stage is None:
+            continue
+        client = University(
+            name=f"Физлицо {index}",
+            city=None,
+            contact_person=None,
+        )
+        session.add(client)
+        await session.flush()
+        session.add(
+            Interaction(
+                university_id=client.id,
+                product_id=None,
+                stage_id=stage.id,
+                scope=WorkflowScope.B2C,
+                notes=f"Курс: {course}",
+                assigned_kam_id=kam.id if kam else None,
             )
         )
 
