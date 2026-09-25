@@ -348,6 +348,20 @@ img, svg, canvas, video, table { max-width: 100%; }
   fill: var(--atmr-fg-subtle);
 }
 
+/* Пустая таблица — не disabled-контрол, а информационная подпись: antd берёт
+   для неё colorTextDisabled (rgba(0,0,0,.25) = 1.83:1). */
+.ant-table-placeholder,
+.ant-table-placeholder .ant-table-cell {
+  color: var(--atmr-fg-muted);
+}
+
+/* Своя роль в списке пользователей показана disabled-селектом: antd гасит
+   текст до rgba(0,0,0,.25). Неактивность и так видна по серому фону поля,
+   а значение должно читаться. */
+.ant-select-disabled .ant-select-selection-item {
+  color: var(--atmr-fg-muted);
+}
+
 .report-stage-chart .recharts-bar-rectangle {
   transition: opacity 0.15s ease;
 }

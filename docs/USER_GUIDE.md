@@ -111,3 +111,17 @@ RTK CRM помогает КАМ и руководителям вести вза�
 
 Скриншоты встроены в разделы выше и лежат в `docs/images/`. Кадры сняты на
 демо-данных, реальные персональные данные в них отсутствуют.
+
+Наборы снимков:
+
+- `docs/images/` — светлая тема, десктоп;
+- `docs/images/dark/` — тёмная тема, десктоп;
+- `docs/images/mobile/` — светлая тема, мобильный вид;
+- `docs/images/mobile/dark/` — тёмная тема, мобильный вид.
+
+Пересобрать все наборы можно скриптом:
+
+```
+python scripts/capture_screenshots.py --theme both
+python scripts/capture_screenshots.py --theme both --mobile
+```

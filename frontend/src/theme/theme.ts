@@ -19,6 +19,11 @@ export const atmrTokens = {
   colorError: '#CC2936',
   colorText: '#1C1D22',
   colorTextSecondary: '#6B6B72',
+  // antd по умолчанию берёт description/placeholder из чёрного с альфой:
+  // rgba(0,0,0,.45) даёт 3.35:1, rgba(0,0,0,.25) — 1.83:1. Оба ниже AA,
+  // поэтому задаём плотный серый, читаемый и на белом, и на #F5F5F7.
+  colorTextDescription: '#6B6B72',
+  colorTextPlaceholder: '#6B6B72',
   colorBorder: '#E0E0E5',
   colorBorderSecondary: '#EEEEF2',
   colorBgLayout: '#F5F5F7',
@@ -107,6 +112,7 @@ export const antDarkTheme: ThemeConfig = {
     colorTextTertiary: darkPalette.textTertiary,
     colorTextQuaternary: darkPalette.textTertiary,
     colorTextPlaceholder: darkPalette.textTertiary,
+    colorTextDescription: darkPalette.textTertiary,
     colorTextLightSolid: darkPalette.onSolid,
     colorBorder: darkPalette.border,
     colorBorderSecondary: darkPalette.borderSoft,

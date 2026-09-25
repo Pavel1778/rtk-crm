@@ -34,6 +34,21 @@ const RADIAN = Math.PI / 180;
 // Сектора уже 5% слишком тонкие для подписи внутри — выносим их с выноской.
 const SMALL_SLICE = 0.05;
 
+// Recharts подставляет собственные цвета осей (#666), не зная о теме: на
+// тёмном фоне это 2.83:1. Задаём цвет явно токеном для обеих тем.
+const AXIS_TICK = { fill: 'var(--atmr-fg-subtle)' } as const;
+const AXIS_TICK_SMALL = { fill: 'var(--atmr-fg-subtle)', fontSize: 10 } as const;
+
+// Тултип recharts по умолчанию — светлая карточка с тёмным текстом: на
+// тёмной теме выпадал из палитры и слепил. Берём поверхности и текст темы.
+const TOOLTIP_STYLE = {
+  fontSize: 12,
+  borderRadius: 8,
+  background: 'var(--atmr-bg-elevated)',
+  border: '1px solid var(--atmr-border-default)',
+  color: 'var(--atmr-fg-default)',
+} as const;
+
 function ProductSliceLabel({
   cx = 0, cy = 0, midAngle, innerRadius = 0, outerRadius = 0, percent, compact,
 }: {
@@ -293,30 +308,37 @@ export default function ReportPage() {
                   horizontal
                   vertical={false}
                 />
-                <XAxis type="number" allowDecimals={false} />
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={AXIS_TICK_SMALL}
+                  stroke="var(--atmr-border-default)"
+                />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={240}
-                  tick={{ fontSize: 12 }}
+                  width={isMobile ? 132 : 240}
+                  tick={{ ...AXIS_TICK, fontSize: 12 }}
+                  stroke="var(--atmr-border-default)"
+                  interval={0}
                   tickFormatter={(value: string) =>
-                    value.length > (isMobile ? 25 : 42)
-                      ? `${value.slice(0, isMobile ? 23 : 40)}…`
+                    value.length > (isMobile ? 16 : 42)
+                      ? `${value.slice(0, isMobile ? 14 : 40)}…`
                       : value
                   }
                 />
                 <Tooltip
-                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  contentStyle={TOOLTIP_STYLE}
                   labelFormatter={(label) => String(label)}
                   formatter={(value) => [
                     Number(value ?? 0),
                     'Взаимодействий',
                   ]}
                 />
-                <Bar 
-                  dataKey="count" 
+                <Bar
+                  dataKey="count"
                   fill="var(--atmr-accent-default)"
-                  radius={isMobile ? [6, 6, 0, 0] : [0, 6, 6, 0]} 
+                  radius={isMobile ? [6, 6, 0, 0] : [0, 6, 6, 0]}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -372,6 +394,7 @@ export default function ReportPage() {
                     ))}
                   </Pie>
                   <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
                     formatter={(value) => {
                       const n = Number(value);
                       const pct = productTotal
@@ -434,12 +457,20 @@ export default function ReportPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--atmr-border-default)" />
                   <XAxis
                     dataKey="date"
-                    tick={{ fontSize: isMobile ? 10 : 11 }}
+                    tick={{ ...AXIS_TICK, fontSize: isMobile ? 10 : 11 }}
+                    stroke="var(--atmr-border-default)"
                     tickFormatter={(v) => v?.slice(5) || ''}
                     minTickGap={24}
                   />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip labelFormatter={(value) => `Дата: ${value}`} />
+                  <YAxis
+                    tick={{ ...AXIS_TICK, fontSize: 11 }}
+                    stroke="var(--atmr-border-default)"
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    labelFormatter={(value) => `Дата: ${value}`}
+                    contentStyle={TOOLTIP_STYLE}
+                  />
                   <Line
                     type="monotone"
                     dataKey="count"

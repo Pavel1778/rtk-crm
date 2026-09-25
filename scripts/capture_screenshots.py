@@ -5,7 +5,7 @@
     python scripts/capture_screenshots.py [--theme light|dark|both] [--mobile]
 
 Изображения кладутся в `docs/images/` (светлая) и `docs/images/dark/`
-(тёмная), мобильные виды — в `docs/images/mobile/`.
+(тёмная); мобильные виды — в `docs/images/mobile/` и `docs/images/mobile/dark/`.
 """
 
 from __future__ import annotations
@@ -21,6 +21,17 @@ ADMIN = ("admin@rtk.ru", "admin123")
 
 DESKTOP = {"width": 1440, "height": 900}
 MOBILE = {"width": 390, "height": 844}
+
+# Баннер cookie перекрывает нижнюю часть страницы и перехватывает клики по
+# элементам под ним. Предустанавливаем согласие в localStorage до отрисовки,
+# чтобы баннер не появлялся вовсе (иначе клик по чипу этапа на мобильном
+# падает на баннер). Ключ и версия — из frontend/src/lib/cookieConsent.ts.
+CONSENT_INIT = """
+localStorage.setItem('rtk_cookie_consent', JSON.stringify({
+  necessary: true, analytics: true, functional: true, marketing: false,
+  timestamp: Date.now(), version: '1.0',
+}));
+"""
 
 
 def apply_theme(page: Page, theme: str) -> None:
@@ -47,11 +58,18 @@ def login(page: Page, url: str) -> None:
 
 
 def dismiss_cookie_banner(page: Page) -> None:
-    """Баннер согласия перекрывает нижнюю часть экрана и ломает снимки."""
+    """Баннер согласия перекрывает нижнюю часть экрана и ломает снимки.
+    Баннер может появляться повторно (в т.ч. после перезагрузки страницы),
+    поэтому ждём его исчезновения, а не просто кликаем один раз."""
     accept = page.locator(".cookie-banner button", has_text="Принять")
-    if accept.count():
-        accept.first.click()
-        page.wait_for_timeout(300)
+    for _ in range(10):
+        if not accept.count() or not accept.first.is_visible():
+            return
+        try:
+            accept.first.click(timeout=2000)
+            page.wait_for_timeout(300)
+        except Exception:
+            page.wait_for_timeout(300)
 
 
 def shoot(page: Page, target: Path, name: str) -> None:
@@ -122,11 +140,17 @@ def capture_desktop(page: Page, theme: str, target: Path) -> None:
         shoot(page, target, name)
 
 
+def new_context(browser, viewport: dict):
+    context = browser.new_context(viewport=viewport, locale="ru-RU")
+    context.add_init_script(CONSENT_INIT)
+    return context
+
+
 def capture_login(theme: str, target: Path, viewport: dict) -> None:
     """Экран входа снимаем в чистом контексте: после логина он недоступен."""
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        context = browser.new_context(viewport=viewport, locale="ru-RU")
+        context = new_context(browser, viewport)
         page = context.new_page()
         page.goto(f"{BASE_URL}/login", wait_until="networkidle")
         apply_theme(page, theme)
@@ -153,11 +177,11 @@ def main() -> int:
             target = ROOT / "docs" / "images"
             if args.mobile:
                 target = target / "mobile"
-            elif theme == "dark":
+            if theme == "dark":
                 target = target / "dark"
             target.mkdir(parents=True, exist_ok=True)
 
-            context = browser.new_context(viewport=viewport, locale="ru-RU")
+            context = new_context(browser, viewport)
             page = context.new_page()
             login(page, BASE_URL)
             if args.mobile:
@@ -186,7 +210,7 @@ def main() -> int:
         target = ROOT / "docs" / "images"
         if args.mobile:
             target = target / "mobile"
-        elif theme == "dark":
+        if theme == "dark":
             target = target / "dark"
         target.mkdir(parents=True, exist_ok=True)
         capture_login(theme, target, viewport)
