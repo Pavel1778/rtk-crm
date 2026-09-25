@@ -78,11 +78,23 @@ def shoot(page: Page, target: Path, name: str) -> None:
     print("saved", name)
 
 
+def require(condition: bool, message: str) -> None:
+    """Съёмка без демо-данных молча даёт дубли вместо ошибки, поэтому
+    ключевые предусловия проверяем явно."""
+    if not condition:
+        raise RuntimeError(message)
+
+
 def capture_desktop(page: Page, theme: str, target: Path) -> None:
     apply_theme(page, theme)
 
     page.goto("http://localhost:5173/", wait_until="networkidle")
     dismiss_cookie_banner(page)
+    require(
+        page.locator(".kanban-board .ant-card").count() > 0,
+        f"[{theme}] доска пуста: нет взаимодействий. Запустите backend с "
+        "SEED_DEMO_DATA=true на чистой базе dev.db.",
+    )
     shoot(page, target, "02-kanban-board")
 
     # Панель фильтров: открываем поиск и подсказку по продукту.
@@ -104,6 +116,10 @@ def capture_desktop(page: Page, theme: str, target: Path) -> None:
     if card.count():
         card.click()
         page.wait_for_timeout(1200)
+    require(
+        page.locator(".ant-drawer-open").count() > 0,
+        f"[{theme}] карточка взаимодействия не открылась: снимок совпал бы с доской.",
+    )
     shoot(page, target, "03-interaction-card")
 
     page.goto("http://localhost:5173/directories", wait_until="networkidle")
