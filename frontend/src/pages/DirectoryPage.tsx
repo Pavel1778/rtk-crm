@@ -33,7 +33,7 @@ import {
   previewCatalogImport,
 } from '../api/endpoints';
 import type { ITDirection, ITProduct, University } from '../types';
-import type { CatalogImportResult, ImportIssue } from '../api/endpoints';
+import type { CatalogImportResult, CatalogType, ImportIssue } from '../api/endpoints';
 import { useRole } from '../stores/authStore';
 
 export default function DirectoryPage() {
@@ -69,6 +69,14 @@ const IMPORT_FIELDS = {
     ['name', 'Название продукта', true],
     ['direction', 'ИТ-направление', false],
   ],
+  users: [
+    ['email', 'Email', true],
+    ['full_name', 'ФИО', false],
+    ['last_name', 'Фамилия', false],
+    ['first_name', 'Имя', false],
+    ['middle_name', 'Отчество', false],
+    ['role', 'Роль', false],
+  ],
 } as const;
 
 // Полный список ошибок импорта не помещается в тост: показываем первые две.
@@ -85,7 +93,7 @@ function warnAboutErrors(
 function CatalogImportPanel() {
   const { message } = AntApp.useApp();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [catalogType, setCatalogType] = useState<'universities' | 'products'>('universities');
+  const [catalogType, setCatalogType] = useState<CatalogType>('universities');
   const [format, setFormat] = useState<'excel' | 'json'>('excel');
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -183,6 +191,7 @@ function CatalogImportPanel() {
           options={[
             { value: 'universities', label: 'Вузы' },
             { value: 'products', label: 'Продукты' },
+            { value: 'users', label: 'Пользователи' },
           ]}
           style={{ width: 180 }}
         />

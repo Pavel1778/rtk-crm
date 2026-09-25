@@ -234,8 +234,11 @@ export type CatalogImportResult = {
   };
 };
 
+// Типы каталогов, которые принимает импорт (см. backend CATALOG_TYPES).
+export type CatalogType = 'universities' | 'products' | 'users';
+
 export const previewCatalogImport = (
-  catalogType: 'universities' | 'products',
+  catalogType: CatalogType,
   file: File,
   mapping: Record<string, string>,
   format: 'excel' | 'json' = 'excel',
@@ -253,7 +256,7 @@ export const previewCatalogImport = (
 };
 
 export const executeCatalogImport = (
-  catalogType: 'universities' | 'products',
+  catalogType: CatalogType,
   file: File,
   mapping: Record<string, string>,
   format: 'excel' | 'json' = 'excel',
@@ -271,7 +274,7 @@ export const executeCatalogImport = (
 };
 
 export const downloadCatalogImportReport = (
-  catalogType: 'universities' | 'products',
+  catalogType: CatalogType,
   file: File,
   mapping: Record<string, string>,
 ) => {
