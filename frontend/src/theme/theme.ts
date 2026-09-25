@@ -63,28 +63,31 @@ export const antTheme: ThemeConfig = {
  * Тёмная вариация «Атомаро».
  *
  * Правила тёмной темы:
- * - фон не чистый чёрный: #17181C снижает контраст с текстом и усталость глаз;
- * - глубина передаётся светлотой поверхности (#17181C → #1F2025 → #2A2B32),
+ * - фон не чистый чёрный: #131417 снижает контраст с текстом и усталость глаз;
+ * - глубина передаётся светлотой поверхности (#131417 → #1B1C20 → #292A30),
  *   а не тенями, которые на тёмном фоне не читаются;
  * - акценты десатурированы, иначе неонят и «размываются» на тёмном фоне;
  * - текст и акценты проверены на контраст WCAG AA (≥ 4.5:1) от каждой
- *   поверхности, включая всплывающие слои (#2A2B32).
+ *   поверхности, включая всплывающие слои (#292A30).
  *
  * Значения совпадают с CSS-переменными `:root[data-theme='dark']`,
  * чтобы antd-компоненты и собственные стили не расходились по палитре.
  */
 export const darkPalette = {
-  bgPage: '#17181C',
-  bgContainer: '#1F2025',
-  bgElevated: '#2A2B32',
-  bgSoft: '#26272E',
-  text: '#E6E6EB',
-  textSecondary: '#A9A9B4',
+  bgPage: '#131417',
+  bgContainer: '#1B1C20',
+  bgElevated: '#292A30',
+  bgSoft: '#212227',
+  text: '#E8E8ED',
+  textSecondary: '#ABABB6',
   // Третичный/placeholder текст: производные токены antd по умолчанию остаются
   // светлыми (rgba(0,0,0,.45)) и на тёмном фоне не читаются.
-  textTertiary: '#9A9AA6',
-  border: '#33343B',
-  borderSoft: '#2C2D34',
+  textTertiary: '#9494A0',
+  border: '#36373E',
+  borderSoft: '#2A2B31',
+  // Рамка полей и кнопок: 3.3:1 к карточке — минимум WCAG 1.4.11.
+  // Декоративные разделители остаются на borderSoft, он специально тише.
+  borderControl: '#6B6D77',
   accent: '#A78BFA',
   accentHover: '#B9A5F5',
   accentSoft: '#2E2743',
@@ -94,7 +97,7 @@ export const darkPalette = {
   info: '#7FA6E8',
   // Текст на цветных заливках (основные кнопки, счётчики бейджей). Белый на
   // осветлённых акцентах даёт ~2.7:1, поэтому заливки подписываем тёмным.
-  onSolid: '#17181C',
+  onSolid: '#131417',
 } as const;
 
 export const antDarkTheme: ThemeConfig = {
@@ -113,16 +116,28 @@ export const antDarkTheme: ThemeConfig = {
     colorTextQuaternary: darkPalette.textTertiary,
     colorTextPlaceholder: darkPalette.textTertiary,
     colorTextDescription: darkPalette.textTertiary,
-    colorTextLightSolid: darkPalette.onSolid,
-    colorBorder: darkPalette.border,
+    colorBorder: darkPalette.borderControl,
     colorBorderSecondary: darkPalette.borderSoft,
     colorBgLayout: darkPalette.bgPage,
     colorBgContainer: darkPalette.bgContainer,
     colorBgElevated: darkPalette.bgElevated,
     colorLink: darkPalette.accent,
+    // colorTextLightSolid глобально не трогаем: светлый текст на тёмных
+    // подложках ждут тултипы, badge, steps, switch и avatar — тёмный цвет
+    // ломает их (подсказка становилась тёмной на тёмном, 1.83:1). Заливки
+    // кнопок подписываем тёмным узко, через componentToken ниже.
   },
   components: {
     ...antTheme.components,
+    // Основная кнопка заливается светлым акцентом: белый текст на #A78BFA
+    // даёт 2.7:1, поэтому подпись тёмная. Задаём цвет именно кнопке, чтобы
+    // не задеть тултипы и прочие компоненты, ждущие светлый colorTextLightSolid.
+    Button: {
+      ...antTheme.components?.Button,
+      primaryColor: darkPalette.onSolid,
+      fontWeight: 500,
+      primaryShadow: 'none',
+    },
     Card: {
       boxShadowTertiary: 'none',
       colorBorderSecondary: darkPalette.borderSoft,

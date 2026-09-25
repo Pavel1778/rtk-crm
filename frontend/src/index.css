@@ -1,12 +1,17 @@
 :root {
   --atmr-accent-default: #6E41F2;
+  --atmr-accent-hover: #5A2FD8;
   --atmr-bg-page: #F5F5F7;
   --atmr-bg-container: #FFFFFF;
+  --atmr-bg-elevated: #FFFFFF;
   --atmr-fg-default: #1C1D22;
   --atmr-fg-muted: #6B6B72;
   --atmr-border-default: #E0E0E5;
   --atmr-border-soft: #EEEEF2;
   --atmr-border-muted: #E5E7EB;
+  /* Рамки полей, кнопок и селектов. Светлая тема различает поле и карточку
+     заливкой, поэтому здесь рамка может быть мягкой. */
+  --atmr-border-control: #D6D6DD;
   --atmr-bg-soft: #F5F5F7;
   --atmr-bg-dropzone: #F3E5F5;
   --atmr-fg-subtle: #3D3D46;
@@ -17,7 +22,15 @@
   --atmr-error-default: #CC2936;
   --atmr-info-default: #3B82F6;
   --atmr-accent-muted: #8B5CF6;
+  /* Текст и иконки на акцентной заливке. В светлой теме акцент тёмный —
+     подпись белая (5.7:1); в тёмной акцент светлый, поэтому подпись тёмная
+     (6.8:1). Белый на #A78BFA даёт 2.7:1 и не проходит AA. */
+  --atmr-on-accent: #FFFFFF;
   --atmr-shadow-popover: 0 8px 24px rgba(28, 29, 34, 0.12);
+  /* Баннер cookie прижат к низу окна: тень направлена вверх. */
+  --atmr-shadow-banner: 0 -4px 16px rgba(28, 29, 34, 0.08);
+  --atmr-scrollbar-thumb: #C4C4CC;
+  --atmr-selection-bg: #DDD3FF;
   /* Подписи внутри секторов диаграммы: цвет текста и контур-гало.
      Сектора используют разные токены палитры, поэтому без гало белая
      подпись теряется на светлых долях (например, на warning). */
@@ -36,36 +49,40 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --atmr-bg-page: #17181C;
-    --atmr-bg-container: #1F2025;
-    --atmr-bg-elevated: #2A2B32;
-    --atmr-bg-soft: #26272E;
-    --atmr-fg-default: #E6E6EB;
-    --atmr-fg-muted: #A9A9B4;
-    --atmr-fg-subtle: #C4C4CD;
-    --atmr-border-default: #33343B;
-    --atmr-border-soft: #2C2D34;
-    --atmr-border-muted: #2C2D34;
+    --atmr-bg-page: #131417;
+    --atmr-bg-container: #1B1C20;
+    --atmr-bg-elevated: #292A30;
+    --atmr-bg-soft: #212227;
+    --atmr-fg-default: #E8E8ED;
+    --atmr-fg-muted: #ABABB6;
+    --atmr-fg-subtle: #C6C6CF;
+    --atmr-border-default: #36373E;
+    --atmr-border-soft: #2A2B31;
+    --atmr-border-muted: #2E2F36;
+    --atmr-border-control: #6B6D77;
     --atmr-bg-dropzone: #2E2743;
     --atmr-accent-default: #A78BFA;
     --atmr-accent-hover: #B9A5F5;
     --atmr-accent-gradient-start: #8B6FE0;
     --atmr-accent-gradient-mid: #B9A5F5;
+    --atmr-accent-muted: #A78BFA;
+    --atmr-on-accent: #131417;
     --atmr-success-default: #4FB477;
     --atmr-warning-default: #D9A441;
     --atmr-error-default: #E8808A;
     --atmr-info-default: #7FA6E8;
-    --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --atmr-chart-label: #17181C;
+    /* Тень на тёмном фоне читается светлотой, а не затемнением: чёрная
+       невидима. Верхний слой отделяем светлой кромкой. */
+    --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.55);
+    --atmr-shadow-banner: 0 -1px 0 0 rgba(255, 255, 255, 0.07);
+    --atmr-scrollbar-thumb: #45464E;
+    --atmr-selection-bg: #3A2F5C;
+    --atmr-chart-label: #131417;
     --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
     --atmr-badge-open-bg: #A85B00;
     --atmr-badge-done-bg: #007A2F;
     --atmr-badge-count-fg: #FFFFFF;
   }
-}
-
-.Theme_root_rtk_purple_light {
-  color-scheme: light;
 }
 
 /* Тёмная тема: переменные переопределяются на корне документа по data-theme,
@@ -74,38 +91,37 @@
    акценты десатурированы. Значения синхронизированы с darkPalette в theme.ts. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --atmr-bg-page: #17181C;
-  --atmr-bg-container: #1F2025;
-  --atmr-bg-elevated: #2A2B32;
-  --atmr-bg-soft: #26272E;
-  --atmr-fg-default: #E6E6EB;
-  --atmr-fg-muted: #A9A9B4;
-  --atmr-fg-subtle: #C4C4CD;
-  --atmr-border-default: #33343B;
-  --atmr-border-soft: #2C2D34;
-  --atmr-border-muted: #2C2D34;
+  --atmr-bg-page: #131417;
+  --atmr-bg-container: #1B1C20;
+  --atmr-bg-elevated: #292A30;
+  --atmr-bg-soft: #212227;
+  --atmr-fg-default: #E8E8ED;
+  --atmr-fg-muted: #ABABB6;
+  --atmr-fg-subtle: #C6C6CF;
+  --atmr-border-default: #36373E;
+  --atmr-border-soft: #2A2B31;
+  --atmr-border-muted: #2E2F36;
+  --atmr-border-control: #6B6D77;
   --atmr-bg-dropzone: #2E2743;
   --atmr-accent-default: #A78BFA;
   --atmr-accent-hover: #B9A5F5;
   --atmr-accent-gradient-start: #8B6FE0;
   --atmr-accent-gradient-mid: #B9A5F5;
   --atmr-accent-muted: #A78BFA;
+  --atmr-on-accent: #131417;
   --atmr-success-default: #4FB477;
   --atmr-warning-default: #D9A441;
   --atmr-error-default: #E8808A;
   --atmr-info-default: #7FA6E8;
-  --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --atmr-chart-label: #17181C;
+  --atmr-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --atmr-shadow-banner: 0 -1px 0 0 rgba(255, 255, 255, 0.07);
+  --atmr-scrollbar-thumb: #45464E;
+  --atmr-selection-bg: #3A2F5C;
+  --atmr-chart-label: #131417;
   --atmr-chart-label-halo: rgba(255, 255, 255, 0.55);
   --atmr-badge-open-bg: #A85B00;
   --atmr-badge-done-bg: #007A2F;
   --atmr-badge-count-fg: #FFFFFF;
-}
-
-/* Легаси-обёртка Layout: оставлена для совместимости, значения берёт
-   от корня, чтобы не дублировать палитру в двух местах. */
-.Theme_root_rtk_purple_dark {
-  color-scheme: dark;
 }
 
 /* Базовая адаптивность для всех устройств */
@@ -154,6 +170,30 @@ body {
   background: var(--atmr-bg-page);
   color: var(--atmr-fg-default);
   transition: background 0.2s, color 0.2s;
+}
+
+/* Скроллбар и выделение текста: браузер рисует их по `color-scheme`, но
+   палитру он подбирает свою, и на тёмном фоне полоса выглядит светлой
+   заплатой. Задаём явные цвета из темы. */
+* {
+  scrollbar-color: var(--atmr-scrollbar-thumb) transparent;
+}
+::selection {
+  background: var(--atmr-selection-bg);
+  color: var(--atmr-fg-default);
+}
+/* WebKit не понимает scrollbar-color: полосу рисуем псевдоэлементами. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--atmr-scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--atmr-fg-muted);
+  background-clip: content-box;
 }
 img, svg, canvas, video, table { max-width: 100%; }
 
@@ -268,6 +308,20 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 
 /* ═══════ ФОРМЫ ═══════ */
+
+/* Границы полей, кнопок и селектов. antd в тёмной теме берёт рамку из
+   colorBorder, но производные состояния (hover/active) он считает сам и
+   делает их почти неразличимыми. Задаём явный токен: он даёт ≥3:1 к фону
+   и карточке, как требует WCAG 1.4.11 для границ элементов управления. */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-picker,
+.ant-select .ant-select-selector,
+.ant-btn-default {
+  border-color: var(--atmr-border-control);
+}
+
 .date-range-filter__label {
   font-size: 12px;
   line-height: 16px;
@@ -741,7 +795,7 @@ img, svg, canvas, video, table { max-width: 100%; }
   padding: 16px clamp(12px, 3vw, 32px);
   background: var(--atmr-bg-container);
   border-top: 1px solid var(--atmr-border-soft);
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--atmr-shadow-banner);
 }
 
 .cookie-banner__text {

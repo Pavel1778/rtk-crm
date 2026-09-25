@@ -72,7 +72,7 @@ export default function MainLayout() {
     : MENU_ITEMS;
 
   return (
-    <Layout className="Theme_root_rtk_purple_light" style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh' }}>
       <Header
         style={{
           display: 'flex',

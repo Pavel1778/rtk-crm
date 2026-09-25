@@ -178,7 +178,12 @@ function KanbanColumn({
             }}
           />
           <Typography.Text strong>{stage.name}</Typography.Text>
-          <Badge count={cards.length} color="var(--atmr-accent-default)" showZero />
+          <Badge
+            count={cards.length}
+            color="var(--atmr-accent-default)"
+            style={{ color: 'var(--atmr-on-accent)' }}
+            showZero
+          />
         </Space>
       </Space>
       <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
