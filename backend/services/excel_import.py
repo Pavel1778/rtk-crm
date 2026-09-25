@@ -30,6 +30,10 @@ SEVERITY_ERROR = "error"
 SEVERITY_WARNING = "warning"
 SEVERITY_OK = "ok"
 
+# Типы каталогов, которые принимает импорт. Набор вынесен в константу:
+# его проверяют и парсеры, и API, поэтому список не должен расходиться.
+CATALOG_TYPES = ("universities", "products", "users")
+
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 # Схема верхнего уровня: массив объектов каталога либо {"data": [...]}.
@@ -148,7 +152,7 @@ def parse_catalog_file(
     mapping: dict[str, str] | None = None,
 ) -> CatalogImportResult:
     """Разбирает XLS/XLSX и приводит его к общей структуре строк."""
-    if catalog_type not in {"universities", "products"}:
+    if catalog_type not in CATALOG_TYPES:
         return CatalogImportResult(
             success=False,
             data=[],
@@ -167,6 +171,8 @@ def parse_catalog_file(
 
     if catalog_type == "universities":
         return _parse_universities(headers, rows, mapping)
+    if catalog_type == "users":
+        return _parse_users(headers, rows, mapping)
     return _parse_products(headers, rows, mapping)
 
 
@@ -182,6 +188,14 @@ def parse_catalog_json(
         return CatalogImportResult(False, [], [f"Некорректный JSON: {exc}"])
 
     records = payload.get("data") if isinstance(payload, dict) else payload
+    # Выгрузки кейсодержателя начинаются с пустого элемента-заглушки
+    # (`[null, {...}]`): это не запись каталога, и из-за неё весь файл
+    # отвергался как невалидный. Пустые элементы отбрасываем до проверки
+    # схемы, чтобы валидные строки после них импортировались. Обёртку
+    # {"data": [...]} не трогаем — иначе из ошибки пропадёт путь до поля.
+    if isinstance(payload, list):
+        payload = [record for record in payload if record is not None]
+        records = payload
     if _CATALOG_PAYLOAD_VALIDATOR is not None:
         errors = sorted(
             _CATALOG_PAYLOAD_VALIDATOR.iter_errors(payload),
@@ -212,6 +226,8 @@ def parse_catalog_json(
     rows = [[record.get(header) for header in headers] for record in records]
     if catalog_type == "universities":
         return _parse_universities(headers, rows, mapping)
+    if catalog_type == "users":
+        return _parse_users(headers, rows, mapping)
     if catalog_type == "products":
         return _parse_products(headers, rows, mapping)
     return CatalogImportResult(False, [], [f"Неизвестный тип каталога: {catalog_type}"])
@@ -318,6 +334,13 @@ def _parse_products(
         "название": "name",
         "наименование": "name",
         "name": "name",
+        # «Продукт» и «Курс» — заголовки из выгрузок кейсодержателя
+        # («Вендоры.xlsx», «Данные оплат.json»): и каталог вендоров, и список
+        # курсов описывают ИТ-продукты (ТЗ 4.1), поэтому оба поля идут в name.
+        "продукт": "name",
+        "product": "name",
+        "курс": "name",
+        "course": "name",
         "направление": "direction",
         "direction": "direction",
     }
@@ -329,6 +352,128 @@ def _parse_products(
         required="name",
         error_label="Название",
         field_labels={"name": "Название", "direction": "Направление"},
+    )
+
+
+def _parse_users(
+    headers: list[str],
+    rows: list[list[Any]],
+    mapping: dict[str, str] | None = None,
+) -> CatalogImportResult:
+    """Разбирает выгрузку пользователей («Загрузка пользователей.xlsx»).
+
+    В файле кейсодержателя кроме учётных данных есть персональные данные
+    (СНИЛС, паспорт, адрес регистрации). Они намеренно не сопоставляются:
+    импорт переносит только email, ФИО и роль, а чувствительные колонки
+    игнорируются, чтобы не тиражировать ПДн по системе (152-ФЗ).
+    """
+    aliases = {
+        "email": "email",
+        "e-mail": "email",
+        "почта": "email",
+        "электронная почта": "email",
+        "фамилия": "last_name",
+        "last name": "last_name",
+        "имя": "first_name",
+        "first name": "first_name",
+        "отчество": "middle_name",
+        "middle name": "middle_name",
+        "фио": "full_name",
+        "full name": "full_name",
+        "роль": "role",
+        "role": "role",
+    }
+    indices = _mapped_indices(headers, aliases, mapping)
+
+    if "email" not in indices:
+        issue = ValidationIssue(
+            row=None,
+            field="Email",
+            problem="Не найдена обязательная колонка 'Email'",
+        )
+        return CatalogImportResult(
+            success=False,
+            data=[],
+            headers=headers,
+            errors=[issue.problem],
+            issues=[issue],
+        )
+
+    data: list[dict[str, Any]] = []
+    errors: list[str] = []
+    issues: list[ValidationIssue] = []
+    total_rows = 0
+    seen_emails: dict[str, int] = {}
+
+    for row_number, row in enumerate(rows, start=2):
+        if not any(value not in (None, "") for value in row):
+            continue
+        total_rows += 1
+
+        email = _normalise_value(_cell(row, indices, "email"))
+        if not email:
+            errors.append(f"Строка {row_number}: отсутствует email")
+            issues.append(
+                ValidationIssue(row=row_number, field="Email", problem="Пусто")
+            )
+            continue
+
+        full_name = _normalise_value(_cell(row, indices, "full_name"))
+        if not full_name:
+            full_name = " ".join(
+                part
+                for part in (
+                    _normalise_value(_cell(row, indices, "last_name")),
+                    _normalise_value(_cell(row, indices, "first_name")),
+                    _normalise_value(_cell(row, indices, "middle_name")),
+                )
+                if part
+            )
+        # ФИО в выгрузке может быть пустым: логин из email — допустимая замена,
+        # иначе пользователь без имени ломает список в интерфейсе.
+        if not full_name:
+            full_name = email.split("@")[0]
+
+        if not _EMAIL_RE.match(email):
+            issues.append(
+                ValidationIssue(
+                    row=row_number,
+                    field="Email",
+                    problem="Некорректный email",
+                    severity=SEVERITY_WARNING,
+                    value=email,
+                )
+            )
+
+        key = email.casefold()
+        if key in seen_emails:
+            issues.append(
+                ValidationIssue(
+                    row=row_number,
+                    field="Email",
+                    problem=f"Дубль в файле (строка {seen_emails[key]})",
+                    severity=SEVERITY_WARNING,
+                    value=email,
+                )
+            )
+        else:
+            seen_emails[key] = row_number
+
+        data.append(
+            {
+                "email": email,
+                "full_name": full_name,
+                "role": _normalise_value(_cell(row, indices, "role")) or None,
+            }
+        )
+
+    return CatalogImportResult(
+        success=True,
+        data=data,
+        errors=errors,
+        headers=headers,
+        issues=issues,
+        total_rows=total_rows,
     )
 
 

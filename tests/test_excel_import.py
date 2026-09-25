@@ -120,3 +120,125 @@ def test_json_import_reports_required_name_missing() -> None:
 
     assert result.success is False
     assert any("Название" in error for error in result.errors)
+
+
+def _vendors_xlsx() -> BytesIO:
+    """Мини-аналог «Вендоры.xlsx» кейсодержателя: продукт вместо «Названия»."""
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Компания", "Продукт", "ФИО", "Телефон", "Почта", "Способ связи"])
+    sheet.append(
+        ["ООО «Базис»", "«Базис Dynamix»", "Иванов И. И.", "+7 900 111-22-33",
+         "ivanov@example.ru", "Чат в ТГ"]
+    )
+    sheet.append(
+        ["ООО «РТК ИТ»", "«Нейрошлюз»", "Козлов М. И.", "+7 900 777-88-99",
+         "kozlov@example.ru", "Почта"]
+    )
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return output
+
+
+def test_products_import_accepts_vendor_catalog() -> None:
+    """Колонка «Продукт» из «Вендоры.xlsx» распознаётся как название продукта."""
+    result = parse_catalog_file(_vendors_xlsx(), "products", "Вендоры.xlsx")
+
+    assert result.success is True
+    assert [item["name"] for item in result.data] == [
+        "«Базис Dynamix»",
+        "«Нейрошлюз»",
+    ]
+    # Контакты вендоров в каталог продуктов не переносятся.
+    assert all(set(item) == {"name", "direction"} for item in result.data)
+
+
+def test_products_import_accepts_course_column_from_json() -> None:
+    """Колонка «Курс» из «Данные оплат.json» тоже описывает ИТ-продукт."""
+    payload = (
+        b'[{"\\u041a\\u0443\\u0440\\u0441": "\\u041f\\u0440\\u043e\\u043c\\u043f\\u0442"}]'
+    )
+
+    result = parse_catalog_json(payload, "products")
+
+    assert result.success is True
+    assert result.data[0]["name"] == "Промпт"
+
+
+def test_json_import_skips_leading_null_stub() -> None:
+    """Выгрузки кейсодержателя начинаются с null: строка не должна ломать файл."""
+    payload = b'[null, {"name": "\\u041c\\u0413\\u0423"}]'
+
+    result = parse_catalog_json(payload, "universities")
+
+    assert result.success is True
+    assert result.data == [{"name": "МГУ", "city": None, "contact_person": None,
+                            "contact_email": None, "contact_phone": None}]
+
+
+def _users_xlsx() -> BytesIO:
+    """Мини-аналог «Загрузка пользователей.xlsx» с ПДн-колонками."""
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(
+        ["Фамилия", "Имя", "Отчество", "Email", "СНИЛС",
+         "Серия паспорта", "Номер паспорта", "Улица регистрации"]
+    )
+    sheet.append(
+        ["Черепанова", "Светлана", "Васильевна", "cherepanona.s@test.ru",
+         "123-456-789 00", "4509", "123456", "ул. Ленина"]
+    )
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return output
+
+
+def test_users_import_collects_only_account_fields() -> None:
+    """Импорт пользователей не переносит ПДн из выгрузки (152-ФЗ)."""
+    result = parse_catalog_file(_users_xlsx(), "users", "Загрузка пользователей.xlsx")
+
+    assert result.success is True
+    assert result.data == [
+        {
+            "email": "cherepanona.s@test.ru",
+            "full_name": "Черепанова Светлана Васильевна",
+            "role": None,
+        }
+    ]
+    serialised = str(result.data)
+    for sensitive in ("СНИЛС", "123-456-789", "4509", "123456", "Ленина"):
+        assert sensitive not in serialised
+
+
+def test_users_import_requires_email_column() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Фамилия", "Имя"])
+    sheet.append(["Иванов", "Пётр"])
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    result = parse_catalog_file(output, "users", "users.xlsx")
+
+    assert result.success is False
+    assert any("Email" in error for error in result.errors)
+
+
+def test_users_import_warns_on_duplicate_email() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Email", "Фамилия"])
+    sheet.append(["dup@example.com", "Иванов"])
+    sheet.append(["dup@example.com", "Петров"])
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    result = parse_catalog_file(output, "users", "users.xlsx")
+
+    assert result.success is True
+    assert len(result.data) == 2
+    assert any("Дубль" in issue.problem for issue in result.issues)

@@ -15,6 +15,8 @@ import openpyxl
 import pytest
 from app.db.session import SessionLocal, create_tables
 from app.main import app
+from app.models.entities import User
+from app.models.enums import UserRole
 from app.services.excel_import import (
     SEVERITY_ERROR,
     SEVERITY_WARNING,
@@ -288,3 +290,63 @@ async def test_report_endpoint_rejects_non_excel_and_unknown_catalog() -> None:
 
     assert wrong_type.status_code == 400
     assert wrong_format.status_code == 400
+
+
+def _users_xlsx(rows: list[list[object]]) -> BytesIO:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Фамилия", "Имя", "Отчество", "Email", "СНИЛС"])
+    for row in rows:
+        sheet.append(row)
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return output
+
+
+async def test_execute_imports_users_from_case_holder_export() -> None:
+    """Выгрузка кейсодержателя создаёт учётные записи без ПДн."""
+    async with _report_client() as client:
+        headers = await _auth_headers(client)
+        email = f"case-holder-{uuid4().hex[:8]}@example.com"
+        response = await client.post(
+            "/api/catalogs/import/execute",
+            params={"catalog_type": "users"},
+            files={
+                "file": (
+                    "Загрузка пользователей.xlsx",
+                    _users_xlsx([
+                        ["Черепанова", "Светлана", "Васильевна", email, "123-456-789 00"],
+                    ]).getvalue(),
+                )
+            },
+            data={"mapping": "{}"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["created"] == 1
+    assert body["total"] == 1
+
+    async with SessionLocal() as session:
+        user = await session.scalar(select(User).where(User.email == email))
+        assert user is not None
+        assert user.full_name == "Черепанова Светлана Васильевна"
+        assert user.role == UserRole.USER
+        # Пароль из выгрузки не берётся: хеш временного пароля не пустой.
+        assert user.hashed_password
+
+
+async def test_execute_rejects_unknown_catalog_type() -> None:
+    async with _report_client() as client:
+        headers = await _auth_headers(client)
+        response = await client.post(
+            "/api/catalogs/import/execute",
+            params={"catalog_type": "unknown"},
+            files={"file": ("catalog.xlsx", _xlsx([["МГУ", "Москва", "", "", ""]]).getvalue())},
+            data={"mapping": "{}"},
+            headers=headers,
+        )
+
+    assert response.status_code == 400
