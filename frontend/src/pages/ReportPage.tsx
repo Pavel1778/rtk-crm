@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
-  LineChart, Line,
+  LineChart, Line, LabelList,
 } from 'recharts';
 import { downloadBlob, errorMessage } from '../api/client';
 import {
@@ -374,6 +374,12 @@ export default function ReportPage() {
                 <XAxis
                   type="number"
                   allowDecimals={false}
+                  // Без явного домена recharts выбирает «круглую» верхнюю
+                  // границу: при максимуме 1 ось растягивалась до 4, и
+                  // столбцы занимали четверть ширины поля, а не всю. Верхняя
+                  // граница — фактический максимум, но не меньше 1, иначе
+                  // при всех нулях ось вырождается в [0, 0].
+                  domain={[0, (dataMax: number) => Math.max(1, dataMax)]}
                   tick={AXIS_TICK_SMALL}
                   stroke="var(--atmr-border-default)"
                 />
@@ -403,7 +409,19 @@ export default function ReportPage() {
                   dataKey="count"
                   fill="var(--atmr-accent-default)"
                   radius={[0, 6, 6, 0]}
-                />
+                  minPointSize={2}
+                >
+                  {/* Значение столбца подписью: у половины этапов счётчик
+                      равен нулю, и без числа столбец нулевой длины нельзя
+                      отличить от «нет данных». */}
+                  <LabelList
+                    dataKey="count"
+                    position="right"
+                    offset={6}
+                    fill="var(--atmr-fg-subtle)"
+                    fontSize={11}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>

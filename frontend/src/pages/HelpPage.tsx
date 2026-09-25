@@ -239,6 +239,15 @@ export default function HelpPage() {
                 ) : null}
               </figure>
             ),
+            // Широкую GFM-таблицу оборачиваем в прокручиваемый контейнер.
+            // Раньше прокрутку задавали самой таблице через `display: block`,
+            // но это ломает табличный контекст форматирования: колонки
+            // пересчитываются по строкам независимо и перестают совпадать.
+            table: ({ children }) => (
+              <div className="help-doc__table-scroll">
+                <table>{children}</table>
+              </div>
+            ),
           }}
         >
           {content[tab.key] ?? ''}
@@ -248,11 +257,14 @@ export default function HelpPage() {
   }));
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="help-page">
       <Title level={2} style={{ marginBottom: 16 }}>
         Помощь
       </Title>
-      <Card style={{ border: '1px solid var(--atmr-border-soft)' }}>
+      <Card
+        className="help-page__card"
+        style={{ border: '1px solid var(--atmr-border-soft)' }}
+      >
         {loading ? (
           <div style={{ textAlign: 'center', padding: 48 }}>
             <Spin size="large" />
@@ -267,6 +279,7 @@ export default function HelpPage() {
               >
                 <Input
                   allowClear
+                  className="help-search"
                   prefix={<SearchOutlined />}
                   placeholder="Поиск по разделам"
                   value={query}
