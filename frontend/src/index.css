@@ -762,7 +762,15 @@ img, svg, canvas, video, table { max-width: 100%; }
   }
 }
 
-/* Встроенная документация (/help): скриншоты не должны занимать весь экран */
+/* Встроенная документация (/help).
+
+   Markdown приходит от react-markdown без стилей: `.ant-typography` задаёт
+   оформление заголовкам, которые мы подставляем в компонентах, а таблицы,
+   код, цитаты и разделители остаются «сырыми» элементами браузера. Ниже
+   приводим их к теме и ограничиваем по ширине, чтобы содержимое не
+   расползалось за карточку. */
+
+/* Скриншоты не должны занимать весь экран. */
 .help-doc img {
   max-width: 720px;
   width: 100%;
@@ -770,6 +778,94 @@ img, svg, canvas, video, table { max-width: 100%; }
   border: 1px solid var(--atmr-border-soft);
   border-radius: 8px;
   margin: 12px 0;
+}
+
+.help-doc figure {
+  margin: 12px 0;
+}
+
+/* Таблицы из GFM: у браузера нет ни рамок, ни отступов, поэтому без явных
+   правил шапка и строки сливаются в один текст. */
+.help-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.help-doc th,
+.help-doc td {
+  border: 1px solid var(--atmr-border-soft);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.help-doc th {
+  background: var(--atmr-bg-soft);
+  color: var(--atmr-fg-default);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Длинные ячейки (описания «почему не альтернатива») переносятся, а не
+   растягивают таблицу за пределы карточки. */
+.help-doc td {
+  overflow-wrap: anywhere;
+}
+
+/* Горизонтальная прокрутка вместо переноса ASCII-диаграмм: они выровнены
+   пробелами, и перенос ломает картинку. */
+.help-doc pre {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--atmr-border-soft);
+  border-radius: 8px;
+  background: var(--atmr-bg-soft);
+  color: var(--atmr-fg-default);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-x: auto;
+}
+
+.help-doc pre code {
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: inherit;
+}
+
+/* Инлайновый код: фон из темы, чтобы `код` не сливался с абзацем. */
+.help-doc :not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--atmr-bg-soft);
+  color: var(--atmr-fg-default);
+  font-size: 12.5px;
+}
+
+.help-doc blockquote {
+  margin: 12px 0;
+  padding: 4px 14px;
+  border-left: 3px solid var(--atmr-accent-default);
+  color: var(--atmr-fg-muted);
+}
+
+.help-doc hr {
+  margin: 20px 0;
+  border: none;
+  border-top: 1px solid var(--atmr-border-soft);
+}
+
+/* Ссылки в документации: react-markdown отдаёт их без класса antd, поэтому
+   подсвечиваем акцентом — иначе они неотличимы от обычного текста. */
+.help-doc a {
+  color: var(--atmr-accent-default);
+  text-decoration: none;
+}
+
+.help-doc a:hover {
+  text-decoration: underline;
 }
 
 /* Тег «продукт» на карточке: preset-цвета antd (Tag color="purple") фиксированы

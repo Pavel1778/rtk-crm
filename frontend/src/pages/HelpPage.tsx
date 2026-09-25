@@ -97,6 +97,7 @@ export default function HelpPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('user');
   const [query, setQuery] = useState('');
+  const [activeSection, setActiveSection] = useState('');
   const docRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -123,11 +124,38 @@ export default function HelpPage() {
   const sections = useMemo(() => extractSections(currentDoc), [currentDoc]);
   const activeTabMeta = DOC_TABS.find((tab) => tab.key === activeTab);
 
+  // Подсветка раздела, который сейчас на экране: без неё длинное руководство
+  // не даёт понять, где находишься. Следим за заголовками через
+  // IntersectionObserver — scroll-обработчик считал бы позиции на каждом кадре.
+  useEffect(() => {
+    const root = docRef.current;
+    if (!root || !sections.length) return;
+    const headings = sections
+      .map((section) => root.querySelector(`#${section.id}`))
+      .filter((node): node is Element => Boolean(node));
+    if (!headings.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length) setActiveSection(visible[0].target.id);
+      },
+      // Верхняя треть контейнера — «зона чтения»: заголовок считается
+      // активным, когда дошёл до неё, а не когда появился у нижней кромки.
+      { rootMargin: '-10% 0px -70% 0px', threshold: 0 },
+    );
+    headings.forEach((heading) => observer.observe(heading));
+    return () => observer.disconnect();
+  }, [sections, activeTab]);
+
   const scrollTo = useCallback((id: string) => {
     docRef.current?.querySelector(`#${id}`)?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     });
+    setActiveSection(id);
   }, []);
 
   // Поиск идёт по заголовкам разделов: полнотекстовый фильтр разорвал бы
@@ -173,8 +201,19 @@ export default function HelpPage() {
                 node.children[0].tagName === 'img';
               return only ? <>{children}</> : <p>{children}</p>;
             },
+            // Внутренние ссылки ведут на Markdown-файлы зеркала, а не на
+            // страницы приложения: в текущей вкладке браузер показал бы сырой
+            // текст. Открываем их в новой вкладке; mailto оставляем как есть.
+            a: ({ href, children }) =>
+              href?.startsWith('mailto:') ? (
+                <a href={href}>{children}</a>
+              ) : (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              ),
             img: ({ src, alt }) => (
-              <figure style={{ margin: '12px 0' }}>
+              <figure>
                 <img
                   src={src}
                   alt={alt ?? ''}
@@ -210,7 +249,9 @@ export default function HelpPage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={2}>Помощь</Title>
+      <Title level={2} style={{ marginBottom: 16 }}>
+        Помощь
+      </Title>
       <Card style={{ border: '1px solid var(--atmr-border-soft)' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 48 }}>
@@ -219,7 +260,11 @@ export default function HelpPage() {
         ) : (
           <Row gutter={24}>
             <Col xs={24} md={7} lg={6}>
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <Space
+                direction="vertical"
+                size={12}
+                style={{ width: '100%', position: 'sticky', top: 16 }}
+              >
                 <Input
                   allowClear
                   prefix={<SearchOutlined />}
@@ -227,22 +272,45 @@ export default function HelpPage() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
-                <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Разделов: {matchedSections.length}
+                </Text>
+                <div
+                  style={{
+                    maxHeight: 420,
+                    overflowY: 'auto',
+                    // Разделители помогают читать список: без них 10+ пунктов
+                    // сливаются в сплошной столбец текста.
+                    borderLeft: '1px solid var(--atmr-border-soft)',
+                  }}
+                >
                   {matchedSections.length ? (
-                    matchedSections.map((section) => (
-                      <div
-                        key={section.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => scrollTo(section.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') scrollTo(section.id);
-                        }}
-                        style={{ padding: '6px 4px', cursor: 'pointer' }}
-                      >
-                        <Text>{section.label}</Text>
-                      </div>
-                    ))
+                    matchedSections.map((section) => {
+                      const isActive = section.id === activeSection;
+                      return (
+                        <div
+                          key={section.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-current={isActive ? 'true' : undefined}
+                          onClick={() => scrollTo(section.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') scrollTo(section.id);
+                          }}
+                          style={{
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            borderLeft: `3px solid ${
+                              isActive ? 'var(--atmr-accent-default)' : 'transparent'
+                            }`,
+                            marginLeft: -1,
+                            background: isActive ? 'var(--atmr-bg-soft)' : undefined,
+                          }}
+                        >
+                          <Text strong={isActive}>{section.label}</Text>
+                        </div>
+                      );
+                    })
                   ) : (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -252,6 +320,7 @@ export default function HelpPage() {
                 </div>
                 {activeTabMeta?.pdf ? (
                   <Button
+                    type="primary"
                     icon={<FilePdfOutlined />}
                     onClick={() => {
                       downloadStaticFile(`/docs/${activeTabMeta.pdf}`, activeTabMeta.pdf);
@@ -261,7 +330,11 @@ export default function HelpPage() {
                   >
                     Скачать PDF
                   </Button>
-                ) : null}
+                ) : (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    PDF-версия доступна для руководств пользователя и администратора.
+                  </Text>
+                )}
               </Space>
             </Col>
             <Col xs={24} md={17} lg={18}>
