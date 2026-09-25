@@ -34,6 +34,66 @@ const RADIAN = Math.PI / 180;
 // Сектора уже 5% слишком тонкие для подписи внутри — выносим их с выноской.
 const SMALL_SLICE = 0.05;
 
+/** Разбивает название этапа на строки по словам.
+ *
+ * На телефоне подпись оси обрезалась до 14 символов, и по «Коммуникация и…»
+ * нельзя было понять этап. Перенос по словам сохраняет текст читаемым;
+ * `…` остаётся только как крайняя мера, если строки не вмещают название. */
+function wrapLabel(text: string, perLine: number, maxLines: number): string[] {
+  const lines: string[] = [];
+  let current = '';
+  for (const word of text.split(' ')) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (!current || candidate.length <= perLine) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  if (lines.length <= maxLines) return lines;
+  const kept = lines.slice(0, maxLines);
+  const last = kept[maxLines - 1];
+  kept[maxLines - 1] = `${last.slice(0, Math.max(1, perLine - 1))}…`;
+  return kept;
+}
+
+interface StageTickProps {
+  x?: number;
+  y?: number;
+  payload?: { value?: string | number };
+  lines: number;
+  perLine: number;
+}
+
+/** Подпись этапа на оси Y: до `lines` строк по `perLine` символов. */
+function StageTick({ x = 0, y = 0, payload, lines, perLine }: StageTickProps) {
+  const parts = wrapLabel(String(payload?.value ?? ''), perLine, lines);
+  const lineHeight = 14;
+  const offset = ((parts.length - 1) * lineHeight) / 2;
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="end"
+      fill="var(--atmr-fg-subtle)"
+      fontSize={12}
+    >
+      {parts.map((part, index) => (
+        <tspan
+          key={index}
+          x={x}
+          y={y - offset + index * lineHeight}
+          dominantBaseline="central"
+        >
+          {part}
+        </tspan>
+      ))}
+    </text>
+  );
+}
+
 // Recharts подставляет собственные цвета осей (#666), не зная о теме: на
 // тёмном фоне это 2.83:1. Задаём цвет явно токеном для обеих тем.
 const AXIS_TICK = { fill: 'var(--atmr-fg-subtle)' } as const;
@@ -112,6 +172,9 @@ function ProductSliceLabel({
 export default function ReportPage() {
   const device = useDevice();
   const isMobile = device === 'mobile';
+  // Планшет: сайдбар сужает колонку, поэтому узкая ось и перенос подписей
+  // нужны не только на телефоне (на 768px подпись не вмещалась в 42 символа).
+  const isCompactAxis = device !== 'desktop';
   const [exporting, setExporting] = useState<string | null>(null);
   const [draftDates, setDraftDates] = useState<DateRangeValue>({});
   const [filters, setFilters] = useState<ReportFilters>({});
@@ -285,8 +348,8 @@ export default function ReportPage() {
             data-chart-export="report-by-stage"
             className="chart-container report-stage-chart"
             style={{
-              height: isMobile
-                ? Math.max(420, data.by_stage.length * 38)
+              height: isCompactAxis
+                ? Math.max(420, data.by_stage.length * 62)
                 : stageChartHeight,
               background: 'var(--atmr-bg-container)',
             }}
@@ -317,15 +380,16 @@ export default function ReportPage() {
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={isMobile ? 132 : 240}
-                  tick={{ ...AXIS_TICK, fontSize: 12 }}
+                  width={isCompactAxis ? 128 : 240}
+                  tick={
+                    isCompactAxis ? (
+                      <StageTick lines={4} perLine={18} />
+                    ) : (
+                      <StageTick lines={2} perLine={28} />
+                    )
+                  }
                   stroke="var(--atmr-border-default)"
                   interval={0}
-                  tickFormatter={(value: string) =>
-                    value.length > (isMobile ? 16 : 42)
-                      ? `${value.slice(0, isMobile ? 14 : 40)}…`
-                      : value
-                  }
                 />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
@@ -338,7 +402,7 @@ export default function ReportPage() {
                 <Bar
                   dataKey="count"
                   fill="var(--atmr-accent-default)"
-                  radius={isMobile ? [6, 6, 0, 0] : [0, 6, 6, 0]}
+                  radius={[0, 6, 6, 0]}
                 />
               </BarChart>
             </ResponsiveContainer>

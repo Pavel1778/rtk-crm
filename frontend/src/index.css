@@ -968,6 +968,10 @@ img, svg, canvas, video, table { max-width: 100%; }
   background: var(--atmr-bg-soft);
   color: var(--atmr-fg-default);
   font-size: 12.5px;
+  /* Длинные токены без пробелов (пути `backend/services/...`, URL) не имеют
+     точек переноса и вылезали за карточку: на экране 320px такой токен
+     занимал 251px при 198px доступной ширины. Разрешаем перенос по символам. */
+  overflow-wrap: break-word;
 }
 
 .help-doc blockquote {
@@ -1001,4 +1005,34 @@ img, svg, canvas, video, table { max-width: 100%; }
   background: var(--atmr-bg-dropzone);
   border-color: transparent;
   color: var(--atmr-accent-default);
+}
+
+/* ═══════ ТАБЛИЦЫ ДОКУМЕНТАЦИИ НА УЗКИХ ЭКРАНАХ ═══════
+   GFM-таблица шире колонки: в «Архитектуре» она занимает 338px при 198px
+   полезной ширины на экране 320px, а на планшете 768px — 490px при 434px.
+   Так как у body стоит overflow-x: hidden, правый край не прокручивался, а
+   обрезался — последняя колонка была недостижима. Переводим таблицу в
+   блочный контейнер с собственной горизонтальной прокруткой: колонки
+   остаются целыми и читаемыми, а страница по-прежнему не скроллится вбок.
+   Правило действует на всех ширинах: на широком экране содержимое
+   помещается, прокрутка не появляется, и вид таблицы не меняется. */
+.help-doc table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  /* Заголовки больше не удерживаются в одну строку: white-space: nowrap
+     задавал таблице ширину по самому длинному заголовку и распирал её. */
+  .help-doc th {
+    white-space: normal;
+  }
+
+  .help-doc th,
+  .help-doc td {
+    padding: 6px 8px;
+    font-size: 12.5px;
+  }
 }
