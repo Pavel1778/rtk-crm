@@ -8,6 +8,7 @@ from app.api import (
     catalogs,
     directories,
     files,
+    integration,
     interactions,
     notifications,
     reports,
@@ -148,6 +149,7 @@ app.include_router(interactions.router)
 app.include_router(audit.router)
 app.include_router(reports.router)
 app.include_router(notifications.router)
+app.include_router(integration.router)
 
 
 @app.get("/", tags=["system"])

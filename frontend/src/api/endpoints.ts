@@ -318,6 +318,60 @@ export const reorderStages = (stages: { id: number; order: number }[]) =>
 export const deleteStage = (id: number, targetStageId?: number) =>
   api.delete(`/api/stages/${id}`, { params: targetStageId ? { target_stage_id: targetStageId } : undefined });
 
+// --- Интеграция с LMS и CMS (ФТ-5) ---
+export type IntegrationSummary = {
+  source: string;
+  total: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+  warnings: string[];
+  created_ids: number[];
+};
+
+export type IntegrationSchema = {
+  required: string[];
+  optional: string[];
+  known: string[];
+  scope_values: string[];
+  notes: string;
+};
+
+export const getIntegrationSchema = () =>
+  api.get<IntegrationSchema>('/api/integration/schema').then((r) => r.data);
+
+/** Dry-run: разбор пакета без записи в БД. */
+export const previewIntegration = (
+  payload: unknown,
+  source: 'lms' | 'cms' = 'lms',
+) =>
+  api
+    .post<IntegrationSummary>('/api/integration/preview', payload, {
+      params: { source },
+    })
+    .then((r) => r.data);
+
+export const importIntegration = (
+  payload: unknown,
+  source: 'lms' | 'cms' = 'lms',
+) =>
+  api
+    .post<IntegrationSummary>('/api/integration/import', payload, {
+      params: { source },
+    })
+    .then((r) => r.data);
+
+/** Забор пакета из внешней системы (пока заглушка LMS/CMS). */
+export const pullIntegration = (source: 'lms' | 'cms') =>
+  api.get<IntegrationSummary>(`/api/integration/pull/${source}`).then((r) => r.data);
+
+/** Исходящий пакет для LMS/CMS: данные карточек и ключи связи. */
+export const getOutboundPackage = () =>
+  api.get<{ direction: string; targets: string[]; total: number; items: unknown[] }>(
+    '/api/integration/outbound',
+  ).then((r) => r.data);
+
 // --- Отчёты ---
 export type ReportFilters = {
   stage_id?: number;

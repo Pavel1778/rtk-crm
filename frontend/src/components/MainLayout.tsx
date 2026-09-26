@@ -1,4 +1,5 @@
 import {
+  ApiOutlined,
   AppstoreOutlined,
   BarChartOutlined,
   BulbOutlined,
@@ -38,6 +39,12 @@ const AUDIT_ITEM = {
   label: 'Журнал',
 };
 
+const INTEGRATION_ITEM = {
+  key: '/integration',
+  icon: <ApiOutlined />,
+  label: 'Интеграция',
+};
+
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,9 +74,12 @@ export default function MainLayout() {
     setThemePreference(next);
   };
 
-  const items = role === 'admin'
-    ? [...MENU_ITEMS, ADMIN_ITEM, AUDIT_ITEM]
-    : MENU_ITEMS;
+  const items =
+    role === 'admin'
+      ? [...MENU_ITEMS, ADMIN_ITEM, AUDIT_ITEM, INTEGRATION_ITEM]
+      : role === 'manager'
+        ? [...MENU_ITEMS, INTEGRATION_ITEM]
+        : MENU_ITEMS;
 
   return (
     <Layout className="app-shell">
