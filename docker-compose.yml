@@ -112,8 +112,11 @@ services:
       GIGACHAT_CREDENTIALS: ${GIGACHAT_CREDENTIALS:-}
       GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_B2B}
       GIGACHAT_MODEL: ${GIGACHAT_MODEL:-GigaChat}
-      GIGACHAT_CA_BUNDLE: ${GIGACHAT_CA_BUNDLE:-}
+      # Сертификат НУЦ Минцифры вшит в образ; монтирование позволяет обновлять
+      # его без пересборки.
+      GIGACHAT_CA_BUNDLE: ${GIGACHAT_CA_BUNDLE:-/certs/russian_trusted_root_ca.pem}
       GIGACHAT_VERIFY_SSL: ${GIGACHAT_VERIFY_SSL:-true}
+      GIGACHAT_FALLBACK_ENABLED: ${GIGACHAT_FALLBACK_ENABLED:-true}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       STUCK_TIMEOUT_DAYS: ${STUCK_TIMEOUT_DAYS:-14}
       NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}

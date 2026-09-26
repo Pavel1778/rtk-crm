@@ -27,8 +27,9 @@ class Settings(BaseSettings):
     # за окно (секунды). 0 отключает ограничение.
     login_rate_limit: int = 5
     login_rate_limit_window_seconds: int = 60
-    # JWT remains the active auth mode; Keycloak integration is a future
-    # closed-contour deployment option.
+    # Демонстрационный режим. Фиксирует текущий контур (JWT + БД, внешние
+    # LMS/CMS отвечают заглушками) и не переключает аутентификацию: режим
+    # входа задаётся явно через AUTH_MODE.
     mock_mode: bool = True
 
     # Режим аутентификации: "jwt" — локальные пароли и HS256-токены,
@@ -70,6 +71,11 @@ class Settings(BaseSettings):
     # явно; verify_ssl=False допустим только для отладки.
     gigachat_ca_bundle: str = ""
     gigachat_verify_ssl: bool = True
+    # Если внешний сервис недоступен, эндпоинт сводки отдаёт детерминированный
+    # текст из данных карточки (см. `gigachat.build_fallback_summary`) вместо
+    # 502. Нужно для демонстрации: сводка остаётся доступной без внешнего
+    # сервиса. Отключается явно, чтобы в проде ошибка была видна.
+    gigachat_fallback_enabled: bool = False
 
     # CORS — строка через запятую в env. Явный список: с allow_credentials=True
     # браузер отвергает ответы с `*` в Access-Control-Allow-Origin.

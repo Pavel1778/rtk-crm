@@ -388,21 +388,31 @@ async def summarize_interaction(
 
     try:
         summary = gigachat.summarize(context)
+        model = get_settings().gigachat_model
     except gigachat.GigaChatDisabled:
-        raise HTTPException(
-            status_code=503,
-            detail="Сводка недоступна: сервис GigaChat не настроен",
-        ) from None
+        # Ключ не задан. В демонстрационном контуре отдаём детерминированный
+        # текст из карточки, чтобы функция оставалась доступной без внешнего
+        # сервиса; иначе 503, и интерфейс объясняет, что функция выключена.
+        if not get_settings().gigachat_fallback_enabled:
+            raise HTTPException(
+                status_code=503,
+                detail="Сводка недоступна: сервис GigaChat не настроен",
+            ) from None
+        summary = gigachat.build_fallback_summary(context)
+        model = gigachat.FALLBACK_MODEL
     except gigachat.GigaChatUnavailable as exc:
-        raise HTTPException(
-            status_code=502,
-            detail="Сервис GigaChat временно недоступен",
-        ) from exc
+        if not get_settings().gigachat_fallback_enabled:
+            raise HTTPException(
+                status_code=502,
+                detail="Сервис GigaChat временно недоступен",
+            ) from exc
+        summary = gigachat.build_fallback_summary(context)
+        model = gigachat.FALLBACK_MODEL
 
     return InteractionSummary(
         interaction_id=interaction_id,
         summary=summary,
-        model=get_settings().gigachat_model,
+        model=model,
         generated_at=datetime.now(UTC),
     )
 

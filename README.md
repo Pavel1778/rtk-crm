@@ -60,6 +60,7 @@ backend/          FastAPI-приложение (пакет backend)
   api/              роутеры: auth, universities, directories,
                     stages, interactions, reports
   seed.py           справочники + демо-данные
+  certs/            корневой сертификат НУЦ Минцифры для TLS к GigaChat
   start.sh          старт без Docker (Render, Start Command)
 frontend/         React-приложение (Vite)
   src/api/          axios-клиент и описание эндпоинтов
@@ -67,6 +68,7 @@ frontend/         React-приложение (Vite)
                     SettingsPage, LoginPage
   src/components/   MainLayout, kanban, interaction
 infra/yandex-cloud/ прод-стек для ВМ: setup-vm.sh, docker-compose, nginx
+render.yaml       Blueprint для контура Render + Vercel + Supabase
 docs/             DEPLOYMENT.md, STACK.md, USER_GUIDE.md,
                   architecture/, security/, pitch.md
 ```

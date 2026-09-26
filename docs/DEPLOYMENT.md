@@ -96,6 +96,14 @@ S3_BUCKET=rtk-crm-files
 SECRET_KEY=<уникальная строка не менее 32 символов>
 CORS_ORIGINS=https://rtk-crm.ru
 SEED_DEMO_DATA=true
+
+# Сводка по карточке (ФТ-6). Без ключа функция выключена: 503 в API и
+# пояснение во вкладке «Сводка». Сертификат НУЦ Минцифры вшит в образ,
+# задавать GIGACHAT_CA_BUNDLE не нужно.
+GIGACHAT_CREDENTIALS=<authorization-key-base64>
+GIGACHAT_SCOPE=GIGACHAT_API_B2B
+GIGACHAT_MODEL=GigaChat
+GIGACHAT_FALLBACK_ENABLED=true
 ```
 
 Имена переменных должны совпадать с теми, что читает
@@ -185,6 +193,11 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
 
 Тип: **Web Service** (Docker).
 
+В репозитории есть готовый Blueprint `render.yaml`: он задаёт сервис,
+регион, путь к Dockerfile и переменные окружения, поэтому в панели Render
+достаточно подключить репозиторий и заполнить секреты (`sync: false`).
+Если создавать сервис вручную, параметры те же:
+
 | Параметр | Значение |
 |---|---|
 | Repository | `Pavel1778/rtk-crm` |
@@ -206,6 +219,16 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
 | `CORS_ORIGIN_REGEX` | regex для хостов предпросмотра (необязательно) |
 | `SEED_DEMO_DATA` | `true` |
 | `MOCK_MODE` | `true` |
+| `GIGACHAT_CREDENTIALS` | ключ авторизации из личного кабинета GigaChat Developers |
+| `GIGACHAT_SCOPE` | `GIGACHAT_API_B2B` |
+| `GIGACHAT_MODEL` | `GigaChat` |
+| `GIGACHAT_FALLBACK_ENABLED` | `true` — демо-сводка вместо 502 при сбое сервиса |
+
+> Сертификат НУЦ Минцифры вшит в образ (`backend/Dockerfile`) и попадает в
+> `/certs`, поэтому на Render дополнительно настраивать TLS не нужно:
+> `GIGACHAT_CA_BUNDLE` уже указывает на этот путь по умолчанию. Если
+> `GIGACHAT_CREDENTIALS` не задан, вкладка «Сводка» в карточке сообщает, что
+> сервис не настроен (ответ 503).
 
 > `ENVIRONMENT` должен быть ровно `production` (или `prod`). При другом
 > значении HSTS не отдаётся, а проверка длины `SECRET_KEY` не применяется.
