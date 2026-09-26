@@ -96,9 +96,9 @@ Realm импортируется из `keycloak/realm-export.json` при пер
 
 | Логин | Пароль | Роль |
 | --- | --- | --- |
-| `admin@rtk-crm.local` | `Admin123!` | admin |
-| `manager@rtk-crm.local` | `Manager123!` | manager |
-| `kam@rtk-crm.local` | `Kam123!` | kam |
+| `admin@rtk.ru` | `Admin123!` | admin |
+| `manager@rtk.ru` | `Manager123!` | manager |
+| `kam@rtk.ru` | `Kam123!` | kam |
 
 Пароли в realm-файле предназначены для локальной демонстрации. Для закрытого
 контура их нужно заменить при импорте realm.
@@ -107,13 +107,28 @@ Realm импортируется из `keycloak/realm-export.json` при пер
 
 ```bash
 AUTH_MODE=keycloak
+# Внутренний адрес: по нему backend забирает публичные ключи (JWKS).
 KEYCLOAK_URL=https://keycloak.example.ru
+# Публичный адрес: по нему браузер открывает Keycloak. Именно он попадает в
+# claim `iss`, поэтому по нему проверяется issuer токена. В Docker это
+# http://keycloak:8080 для KEYCLOAK_URL и внешний адрес ВМ для этого параметра.
+KEYCLOAK_PUBLIC_URL=https://keycloak.example.ru
 KEYCLOAK_REALM=rtk-crm
 KEYCLOAK_CLIENT_ID=rtk-crm-frontend
 # audience токена; пустое значение отключает проверку aud
 KEYCLOAK_AUDIENCE=rtk-crm-frontend
 KEYCLOAK_JWKS_TTL_SECONDS=300
 ```
+
+Фронтенд переключается тем же режимом при сборке: `VITE_AUTH_MODE=keycloak`
+(в Docker Compose значение берётся из `AUTH_MODE`). В этом режиме вход
+выполняет Keycloak по Authorization Code Flow с PKCE, а access token
+подставляется в запросы и продлевается перед их отправкой. При
+`VITE_AUTH_MODE=jwt` остаётся локальная форма входа по email и паролю.
+
+Адрес Keycloak для браузера задаётся через `KEYCLOAK_PUBLIC_URL`: из него
+собирается `VITE_KEYCLOAK_URL`, поэтому на ВМ достаточно указать
+`KEYCLOAK_PUBLIC_URL=http://<ip-вм>:8080`, и вход заработает без правки образа.
 
 ## Получение токена
 
@@ -125,7 +140,7 @@ curl -s -X POST \
   http://localhost:8080/realms/rtk-crm/protocol/openid-connect/token \
   -d grant_type=password \
   -d client_id=rtk-crm-frontend \
-  -d username=admin@rtk-crm.local \
+  -d username=admin@rtk.ru \
   -d password='Admin123!' | python3 -m json.tool
 ```
 
@@ -135,7 +150,7 @@ curl -s -X POST \
 TOKEN=$(curl -s -X POST \
   http://localhost:8080/realms/rtk-crm/protocol/openid-connect/token \
   -d grant_type=password -d client_id=rtk-crm-frontend \
-  -d username=admin@rtk-crm.local -d password='Admin123!' \
+  -d username=admin@rtk.ru -d password='Admin123!' \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 
 curl -s http://localhost:8000/api/auth/me -H "Authorization: Bearer $TOKEN"
@@ -157,9 +172,10 @@ curl -s http://localhost:8000/api/auth/me -H "Authorization: Bearer $TOKEN"
 - **Хранение состояния.** Локальный запуск использует `start-dev` с встроенной
   БД H2. Для закрытого контура нужен `start --optimized` с внешним PostgreSQL
   и включённым HTTPS: в dev-режиме Keycloak не рассчитан на нагрузку.
-- **`sslRequired: external`** в realm-файле означает, что по HTTPS токены
-  обязательны, а по HTTP (локально) соединение допускается. Для промышленного
-  контура требуется TLS на всех участках.
+- **`sslRequired: none`** в realm-файле допускает работу по HTTP: демо-стенд
+  открывается по `http://<ip-вм>:8080`, и при `external` Keycloak отклонял бы
+  такой вход. Для промышленного контура требуется вернуть `external` и
+  включить TLS на всех участках.
 - **Выход из системы.** Logout выполняется на стороне Keycloak; backend не
   ведёт список отозванных токенов, поэтому access-токен живёт до `exp`.
   Уменьшение `accessTokenLifespan` в realm сокращает это окно.
