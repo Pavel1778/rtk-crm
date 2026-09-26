@@ -1,15 +1,16 @@
 # Деплой RTK CRM
 
-Актуальный способ развёртывания — Yandex Cloud, одна ВМ со всеми
-компонентами в Docker. Описание ниже (Render + Supabase + Vercel) оставлено
-как предыдущий вариант: он использовался до переезда.
+Сейчас прод работает на Render + Supabase + Vercel (раздел 2). Подготовлен
+переезд в Yandex Cloud (раздел 1): инфраструктура описана и проверена,
+включая сборку всего стека и сквозной вход через nginx. Развёртывание
+выполняется на ВМ по инструкции из `infra/yandex-cloud/README.md`.
 
-- [1. Yandex Cloud (актуально)](#1-yandex-cloud-актуально)
-- [2. Render + Supabase + Vercel (предыдущий вариант)](#2-render--supabase--vercel-предыдущий-вариант)
+- [1. Yandex Cloud (подготовлено)](#1-yandex-cloud-подготовлено)
+- [2. Render + Supabase + Vercel (текущий прод)](#2-render--supabase--vercel-текущий-прод)
 
 ---
 
-## 1. Yandex Cloud (актуально)
+## 1. Yandex Cloud (подготовлено)
 
 Всё разворачивается на одной ВМ: PostgreSQL, backend (FastAPI), frontend
 (React/Vite) и nginx. Подробная пошаговая инструкция — в
@@ -30,7 +31,7 @@ nginx  ── /            ──▶ frontend  (статика Vite)
 Все контейнеры в одной docker-сети, наружу смотрят только nginx (80/443).
 Backend и база снаружи недоступны.
 
-### Что изменилось относительно Render + Supabase + Vercel
+### Что изменится относительно текущего прода
 
 | Было | Стало |
 |---|---|
@@ -71,7 +72,7 @@ nginx он не отработает.
 
 ---
 
-## 2. Render + Supabase + Vercel (предыдущий вариант)
+## 2. Render + Supabase + Vercel (текущий прод)
 
 ### Архитектура
 
