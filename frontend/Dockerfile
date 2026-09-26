@@ -7,9 +7,15 @@ WORKDIR /app
 # origin, а проксирует его nginx. Абсолютный адрес здесь привёл бы к
 # обращению в обход прокси и CORS-отказу в браузере.
 ARG VITE_API_URL=
+ARG VITE_AUTH_MODE=jwt
 ARG VITE_KEYCLOAK_URL=http://localhost:8080
+ARG VITE_KEYCLOAK_REALM=rtk-crm
+ARG VITE_KEYCLOAK_CLIENT_ID=rtk-crm-frontend
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_AUTH_MODE=$VITE_AUTH_MODE
 ENV VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL
+ENV VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM
+ENV VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID
 
 COPY package*.json ./
 RUN npm ci
