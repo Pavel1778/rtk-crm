@@ -13,6 +13,16 @@ build/
 !.env.template
 !.env.prod.example
 
+# Ключи и сертификаты
+*.pem
+*.key
+credentials.json
+service-account.json
+service_account.json
+key.json
+*.p12
+*.pfx
+
 # Кэш Python
 __pycache__/
 *.py[cod]
