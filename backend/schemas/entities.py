@@ -338,3 +338,12 @@ class AuditLogRead(ORMModel):
 class AuditLogPage(BaseModel):
     total: int
     items: list[AuditLogRead]
+
+
+# ---------- Сводка по взаимодействию (GigaChat, ФТ-6) ----------
+class InteractionSummary(BaseModel):
+    interaction_id: int
+    summary: str
+    model: str
+    generated_at: datetime
+

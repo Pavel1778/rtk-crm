@@ -46,6 +46,24 @@ class Settings(BaseSettings):
     keycloak_jwks_ttl_seconds: int = 300
     keycloak_jwks_timeout_seconds: float = 5.0
 
+    # GigaChat — суммаризация коммуникаций с вузом (ФТ-6).
+    # Пустой GIGACHAT_CREDENTIALS отключает функцию: эндпоинт отвечает 503,
+    # а интерфейс скрывает кнопку. Так демонстрационный контур работает без
+    # внешнего сервиса и без ключа.
+    gigachat_credentials: str = ""
+    gigachat_scope: str = "GIGACHAT_API_B2B"
+    gigachat_model: str = "GigaChat"
+    gigachat_base_url: str = "https://gigachat.devices.sberbank.ru/api/v1"
+    gigachat_auth_url: str = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
+    # Срок жизни токена доступа GigaChat — 30 минут; обновляем заранее.
+    gigachat_token_ttl_seconds: int = 1500
+    gigachat_timeout_seconds: float = 30.0
+    # Токен доступа GigaChat выдаётся с сертификатом НУЦ Минцифры, которого
+    # нет в стандартном наборе Python. Путь к корневому сертификату задаётся
+    # явно; verify_ssl=False допустим только для отладки.
+    gigachat_ca_bundle: str = ""
+    gigachat_verify_ssl: bool = True
+
     # CORS — строка через запятую в env. Явный список: с allow_credentials=True
     # браузер отвергает ответы с `*` в Access-Control-Allow-Origin.
     # 127.0.0.1 и localhost считаются разными origin, поэтому нужны оба.
@@ -91,6 +109,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment.lower() in {"production", "prod"}
+
+    @property
+    def gigachat_enabled(self) -> bool:
+        return bool(self.gigachat_credentials)
 
     @property
     def cors_origins_list(self) -> list[str]:

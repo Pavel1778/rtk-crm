@@ -204,7 +204,7 @@ production Render/Supabase.
 | MIME + extension + 50 MB upload limit | `✅ OK` | `backend/api/files.py:20-50,74-94` |
 | SQLAlchemy ORM | `✅ OK` | Checked backend API/services; raw SQL only fixed health/DDL statements |
 | `.env` не отслеживается, examples разрешены | `✅ OK` | `.gitignore`, tracked files `backend/.env.example`, `frontend/.env.example` |
-| Старые секреты в Git history | `⚠️ Warning` | Текущие файлы очищены, но ранее опубликованные credentials нельзя считать отозванными: их нужно немедленно ротировать в Supabase/Render |
+| Старые секреты в Git history | `⚠️ Warning` | Текущие файлы очищены. Проверка всех 952 blob-объектов не нашла реальных сторонних учётных данных (Supabase/Render/GigaChat): в истории только placeholder'ы. Ротация сторонних ключей не требуется. Уточнено в `docs/CLEANUP_REPORT.md`: если контур поднимался из `docker-compose.yml` без переопределения, заменить нужно только локальный `SECRET_KEY` |
 
 ## 5. Workflow, RBAC и cookie consent
 

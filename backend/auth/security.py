@@ -118,10 +118,15 @@ async def _user_from_keycloak_token(
 
     user = await db.scalar(select(User).where(User.email == email))
     if user is not None:
-        # Роли в токене — источник истины для RBAC; локальная роль
-        # синхронизируется, чтобы зависимости require_* работали единообразно.
-        token_roles = roles_from_claims(claims)
-        request.state.keycloak_roles = token_roles
+        # Роли в токене — источник истины для RBAC. Локальная роль
+        # синхронизируется, потому что часть проверок (например, доступ КАМ
+        # к своим карточкам) читает поле role напрямую.
+        role = _role_from_keycloak_claims(claims)
+        if user.role is not role or user.is_admin is not (role is UserRole.ADMIN):
+            user.role = role
+            user.is_admin = role is UserRole.ADMIN
+            await db.commit()
+        request.state.keycloak_roles = roles_from_claims(claims)
         return user
 
     # Аккаунт в Keycloak есть, а в CRM ещё нет: заводим по данным токена,

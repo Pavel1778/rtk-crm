@@ -6,6 +6,7 @@ from app.api.access import (
     get_interaction_or_404,
 )
 from app.auth.security import get_current_user
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.entities import (
     Action,
@@ -28,8 +29,10 @@ from app.schemas.entities import (
     InteractionCard,
     InteractionCreate,
     InteractionRead,
+    InteractionSummary,
     InteractionUpdate,
 )
+from app.services import gigachat
 from app.services.report_cache import invalidate_report_cache
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -316,6 +319,91 @@ async def get_interaction(
 ) -> InteractionRead:
     return await _read(
         db, await _get_accessible(db, interaction_id, current)
+    )
+
+
+@router.post(
+    "/{interaction_id}/summary", response_model=InteractionSummary
+)
+async def summarize_interaction(
+    interaction_id: int,
+    db: AsyncSession = Depends(get_db),
+    current: User = Depends(get_current_user),
+) -> InteractionSummary:
+    """Сводка по карточке от GigaChat (ФТ-6).
+
+    Доступ проверяется тем же способом, что и чтение карточки: КАМ не может
+    получить сводку по чужому взаимодействию. Данные передаются в GigaChat
+    только после проверки доступа.
+    """
+    interaction = await _get_accessible(db, interaction_id, current)
+
+    university = await db.get(University, interaction.university_id)
+    product = (
+        await db.get(ITProduct, interaction.product_id)
+        if interaction.product_id
+        else None
+    )
+    stage = await db.get(WorkflowStageRef, interaction.stage_id)
+    specialist = (
+        await db.get(User, interaction.assigned_kam_id)
+        if interaction.assigned_kam_id
+        else None
+    )
+
+    actions = list(
+        await db.scalars(
+            select(Action)
+            .where(Action.interaction_id == interaction_id)
+            .order_by(Action.id)
+        )
+    )
+    comments = list(
+        await db.scalars(
+            select(Comment)
+            .where(Comment.interaction_id == interaction_id)
+            .order_by(Comment.id)
+        )
+    )
+
+    context = {
+        "university_name": university.name if university else None,
+        "product_name": product.name if product else None,
+        "stage_name": stage.name if stage else None,
+        "scope": interaction.scope.value,
+        "assigned_kam_name": specialist.full_name if specialist else None,
+        "created_at": interaction.created_at.isoformat()
+        if interaction.created_at
+        else None,
+        "actions": [
+            {
+                "title": action.title,
+                "is_completed": action.is_completed,
+                "due_date": action.due_date,
+            }
+            for action in actions
+        ],
+        "comments": [{"text": comment.text} for comment in comments],
+    }
+
+    try:
+        summary = gigachat.summarize(context)
+    except gigachat.GigaChatDisabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Сводка недоступна: сервис GigaChat не настроен",
+        ) from None
+    except gigachat.GigaChatUnavailable as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Сервис GigaChat временно недоступен",
+        ) from exc
+
+    return InteractionSummary(
+        interaction_id=interaction_id,
+        summary=summary,
+        model=get_settings().gigachat_model,
+        generated_at=datetime.now(UTC),
     )
 
 
