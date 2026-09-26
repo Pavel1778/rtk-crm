@@ -13,7 +13,11 @@ engine = create_async_engine(
     get_settings().database_url,
     echo=False,
     pool_pre_ping=True,
-    poolclass=NullPool,  # Важно для Supabase pooler (pgbouncer)
+    # NullPool: соединение закрывается сразу после использования.
+    # Нужен при работе через внешний пулер (pgbouncer Yandex Managed
+    # PostgreSQL в режиме transaction pooling) — иначе соединения
+    # «залипают» в процессе и не отдаются обратно в пулер.
+    poolclass=NullPool,
 )
 
 SessionLocal = async_sessionmaker(

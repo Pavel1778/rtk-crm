@@ -64,7 +64,12 @@ class LocalStorage:
 
 
 class S3Storage:
-    """MinIO/S3-хранилище через minio-py (S3-совместимый API)."""
+    """S3-хранилище через minio-py (S3-совместимый API).
+
+    Работает как с локальным MinIO, так и с Yandex Object Storage:
+    для второго endpoint — `storage.yandexcloud.net`, secure=True,
+    region=ru-central1 (регион участвует в подписи SigV4).
+    """
 
     def __init__(self) -> None:
         from minio import Minio
@@ -76,6 +81,7 @@ class S3Storage:
             access_key=settings.s3_access_key,
             secret_key=settings.s3_secret_key,
             secure=settings.s3_secure,
+            region=settings.s3_region,
         )
         if not self.client.bucket_exists(self.bucket):
             self.client.make_bucket(self.bucket)

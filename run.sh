@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  RTK CRM — Universal Launcher with Supabase
+#  RTK CRM — Universal Launcher (Docker Compose)
 #  Работает из любой директории
 # ============================================================
 
@@ -34,7 +34,7 @@ fi
 banner() {
   echo ""
   echo -e "${B}╔══════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${B}║${NC}      ${M}RTK CRM — Local Launcher with Supabase${NC}            ${B}║${NC}"
+  echo -e "${B}║${NC}      ${M}RTK CRM — Local Launcher (Docker Compose)${NC}            ${B}║${NC}"
   echo -e "${B}║${NC}      ${C}$ROOT${NC}"
   echo -e "${B}╚══════════════════════════════════════════════════════════╝${NC}"
   echo ""
@@ -84,7 +84,7 @@ check_env() {
   ok ".env файлы на месте"
 }
 
-check_supabase_creds() {
+check_db_creds() {
   local url
   url=$(grep -oE 'DATABASE_URL:\s*"[^"]+' "$ROOT/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*"//')
   if [ -z "$url" ]; then
@@ -98,7 +98,7 @@ check_supabase_creds() {
 
   if echo "$url" | grep -q "НОВЫЙ_ПАРОЛЬ\|YOUR_PASSWORD\|\[YOUR-PASSWORD\]\|PASSWORD_HERE"; then
     err "DATABASE_URL содержит placeholder вместо реального пароля"
-    echo "  → Открой Supabase Dashboard → Settings → Database → Connection string (URI)"
+    echo "  → Укажите строку подключения PostgreSQL (managed-кластер или контейнер)"
     echo "  → Замени пароль в $ROOT/docker-compose.yml"
     exit 1
   fi
@@ -112,7 +112,7 @@ do_start() {
   check_docker
   check_compose
   check_env
-  check_supabase_creds
+  check_db_creds
 
   echo ""
   info "Запускаю контейнеры (down + up)..."
@@ -139,7 +139,7 @@ do_start() {
   fi
 
   echo ""
-  info "Проверяю подключение к Supabase..."
+  info "Проверяю подключение к базе данных..."
   if ! docker exec rtk_backend python -c "
 import asyncio, os
 from sqlalchemy import text
@@ -151,10 +151,10 @@ async def c():
         await conn.execute(text('SELECT 1'))
 asyncio.run(c())
 " >/dev/null 2>&1; then
-    err "Backend не может подключиться к Supabase"
+    err "Backend не может подключиться к базе данных"
     return 1
   fi
-  ok "Supabase доступен"
+  ok "База данных доступна"
 
   echo ""
   info "Проверяю таблицы..."
@@ -362,7 +362,7 @@ do_open() {
 }
 
 do_reset_all() {
-  warn "Это удалит все контейнеры и БД (данные в Supabase НЕ удаляются)"
+  warn "Это удалит все контейнеры и БД (данные во внешней БД НЕ удаляются)"
   read -rp "Продолжить? (yes/no): " c
   if [ "$c" = "yes" ]; then
     $DC down -v --remove-orphans

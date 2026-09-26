@@ -1,4 +1,4 @@
-# Прод-конфигурация для Yandex Cloud: собственный PostgreSQL вместо Supabase.
+# Прод-конфигурация для Yandex Cloud: PostgreSQL, KeyDB, backend, frontend, nginx.
 # Запуск: docker compose -f infra/yandex-cloud/docker-compose.prod.yml --env-file .env up -d
 services:
   postgres:

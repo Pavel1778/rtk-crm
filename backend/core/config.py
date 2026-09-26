@@ -36,8 +36,7 @@ class Settings(BaseSettings):
     # 127.0.0.1 и localhost считаются разными origin, поэтому нужны оба.
     cors_origins: str = (
         "http://localhost:3000,http://localhost:5173,http://localhost,"
-        "http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1,"
-        "https://rtk-crm-nx4r.vercel.app"
+        "http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1"
     )
     # Дополнительные origin'ы по регулярному выражению (стенды предпросмотра
     # вида https://<branch>.preview.<domain>). Задаётся через env
@@ -60,12 +59,15 @@ class Settings(BaseSettings):
     notifications_enabled: bool = True
     notifications_interval_hours: int = 12
 
-    # MinIO/S3-хранилище файлов. Если endpoint пуст — локальный uploads/.
+    # S3-хранилище файлов (Yandex Object Storage или MinIO).
+    # Если endpoint пуст — локальный uploads/.
     s3_endpoint: str = ""
     s3_access_key: str = ""
     s3_secret_key: str = ""
     s3_bucket: str = "rtk-crm"
     s3_secure: bool = False
+    # Регион подписи SigV4. Для Yandex Object Storage — ru-central1.
+    s3_region: str = "ru-central1"
 
     @property
     def s3_enabled(self) -> bool:

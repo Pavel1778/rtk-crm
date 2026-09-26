@@ -46,8 +46,8 @@ TEAM_NAME = "RTK CRM"
 CITY = "Москва"
 CONTACT = "sabadaspaha@gmail.com"
 REPO = "github.com/Pavel1778/rtk-crm"
-DEMO = "rtk-crm-nx4r.vercel.app"
-API = "rtk-crm-backend.onrender.com"
+DEMO = "Yandex Cloud (ВМ с nginx)"
+API = "https://<домен>/api"
 
 TEAM = [
     {"name": "Сабадаш Павел", "role": "Капитан, backend и инфраструктура", "tg": "Pasha1778"},
@@ -384,9 +384,9 @@ def slide_tech(s):
                       "Recharts и @dnd-kit"]),
         ("Backend", ["Python 3.11, FastAPI", "SQLAlchemy 2 async, asyncpg",
                      "Pydantic v2, JWT и bcrypt"]),
-        ("Данные и инфраструктура", ["PostgreSQL для production",
-                                     "SQLite для локального запуска",
-                                     "Docker Compose и Nginx"]),
+        ("Данные и инфраструктура", ["PostgreSQL (Managed или контейнер)",
+                                     "Yandex Object Storage для файлов",
+                                     "KeyDB для кэша, Docker Compose, Nginx"]),
     ]
     for (title, items), x, w in zip(cards, (0.68, 4.83, 9.15), (3.55, 3.72, 3.55)):
         add_text(s, x + 0.22, 2.02, w - 0.44, 0.6, [

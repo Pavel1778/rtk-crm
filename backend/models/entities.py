@@ -29,8 +29,9 @@ class User(Base, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(255))
     hashed_password: Mapped[str] = mapped_column(String(255))
     # native_enum=False: роль хранится как VARCHAR + CHECK, а не как
-    # Postgres-ENUM. Это снимает конфликт с устаревшим типом userrole,
-    # который pooler Supabase продолжает кэшировать даже после DROP TYPE.
+    # Postgres-ENUM. Так снимается конфликт с устаревшим типом userrole,
+    # который продолжает кэшировать внешний пулер после DROP TYPE,
+    # и упрощается миграция между локальным Postgres и managed-кластером.
     # values_callable нужен, чтобы в БД попадали значения (admin), а не
     # имена членов перечисления (ADMIN).
     role: Mapped[UserRole] = mapped_column(

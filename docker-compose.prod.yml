@@ -1,6 +1,6 @@
-# Оверлей для запуска с локальным PostgreSQL вместо Supabase (вариант Yandex Cloud).
+# Оверлей для запуска с PostgreSQL в контейнере (вариант Yandex Cloud).
 #
-#   docker compose up -d                                        # текущая конфигурация (Supabase)
+#   docker compose up -d                                        # базовая конфигурация (SQLite)
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d   # свой Postgres
 #
 # Полноценный прод-стек для ВМ Yandex Cloud (nginx + TLS + бэкапы):

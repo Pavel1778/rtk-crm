@@ -16,7 +16,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent
 BACKEND_DIR = REPO_ROOT / "backend"
 
-# Тесты работают на локальном SQLite: не требуем Supabase/Postgres.
+# Тесты работают на локальном SQLite: внешняя СУБД не требуется.
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("SEED_DEMO_DATA", "false")

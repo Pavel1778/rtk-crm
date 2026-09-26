@@ -42,18 +42,19 @@
 
 | Компонент | Назначение |
 |---|---|
-| PostgreSQL | Основная БД в проде (Supabase / Yandex Cloud) |
-| Redis | Кэш отчётов, опционально |
-| MinIO | S3-совместимое хранилище файлов (dev/on-prem) |
-| Keycloak | Задел под корпоративную аутентификацию |
+| PostgreSQL | Основная БД (Yandex Managed PostgreSQL, контейнер на ВМ или Supabase) |
+| Redis / KeyDB | Кэш агрегатов отчётов; KeyDB рекомендован заказчиком как более лёгкий |
+| S3-хранилище | Файлы заявок: Yandex Object Storage или MinIO (S3-совместимое API) |
+| Keycloak | Задел под корпоративную аутентификацию (закрытый контур) |
 | Nginx | Reverse proxy, TLS, отдача статики |
-| Docker Compose | Локальный запуск всего контура |
+| Docker Compose | Запуск всего контура одной командой |
 
 ## Внешние сервисы и интеграции
 
-- **Supabase / PostgreSQL** — продовая БД (asyncpg).
-- **Render** — текущий хостинг API (health-check `/health`).
-- **Vercel** — хостинг фронтенда.
+- **Yandex Cloud** — основной контур: Compute (ВМ), Managed PostgreSQL,
+  Object Storage, Container Registry, Cloud DNS.
+- **Render + Vercel + Supabase** — альтернативный контур без своей
+  инфраструктуры (хостинг API, статика фронтенда, PostgreSQL).
 - **LMS/Laravel** — задел под интеграцию (httpx), не в MVP.
 
 ## Требования к окружению

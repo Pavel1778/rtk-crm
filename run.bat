@@ -129,7 +129,7 @@ REM Проверка placeholder пароля
 findstr /C:"НОВЫЙ_ПАРОЛЬ" "%ROOT%\docker-compose.yml" >nul 2>&1
 if !errorlevel! equ 0 (
     echo [ERROR] DATABASE_URL содержит placeholder НОВЫЙ_ПАРОЛЬ
-    echo  - Открой Supabase Dashboard ^-^> Settings ^-^> Database
+    echo  - Укажите строку подключения PostgreSQL (managed или контейнер)
     echo  - Скопируй connection string и замени пароль
     echo  - Файл: %ROOT%\docker-compose.yml
     pause
@@ -169,7 +169,7 @@ echo.
 echo [OK] Backend готов
 
 echo.
-echo [INFO] Проверяю подключение к Supabase...
+echo [INFO] Проверяю подключение к базе данных...
 docker exec rtk_backend python -c "import asyncio; from app.db.session import engine; from sqlalchemy import text; asyncio.run((lambda: __import__('asyncio').get_event_loop().run_until_complete((lambda: __import__('asyncio').sleep(0))()))())" >nul 2>&1
 REM Простой healthcheck через /health
 curl -sS -m 5 http://localhost:8000/health >nul 2>&1
@@ -407,7 +407,7 @@ REM  CHECK DB
 REM ============================================================
 :check_db
 echo.
-echo [INFO] Проверяю подключение к Supabase...
+echo [INFO] Проверяю подключение к базе данных...
 docker exec rtk_backend python -c "
 import asyncio
 from app.db.session import engine
@@ -443,7 +443,7 @@ REM ============================================================
 :reset_all
 echo.
 echo [WARN] Это удалит все контейнеры и volume-ы.
-echo        Данные в Supabase НЕ удаляются.
+echo        Данные во внешней БД НЕ удаляются.
 echo.
 set /p CONFIRM="Продолжить? (yes/no): "
 if /i "%CONFIRM%"=="yes" (

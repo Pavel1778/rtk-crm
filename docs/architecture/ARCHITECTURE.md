@@ -222,7 +222,7 @@ Keycloak (OAuth2 / OpenID Connect) — вариант целевого конт�
 | Механизм | Где | Зачем при 300+ |
 |---|---|---|
 | Полностью асинхронный стек (FastAPI + SQLAlchemy AsyncIO + asyncpg) | `backend/main.py`, `backend/db/session.py` | I/O-ожидание БД не блокирует воркер: один процесс обслуживает сотни соединений |
-| `NullPool` для подключений | `backend/db/session.py` | Совместимо с pgbouncer/Supabase pooler: соединения не «залипают» в процессе |
+| `NullPool` для подключений | `backend/db/session.py` | Совместимо с внешним пулером (pgbouncer Yandex Managed PostgreSQL, Supabase pooler): соединения не «залипают» в процессе |
 | Кеш отчёта в Redis/KeyDB, TTL 30 с | `backend/services/report_cache.py` | Тяжёлые агрегаты не считаются на каждый запрос — снимает нагрузку с PostgreSQL |
 | Rate limiting логина (5 попыток / 60 с на IP) | `backend/middleware/rate_limit.py` | Защита от перебора пароля и от всплеска 401 при сканировании |
 | Индексы на внешних ключах и датах | `backend/alembic/versions/` | Фильтры доски и отчётов по этапу/дате не деградируют на росте данных |
@@ -264,7 +264,8 @@ Keycloak (OAuth2 / OpenID Connect) — вариант целевого конт�
 ## Мониторинг и логирование
 
 - Health checks: `/healthz` (liveness), `/readyz` (readiness + БД),
-  `/api/health` (расширенный статус), `/health` (алиас для Render).
+  `/api/health` (расширенный статус), `/health` (короткий алиас для
+  внешних платформ и health-check).
 - Логи: stdout/stderr (Docker logs), структурированные через `loguru`.
 - Метрики: `prometheus-fastapi-instrumentator` на `/metrics`.
 
@@ -294,7 +295,8 @@ Supabase (PostgreSQL, регион us-west-2). Требования 152-ФЗ «�
 данных» к локализации баз данных граждан РФ и приказ ФСТЭК России № 117
 предполагают размещение в российском контуре. Yandex Cloud даёт аттестованную
 инфраструктуру и переносится без изменения кода — весь стек уже
-контейнеризован.
+контейнеризован. Внешний контур при этом остаётся рабочим и используется как
+публичный демонстрационный стенд.
 
 Инфраструктура для переезда подготовлена и проверена: собран и поднят весь
 стек, вход через nginx отработал. Переключение прода выполняется сменой DNS
@@ -335,8 +337,8 @@ flowchart LR
 4. Поднять стек в режиме `TLS_ENABLED=false` и проверить `/api/health`.
 5. Направить A-запись домена на IP, выпустить сертификат Let's Encrypt,
    переключить `TLS_ENABLED=true`.
-6. Перенести данные из Supabase: `pg_dump` → `pg_restore` в контейнер `rtk_postgres`.
-7. Проверить `https://<домен>/api/health`, затем переключить DNS с Vercel.
+6. Перенести данные из внешней БД: `pg_dump` → `pg_restore` в контейнер `rtk_postgres`.
+7. Проверить `https://<домен>/api/health`, затем переключить DNS на IP ВМ.
 
 Подробности и команды — в `infra/yandex-cloud/README.md`.
 

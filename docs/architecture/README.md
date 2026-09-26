@@ -18,12 +18,13 @@ Mermaid и отображаются в GitHub, GitLab и совместимых 
 
 ## Развёртывание
 
-- [Текущее развёртывание](deployment-current.md) — Vercel → Render → Supabase.
-- [Целевое развёртывание в Yandex Cloud](deployment-yandex-cloud.md) —
-  подготовленный вариант в российском контуре.
+- [Основной контур в Yandex Cloud](deployment-yandex-cloud.md) — ВМ,
+  nginx, PostgreSQL, Object Storage, KeyDB.
+- [Внешний контур](deployment-current.md) — Vercel → Render → Supabase.
 
-Текущий production-контур: Vercel → Render → Supabase. Миграция в Yandex Cloud
-является подготовленным целевым вариантом и не выполняется автоматически.
+Основной контур — Yandex Cloud: данные размещаются в РФ, что требуется
+152-ФЗ. Внешний контур поддерживается как публичный демонстрационный стенд
+и разворачивается из того же кода без изменений.
 
 Полное описание архитектуры, стека и стратегии масштабирования —
 в [`ARCHITECTURE.md`](ARCHITECTURE.md).

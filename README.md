@@ -31,8 +31,10 @@ CRM для кейса «ИТ Школа» хакатона «Лидеры циф
 |---|---|
 | Backend | Python 3.11, FastAPI, SQLAlchemy 2 (async), JWT + bcrypt |
 | Frontend | React 18, TypeScript, Vite, Ant Design 5, Zustand, @dnd-kit |
-| БД | PostgreSQL 16 (в контейнере) или SQLite для локальной разработки |
-| Деплой | текущий прод — Render (backend) + Vercel (frontend) + Supabase; подготовлен переезд в Yandex Cloud |
+| БД | PostgreSQL 16 (контейнер или Yandex Managed PostgreSQL) или SQLite для локальной разработки |
+| Кэш | Redis / KeyDB для агрегатов отчётов |
+| Хранилище файлов | Yandex Object Storage или MinIO (S3-совместимое) |
+| Деплой | основной контур — Yandex Cloud (ВМ + nginx); альтернативный — Render + Vercel + Supabase |
 
 ## Бизнес-модель
 
@@ -58,12 +60,13 @@ backend/          FastAPI-приложение (пакет backend)
   api/              роутеры: auth, universities, directories,
                     stages, interactions, reports
   seed.py           справочники + демо-данные
-  start.sh          старт на Render
+  start.sh          старт без Docker (Render, Start Command)
 frontend/         React-приложение (Vite)
   src/api/          axios-клиент и описание эндпоинтов
   src/pages/        BoardPage, ReportPage, DirectoryPage,
                     SettingsPage, LoginPage
   src/components/   MainLayout, kanban, interaction
+infra/yandex-cloud/ прод-стек для ВМ: setup-vm.sh, docker-compose, nginx
 docs/             DEPLOYMENT.md, STACK.md, USER_GUIDE.md,
                   architecture/, security/, pitch.md
 ```
@@ -112,13 +115,23 @@ http://127.0.0.1:5173 — dev-сервер проксирует `/api` на `loc
 
 ## Деплой
 
-Текущий прод — Render + Supabase + Vercel:
-https://rtk-crm-nx4r.vercel.app.
+Поддерживаются два контура; код один и тот же, различия — только в
+переменных окружения.
 
-Подготовлен переезд в Yandex Cloud: одна ВМ, Docker Compose из четырёх
-контейнеров (PostgreSQL, backend, frontend, nginx). Инфраструктура описана
-и проверена, развёртывание выполняется скриптом — пошагово в
-[infra/yandex-cloud/README.md](infra/yandex-cloud/README.md).
+**Yandex Cloud (основной).** Одна ВМ, Docker Compose из пяти контейнеров
+(PostgreSQL, KeyDB, backend, frontend, nginx). Данные размещаются в РФ —
+это целевой контур по 152-ФЗ и приказу ФСТЭК № 117.
+
+```bash
+docker compose -f infra/yandex-cloud/docker-compose.prod.yml --env-file .env up -d
+```
+
+Пошагово — в [infra/yandex-cloud/README.md](infra/yandex-cloud/README.md)
+и [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+**Render + Vercel + Supabase (альтернативный).** Backend — контейнер на
+Render, frontend — статика на Vercel, база — Supabase PostgreSQL.
+Подходит для быстрого публичного стенда без своей инфраструктуры.
 
 ## Документация
 
@@ -176,8 +189,8 @@ https://rtk-crm-nx4r.vercel.app.
 
 ## Production
 
-- Frontend: https://rtk-crm-nx4r.vercel.app
-- Backend: https://rtk-crm-backend.onrender.com
+- Основной контур: Yandex Cloud, `https://<домен-ВМ>` (см. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
+- Альтернативный контур: Render + Vercel + Supabase
 
 ## Нагрузочная проверка
 

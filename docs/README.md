@@ -14,9 +14,10 @@
 
 - **Frontend**: React 18 + TypeScript + Vite + Ant Design
 - **Backend**: FastAPI (Python 3.11) + SQLAlchemy 2.0 (async)
-- **Database**: PostgreSQL/Supabase (основное хранилище)
+- **Database**: PostgreSQL (Yandex Managed PostgreSQL, контейнер или Supabase)
+- **Storage**: S3-совместимое (Yandex Object Storage или MinIO)
 - **Auth**: JWT + bcrypt с RBAC
-- **Deploy**: Render (backend) + Vercel (frontend)
+- **Deploy**: Yandex Cloud (ВМ + nginx) или Render + Vercel
 
 Keycloak, Redis и Nginx описаны только как варианты будущего целевого
 контура Yandex Cloud, а не как обязательные зависимости текущей сборки.
@@ -109,7 +110,7 @@ Keycloak в текущей сборке не используется: инте�
 |-----------|------------|--------|
 | Backend | Python + FastAPI | 3.11 / 0.141 |
 | Frontend | React + TypeScript | 18 / 5.x |
-| Database | PostgreSQL (текущая: Supabase) | 16 |
+| Database | PostgreSQL (Yandex Managed / контейнер / Supabase) | 16 |
 | Cache | Redis / KeyDB (отчёты, TTL 30 с) | 5.2 |
 | Auth | JWT (HS256) + bcrypt | — |
 | Web Server | Nginx (целевой контур Yandex Cloud) | Alpine |
