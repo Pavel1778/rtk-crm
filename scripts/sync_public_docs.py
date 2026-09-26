@@ -41,6 +41,7 @@ MARKDOWN_FILES = [
     "architecture/deployment-yandex-cloud.md",
     "security/SAST-SCA.md",
     "KEYCLOAK.md",
+    "AI.md",
 ]
 
 ASSET_DIRS = ["images"]

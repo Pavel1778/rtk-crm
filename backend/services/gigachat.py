@@ -180,8 +180,3 @@ def summarize(context: dict[str, Any]) -> str:
         raise GigaChatUnavailable("Неожиданный формат ответа GigaChat") from exc
 
     return str(content).strip()
-
-
-def ping() -> None:
-    """Проверка доступности для /readyz: получает токен доступа."""
-    _get_access_token()

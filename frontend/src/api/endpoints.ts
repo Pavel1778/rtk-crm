@@ -7,6 +7,7 @@ import type {
   ITDirection,
   ITProduct,
   Interaction,
+  InteractionSummary,
   ReportColumn,
   ReportResponse,
   ReportTableRow,
@@ -152,6 +153,12 @@ export const createComment = (interactionId: number, text: string) =>
 
 export const deleteComment = (id: number) =>
   api.delete(`/api/interactions/comments/${id}`);
+
+// --- Сводка по взаимодействию (GigaChat) ---
+export const summarizeInteraction = (interactionId: number) =>
+  api
+    .post<InteractionSummary>(`/api/interactions/${interactionId}/summary`)
+    .then((r) => r.data);
 
 // --- Файлы ---
 export const listFiles = (interactionId: number) =>

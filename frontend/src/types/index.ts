@@ -141,6 +141,13 @@ export interface CommentItem {
   created_at: string;
 }
 
+export interface InteractionSummary {
+  interaction_id: number;
+  summary: string;
+  model: string;
+  generated_at: string;
+}
+
 export interface ReportMetric {
   key: string;
   label: string;

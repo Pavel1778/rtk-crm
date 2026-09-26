@@ -39,6 +39,7 @@ const DOC_TABS: DocTab[] = [
     pdf: 'admin-guide.pdf',
   },
   { key: 'security', label: 'Безопасность', filename: 'SECURITY.md', pdf: '' },
+  { key: 'ai', label: 'Сводка ИИ (GigaChat)', filename: 'AI.md', pdf: '' },
   { key: 'architecture', label: 'Архитектура', filename: 'ARCHITECTURE.md', pdf: '' },
 ];
 

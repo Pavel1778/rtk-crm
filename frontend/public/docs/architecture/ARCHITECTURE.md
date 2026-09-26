@@ -98,44 +98,48 @@ RTK CRM — это B2B CRM-система для менеджеров Росте
 
 ```
 backend/
-├── app/
-│   ├── main.py              # Точка входа, middleware
-│   ├── database.py          # DB подключение, сессии
-│   ├── config.py            # Настройки (pydantic-settings)
-│   │
-│   ├── models/              # SQLAlchemy модели
-│   │   ├── __init__.py
-│   │   ├── university.py    # Вузы
-│   │   ├── workflow.py      # Этапы воркфлоу
-│   │   ├── user.py          # Пользователи, роли
-│   │   ├── file.py          # Прикрепленные файлы
-│   │   ├── log.py           # Action Log (152-ФЗ)
-│   │   └── comment.py       # Комментарии
-│   │
-│   ├── schemas/             # Pydantic схемы (DTO)
-│   │   ├── __init__.py
-│   │   ├── university.py
-│   │   ├── workflow.py
-│   │   ├── user.py
-│   │   └── auth.py
-│   │
-│   ├── api/                 # API роутеры (REST)
-│   │   ├── __init__.py
-│   │   ├── universities.py  # CRUD вузов
-│   │   ├── workflow.py      # Управление этапами
-│   │   ├── reports.py       # Генерация отчетов
-│   │   ├── files.py         # Загрузка файлов
-│   │   └── auth.py          # Логин, JWT
-│   │
-│   └── services/            # Бизнес-логика
-│       ├── __init__.py
-│       ├── reports.py       # PDF/XLSX генерация
-│       ├── audit_logger.py  # Логирование (ФСТЭК)
-│       └── workflow_service.py
+├── main.py                  # Точка входа, middleware, health-пробы
 │
-├── alembic/                 # Миграции БД
-├── seed.py                  # Тестовые данные
-└── requirements.txt
+├── api/                     # REST-роутеры (префикс /api)
+│   ├── auth.py              # Вход, пользователи
+│   ├── interactions.py      # Карточки, доска, задачи, комментарии, сводка
+│   ├── universities.py      # Вузы
+│   ├── directories.py       # Направления и продукты
+│   ├── catalogs.py          # Импорт XLS/XLSX/JSON
+│   ├── stages.py            # Этапы воркфлоу, последствия удаления
+│   ├── files.py             # Загрузка и выдача файлов
+│   ├── reports.py           # Отчёты и экспорт
+│   ├── audit.py             # Журнал действий (152-ФЗ)
+│   ├── notifications.py     # Зависшие заявки
+│   ├── integration.py       # Обмен с внешними системами
+│   └── access.py            # Проверка доступа к взаимодействиям
+│
+├── auth/
+│   ├── security.py          # JWT, пароли, get_current_user, RBAC
+│   └── keycloak.py          # JWKS-валидация RS256 (AUTH_MODE=keycloak)
+│
+├── core/config.py           # Настройки (pydantic-settings)
+├── db/                      # Подключение к БД, базовый класс, сессии
+├── middleware/audit.py      # Автоматическая запись изменений в ActionLog
+│
+├── models/                  # SQLAlchemy-модели и перечисления
+│   ├── entities.py          # University, Interaction, Action, Comment, User, ActionLog
+│   └── enums.py             # Роли, scope B2B/B2C
+│
+├── schemas/entities.py      # Pydantic-схемы (DTO)
+│
+└── services/                # Бизнес-логика
+    ├── excel_import.py      # Разбор XLS/XLSX/JSON
+    ├── import_report.py     # Отчёт об импорте
+    ├── excel_export.py      # Выгрузка отчётов
+    ├── report_columns.py    # Набор колонок отчёта
+    ├── report_cache.py      # Кэш отчётов (Redis/KeyDB)
+    ├── file_storage.py      # S3/MinIO с локальным fallback
+    ├── notifications.py     # Поиск зависших заявок
+    ├── scheduler.py         # Периодические задачи
+    ├── integration.py       # Внешние системы (LMS)
+    ├── guide_pdf.py         # PDF-руководства
+    └── gigachat.py          # Сводка по карточке (ФТ-6)
 ```
 
 ## Схема базы данных
@@ -178,39 +182,75 @@ backend/
 
 ### Аутентификация
 
-- JWT Bearer-токены (HS256), пароли — bcrypt
-- RBAC: `user` / `manager` / `admin`
-- HTTPS обязательный
+Два режима, переключаются `AUTH_MODE`:
 
-Keycloak (OAuth2 / OpenID Connect) — вариант целевого контура, в текущей
-сборке не используется (см. `docs/DEPLOYMENT.md`, режимы аутентификации).
+- **`jwt`** (по умолчанию) — JWT Bearer-токены (HS256), пароли — bcrypt.
+  Роли `user` / `manager` / `admin`, проверяются локально.
+- **`keycloak`** — токены подписывает Keycloak (RS256), CRM проверяет
+  подпись по публичным ключам realm (JWKS), затем `iss`, `aud` и срок
+  действия. Роли берутся из `realm_access.roles` и синхронизируются с
+  локальной учётной записью при входе. Устройство и порядок настройки —
+  `docs/KEYCLOAK.md`.
+
+HTTPS обязателен в обоих режимах. Сводка по карточке передаёт данные во
+внешний сервис GigaChat только после проверки доступа (см. `docs/AI.md`).
 
 ## API Endpoints
 
-### Universities
-- `GET /api/v1/universities/` — список вузов (фильтрация, пагинация)
-- `GET /api/v1/universities/{id}` — детали вуза
-- `POST /api/v1/universities/` — создать вуз
-- `PUT /api/v1/universities/{id}` — обновить вуз
-- `DELETE /api/v1/universities/{id}` — удалить вуз
+Полная схема — в Swagger UI (`/docs`). Ниже — маршруты, которые приложение
+регистрирует фактически; префикс `/api` у всех, кроме служебных проб.
 
-### Workflow
-- `GET /api/v1/workflow/stages/` — список этапов
-- `PUT /api/v1/universities/{id}/stage` — переместить на этап
+### Аутентификация и пользователи
+- `POST /api/auth/login` — вход, выдача JWT
+- `GET /api/auth/me` — текущий пользователь
+- `GET|POST /api/auth/users` — список и создание пользователей
+- `PATCH|DELETE /api/auth/users/{user_id}` — изменение и удаление
 
-### Reports
-- `GET /api/v1/reports/pdf?status=...` — PDF отчет
-- `GET /api/v1/reports/xlsx?manager=...` — XLSX отчет
+### Взаимодействия
+- `GET|POST /api/interactions` — список с фильтрами и создание
+- `GET /api/interactions/board` — данные Kanban-доски
+- `GET|PATCH|DELETE /api/interactions/{interaction_id}` — карточка
+- `POST /api/interactions/{interaction_id}/move` — смена этапа
+- `GET|POST /api/interactions/{interaction_id}/actions` — задачи
+- `PATCH|DELETE /api/interactions/actions/{action_id}`
+- `GET|POST /api/interactions/{interaction_id}/comments` — комментарии
+- `DELETE /api/interactions/comments/{comment_id}`
+- `POST /api/interactions/{interaction_id}/summary` — сводка GigaChat (ФТ-6)
 
-### Files
-- `POST /api/v1/files/upload/` — загрузить файл
-- `GET /api/v1/files/{id}/` — скачать файл
-- `DELETE /api/v1/files/{id}/` — удалить файл
+### Справочники и импорт
+- `GET|POST /api/universities`, `GET|PATCH|DELETE /api/universities/{university_id}`
+- `GET|POST /api/directions`, `DELETE /api/directions/{direction_id}`
+- `GET|POST /api/products`, `DELETE /api/products/{product_id}`
+- `POST /api/catalogs/import/preview` и `/execute` — импорт XLS/XLSX
+- `POST /api/catalogs/import/json/preview` и `/execute` — импорт JSON
+- `POST /api/catalogs/import/report` — отчёт об импорте
 
-### Auth
-- `POST /api/v1/auth/login/` — получить JWT
-- `POST /api/v1/auth/refresh/` — обновить JWT
-- `POST /api/v1/auth/logout/` — logout
+### Этапы воркфлоу
+- `GET|POST /api/stages`, `POST /api/stages/reorder`
+- `PATCH|DELETE /api/stages/{stage_id}`
+- `GET /api/stages/{stage_id}/impact` — последствия удаления этапа
+
+### Файлы
+- `GET /api/files/interactions/{interaction_id}` — файлы карточки
+- `POST /api/files/interactions/{interaction_id}/upload`
+- `GET /api/files/{file_id}/download`, `DELETE /api/files/{file_id}`
+
+### Отчёты и аудит
+- `GET /api/reports`, `/columns`, `/preview`, `/universities`
+- `GET /api/reports/xlsx`, `/xls`, `/pdf`, `/json`
+- `GET /api/audit`, `/entity-types`, `/export`
+
+### Уведомления и интеграция
+- `GET /api/notifications/stuck`, `POST /api/notifications/stuck/dispatch`
+- `GET /api/integration/schema`, `POST /api/integration/preview` и `/import`
+- `GET /api/integration/outbound`, `GET /api/integration/pull/{source}`
+
+### Служебные
+- `GET /healthz` — liveness, `GET /readyz` — readiness (БД, кэш, S3)
+- `GET /metrics` — метрики Prometheus
+
+GigaChat в `/readyz` намеренно не проверяется: функция необязательная, и её
+недоступность не должна переводить сервис в состояние degraded.
 
 ## Масштабируемость
 

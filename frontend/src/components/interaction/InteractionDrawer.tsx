@@ -23,6 +23,7 @@ import {
   InboxOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { isAxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 
@@ -40,6 +41,7 @@ import {
   listFiles,
   listStages,
   listUsers,
+  summarizeInteraction,
   updateAction,
   updateInteraction,
   uploadFile,
@@ -50,6 +52,7 @@ import type {
   CommentItem,
   Interaction,
   InteractionCard,
+  InteractionSummary,
   User,
   WorkflowStage,
 } from '../../types';
@@ -76,6 +79,28 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
   const [uploading, setUploading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [actionForm] = Form.useForm();
+  const [summary, setSummary] = useState<InteractionSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  // Функция выключена, если backend не настроен на GigaChat (ответ 503).
+  const [summaryDisabled, setSummaryDisabled] = useState(false);
+
+  const requestSummary = async () => {
+    if (!card) return;
+    setSummaryLoading(true);
+    try {
+      setSummary(await summarizeInteraction(card.id));
+    } catch (error) {
+      // 503 означает, что ключ GigaChat не задан: это не ошибка пользователя,
+      // поэтому вкладка просто объясняет, что функция недоступна.
+      if (isAxiosError(error) && error.response?.status === 503) {
+        setSummaryDisabled(true);
+      } else {
+        message.error(errorMessage(error, 'Не удалось получить сводку'));
+      }
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
 
   const load = async () => {
     if (!card) return;
@@ -100,6 +125,10 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
 
   useEffect(() => {
     if (card) {
+      // Сводка относится к конкретной карточке: при переключении сбрасываем,
+      // чтобы не показать текст предыдущего взаимодействия.
+      setSummary(null);
+      setSummaryDisabled(false);
       void load();
       void listStages().then(setStages).catch(() => undefined);
       // Список сотрудников нужен только ролям, которые могут переназначать
@@ -261,6 +290,43 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
       {full && !loading && (
         <Tabs
           items={[
+            {
+              key: 'summary',
+              label: 'Сводка',
+              children: (
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  {summaryDisabled ? (
+                    <Typography.Text type="secondary">
+                      Сводка недоступна: сервис GigaChat не настроен в этом
+                      окружении.
+                    </Typography.Text>
+                  ) : (
+                    <>
+                      <Button
+                        type="primary"
+                        loading={summaryLoading}
+                        onClick={() => void requestSummary()}
+                      >
+                        {summary ? 'Обновить сводку' : 'Получить сводку'}
+                      </Button>
+                      {summary && (
+                        <>
+                          <Typography.Paragraph
+                            style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}
+                          >
+                            {summary.summary}
+                          </Typography.Paragraph>
+                          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            Модель: {summary.model} ·{' '}
+                            {dayjs(summary.generated_at).format('DD.MM.YYYY HH:mm')}
+                          </Typography.Text>
+                        </>
+                      )}
+                    </>
+                  )}
+                </Space>
+              ),
+            },
             {
               key: 'info',
               label: 'Сведения',

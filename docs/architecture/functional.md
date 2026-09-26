@@ -54,6 +54,7 @@ flowchart TB
         cache[Report cache Redis/KeyDB]
         scheduler[Планировщик уведомлений]
         storage[File storage S3/MinIO]
+        gigachat[GigaChat: сводка карточки]
         db[(PostgreSQL)]
     end
 
@@ -70,8 +71,13 @@ flowchart TB
     reports_api --> cache --> db
     catalogs --> storage
     scheduler --> db
+    card -.->|сводка, ФТ-6| gigachat
 ```
 
 Ключевая бизнес-логика — единый workflow без версий: изменение этапа
 применяется мгновенно ко всем активным заявкам, а удаление этапа переносит
 задачи на соседний, чтобы работа не останавливалась.
+
+GigaChat вызывается только по запросу пользователя из карточки и не
+участвует в основном сценарии: без ключа вкладка «Сводка» сообщает, что
+сервис не настроен. Подробности — `docs/AI.md`.
