@@ -298,7 +298,8 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                   {summaryDisabled ? (
                     <Typography.Text type="secondary">
                       Сводка недоступна: сервис GigaChat не настроен в этом
-                      окружении.
+                      окружении. Задайте GIGACHAT_CREDENTIALS или включите
+                      демо-режим (GIGACHAT_FALLBACK_ENABLED=true).
                     </Typography.Text>
                   ) : (
                     <>

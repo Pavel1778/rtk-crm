@@ -391,3 +391,87 @@ async def test_summarize_raises_disabled_without_credentials(
     gigachat.reset_token_cache()
     with pytest.raises(gigachat.GigaChatDisabled):
         gigachat.summarize({"university_name": "Вуз"})
+
+
+async def test_fallback_summary_is_built_from_card_data() -> None:
+    """Демо-сводка собирается из полей карточки и не выдумывает факты."""
+    context = {
+        "university_name": "МГТУ им. Баумана",
+        "product_name": "RUBOTYAKA",
+        "stage_name": "Переговоры",
+        "scope": "b2b",
+        "assigned_kam_name": "КАМ Один",
+        "actions": [
+            {"title": "Отправить КП", "is_completed": True, "due_date": None},
+            {"title": "Согласовать дату", "is_completed": False, "due_date": None},
+        ],
+        "comments": [{"text": "Созвон прошёл успешно"}],
+    }
+    text = gigachat.build_fallback_summary(context)
+
+    assert "МГТУ им. Баумана" in text
+    assert "RUBOTYAKA" in text
+    assert "Переговоры" in text
+    assert "КАМ Один" in text
+    # Незавершённая задача попадает в блок «В работе», завершённая — нет.
+    assert "Согласовать дату" in text
+    assert "Отправить КП" not in text
+    assert "Созвон прошёл успешно" in text
+
+
+async def test_fallback_summary_handles_empty_card() -> None:
+    """Пустая карточка не ломает сборку демо-сводки."""
+    text = gigachat.build_fallback_summary({})
+    assert "вуз не указан" in text
+    assert "этап не указан" in text
+
+
+async def test_summary_uses_fallback_when_disabled_and_enabled(
+    client: AsyncClient,
+    fake_http: FakeGigaChat,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """При включённом демо-режиме 503 не отдаётся: приходит сводка из карточки."""
+    monkeypatch.setenv("GIGACHAT_CREDENTIALS", "")
+    monkeypatch.setenv("GIGACHAT_FALLBACK_ENABLED", "true")
+    get_settings.cache_clear()
+    gigachat.reset_token_cache()
+
+    token = await _login(client, "kam@t.ru")
+    interaction_id = await _own_interaction_id(client, token)
+
+    response = await client.post(
+        f"/api/interactions/{interaction_id}/summary",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]
+    # Демо-текст помечен отдельной моделью: его нельзя принять за ответ GigaChat.
+    assert body["model"] == gigachat.FALLBACK_MODEL
+    assert "Тестовый Вуз" in body["summary"]
+    # Внешний сервис при этом не вызывался.
+    assert fake_http.chat_calls == 0
+
+
+async def test_summary_uses_fallback_on_upstream_failure(
+    client: AsyncClient,
+    fake_http: FakeGigaChat,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """При сбое GigaChat демо-режим отдаёт сводку вместо 502."""
+    monkeypatch.setenv("GIGACHAT_FALLBACK_ENABLED", "true")
+    get_settings.cache_clear()
+    fake_http.fail_chat = True
+
+    token = await _login(client, "kam@t.ru")
+    interaction_id = await _own_interaction_id(client, token)
+
+    response = await client.post(
+        f"/api/interactions/{interaction_id}/summary",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["model"] == gigachat.FALLBACK_MODEL
+    assert "Тестовый Вуз" in body["summary"]
