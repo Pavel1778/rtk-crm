@@ -31,8 +31,8 @@ CRM для кейса «ИТ Школа» хакатона «Лидеры циф
 |---|---|
 | Backend | Python 3.11, FastAPI, SQLAlchemy 2 (async), JWT + bcrypt |
 | Frontend | React 18, TypeScript, Vite, Ant Design 5, Zustand, @dnd-kit |
-| БД | PostgreSQL (Supabase) или SQLite для локальной разработки |
-| Деплой | Render (backend), Vercel (frontend), Supabase (БД) |
+| БД | PostgreSQL 16 (в контейнере) или SQLite для локальной разработки |
+| Деплой | Yandex Cloud: одна ВМ, Docker Compose (PostgreSQL + backend + frontend + nginx) |
 
 ## Бизнес-модель
 
@@ -112,8 +112,13 @@ http://127.0.0.1:5173 — dev-сервер проксирует `/api` на `loc
 
 ## Деплой
 
-Пошаговая инструкция для Render + Supabase + Vercel:
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Прод-контур — Yandex Cloud, одна ВМ с четырьмя контейнерами (PostgreSQL,
+backend, frontend, nginx). Пошагово:
+[infra/yandex-cloud/README.md](infra/yandex-cloud/README.md), схема и
+отличия от прежнего варианта: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+Локальный запуск и прежний вариант на Render + Supabase + Vercel описаны
+в том же файле.
 
 ## Документация
 

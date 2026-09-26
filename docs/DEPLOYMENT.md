@@ -1,6 +1,79 @@
-# Деплой RTK CRM: Render + Supabase + Vercel
+# Деплой RTK CRM
 
-## Архитектура
+Актуальный способ развёртывания — Yandex Cloud, одна ВМ со всеми
+компонентами в Docker. Описание ниже (Render + Supabase + Vercel) оставлено
+как предыдущий вариант: он использовался до переезда.
+
+- [1. Yandex Cloud (актуально)](#1-yandex-cloud-актуально)
+- [2. Render + Supabase + Vercel (предыдущий вариант)](#2-render--supabase--vercel-предыдущий-вариант)
+
+---
+
+## 1. Yandex Cloud (актуально)
+
+Всё разворачивается на одной ВМ: PostgreSQL, backend (FastAPI), frontend
+(React/Vite) и nginx. Подробная пошаговая инструкция — в
+[`infra/yandex-cloud/README.md`](../infra/yandex-cloud/README.md), здесь —
+схема и ключевые отличия от предыдущего варианта.
+
+```
+Пользователь
+   │  https://<домен>  (или http://<IP> в режиме отладки)
+   ▼
+nginx  ── /            ──▶ frontend  (статика Vite)
+       ── /api/        ──▶ backend   (uvicorn + FastAPI)
+                              │
+                              ▼
+                          PostgreSQL 16 (контейнер на той же ВМ)
+```
+
+Все контейнеры в одной docker-сети, наружу смотрят только nginx (80/443).
+Backend и база снаружи недоступны.
+
+### Что изменилось относительно Render + Supabase + Vercel
+
+| Было | Стало |
+|---|---|
+| Vercel (CDN) | nginx на ВМ, отдаёт статику |
+| Render (US/EU) | тот же контейнер backend на ВМ |
+| Supabase (внешний Postgres) | PostgreSQL 16 в контейнере |
+| Два origin, CORS обязателен | Один origin, запросы same-origin |
+| `VITE_API_URL` = абсолютный адрес backend | `VITE_API_URL` пустой, `/api/` проксирует nginx |
+
+Переход на один origin убирает целый класс проблем: preflight-запросы,
+расхождения в allowlist CORS, разные домены у cookie.
+
+### Два режима nginx
+
+Режим выбирается переменной `TLS_ENABLED` в `.env`:
+
+| `TLS_ENABLED` | Что поднимается | Когда нужен |
+|---|---|---|
+| `false` | только 80, отвечает по IP | отладка, домена и сертификата ещё нет |
+| `true` | 80 (редирект) + 443 с сертификатом | демонстрация жюри |
+
+В режиме `true` сертификат нужно выпустить **до** старта nginx:
+`certbot --standalone` занимает порт 80, поэтому одновременно с работающим
+nginx он не отработает.
+
+### Переменные окружения
+
+Шаблон — `infra/yandex-cloud/.env.prod.example`. Важно: имена переменных
+должны совпадать с теми, что читает `backend/core/config.py` (`SECRET_KEY`,
+`SEED_DEMO_DATA`, `CORS_ORIGINS`, `S3_*`). `ENVIRONMENT=production` включает
+проверку длины `SECRET_KEY` при старте — со слабым ключом приложение не
+поднимется.
+
+### Бэкапы
+
+`infra/yandex-cloud/backup.sh` кладётся в `/etc/cron.daily/rtk-backup`
+скриптом `setup-vm.sh` и делает `pg_dump` раз в сутки.
+
+---
+
+## 2. Render + Supabase + Vercel (предыдущий вариант)
+
+### Архитектура
 
 ```
 Vercel (frontend, статика Vite)
@@ -14,7 +87,7 @@ Supabase PostgreSQL 15 (Session Pooler, порт 5432)
 
 ---
 
-## 1. Supabase (база данных)
+### 2.1. Supabase (база данных)
 
 Проект: `azdovsiwdyjzoqmltvrv`
 Region: **eu-west-1 (Ирландия)**
@@ -34,7 +107,7 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>.pooler.supabase.com:5
 
 ---
 
-## 2. Render (backend)
+### 2.2. Render (backend)
 
 Тип: **Web Service** (Docker).
 
@@ -124,7 +197,7 @@ GET https://rtk-crm-backend.onrender.com/docs        -> Swagger UI
 
 ---
 
-## 3. Vercel (frontend)
+### 2.3. Vercel (frontend)
 
 | Параметр | Значение |
 |---|---|
@@ -149,7 +222,7 @@ Frontend — SPA на React Router, поэтому нужен rewrite всех �
 
 ---
 
-## 3.1. Локальный запуск
+### 2.3.1. Локальный запуск
 
 ```bash
 # Backend (без Supabase подойдёт SQLite)
@@ -167,7 +240,7 @@ npm run dev
 
 ---
 
-## 4. Типичные ошибки
+### 2.4. Типичные ошибки
 
 | Симптом | Причина | Решение |
 |---|---|---|
@@ -180,7 +253,7 @@ npm run dev
 
 ---
 
-## 5. Безопасность
+### 2.5. Безопасность
 
 - Пароли БД и `SECRET_KEY` — только в переменных окружения.
 - `backend/.env` в `.gitignore`, в репозитории лишь `.env.example`.
