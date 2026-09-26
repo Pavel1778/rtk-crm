@@ -504,3 +504,40 @@ async def test_issuer_uses_public_url_but_jwks_uses_internal(
 
     get_settings.cache_clear()
     kc.reset_cache()
+
+
+def test_realm_accepts_redirect_uri_from_vm_ip() -> None:
+    """Вход на стенде по IP ВМ: проверяем шаблоны redirect_uri.
+
+    Keycloak трактует `*` только как хвостовой шаблон: строка `http://*/*`
+    не совпадает ни с `http://203.0.113.10:3000/`, ни с любым другим адресом,
+    поэтому вход на стенде падал с `Invalid parameter: redirect_uri`. Тест
+    фиксирует, что в realm остаётся рабочий шаблон `http://*`, покрывающий и
+    локальный запуск, и адрес ВМ с любым портом.
+    """
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "keycloak" / "realm-export.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    redirects = data["clients"][0]["redirectUris"]
+
+    assert "http://*" in redirects
+
+    # Правило матчинга Keycloak: '*' — только хвостовой шаблон. Повторяем его
+    # здесь, чтобы тест ловил шаблоны, которые выглядят как wildcard, но ни с
+    # чем не совпадают.
+    def matches(pattern: str, uri: str) -> bool:
+        if not pattern.endswith("*"):
+            return pattern == uri
+        return uri.startswith(pattern[:-1])
+
+    for uri in (
+        "http://203.0.113.10:3000/",
+        "http://203.0.113.10:8080/",
+        "http://10.0.0.5/",
+        "http://localhost:5173/",
+    ):
+        assert any(matches(p, uri) for p in redirects), uri
+
+    assert not any("*" in p[:-1] for p in redirects)
+
