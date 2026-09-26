@@ -451,4 +451,56 @@ def test_realm_export_is_valid_json() -> None:
     assert client["attributes"]["pkce.code.challenge.method"] == "S256"
 
     users = {u["username"]: u for u in data["users"]}
-    assert users["admin@rtk-crm.local"]["realmRoles"] == ["admin"]
+    assert users["admin@rtk.ru"]["realmRoles"] == ["admin"]
+
+    # Адреса и пароли должны совпадать с seed (DEMO_USERS): backend ищет
+    # локальную учётную запись по email из токена, и при расхождении создаёт
+    # новую — демо-карточки остаются привязаны к прежнему пользователю.
+    from app.seed import DEMO_USERS
+
+    # Роль realm `kam` соответствует роли БД `user` (см. _role_from_keycloak_claims).
+    realm_role_by_db_role = {"admin": "admin", "manager": "manager", "user": "kam"}
+    for email, _full_name, password, role in DEMO_USERS:
+        assert email in users, f"нет пользователя realm для {email}"
+        assert users[email]["realmRoles"] == [realm_role_by_db_role[role.value]]
+        assert users[email]["credentials"][0]["value"] == password
+
+
+async def test_issuer_uses_public_url_but_jwks_uses_internal(
+    monkeypatch: pytest.MonkeyPatch, rsa_keys
+) -> None:
+    """Issuer проверяется по публичному адресу, JWKS берётся по внутреннему.
+
+    В контейнерной сети backend обращается к Keycloak по `http://keycloak:8080`,
+    а браузер — по внешнему адресу ВМ, и именно внешний попадает в `iss`.
+    Если проверять issuer по внутреннему адресу, все токены отклонялись бы.
+    """
+    private_pem, jwk = rsa_keys
+    public_url = "http://203.0.113.10:8080"
+    monkeypatch.setenv("AUTH_MODE", "keycloak")
+    monkeypatch.setenv("KEYCLOAK_URL", "http://keycloak:8080")
+    monkeypatch.setenv("KEYCLOAK_PUBLIC_URL", public_url)
+    monkeypatch.setenv("KEYCLOAK_REALM", REALM)
+    monkeypatch.setenv("KEYCLOAK_CLIENT_ID", "rtk-crm-frontend")
+    monkeypatch.setenv("KEYCLOAK_AUDIENCE", "rtk-crm-frontend")
+    get_settings.cache_clear()
+    kc.reset_cache()
+
+    requested: list[str] = []
+
+    def fake_get(url: str, **kwargs: Any) -> httpx.Response:
+        requested.append(url)
+        return jwks_response(url, jwk)
+
+    monkeypatch.setattr(kc.httpx, "get", fake_get)
+
+    token = make_token(private_pem, issuer=f"{public_url}/realms/{REALM}")
+    key = kc.get_signing_key(token)
+    assert key["kid"] == KID
+
+    # Ключи запрошены у внутреннего адреса, а не у публичного.
+    assert requested == ["http://keycloak:8080/realms/rtk-crm/protocol/openid-connect/certs"]
+    assert kc.decode_token(token)["iss"] == f"{public_url}/realms/{REALM}"
+
+    get_settings.cache_clear()
+    kc.reset_cache()
