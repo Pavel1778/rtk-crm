@@ -10,6 +10,8 @@ RTK CRM — это B2B CRM-система для менеджеров Росте
 - **C4 Level 2** — [Containers / Components](/docs/architecture/c4-components.md)
 - **Функциональная архитектура** — [пользовательский путь и сервисы](/docs/architecture/functional.md)
 - **Модель данных (ER)** — [сущности и связи](/docs/architecture/er-model.md)
+- **Модель Archi** — [функциональная и компонентная архитектура](/docs/architecture/rtk-crm.archimate)
+  (ArchiMate 3, открывается в Archi)
 - **Развёртывание** — [текущее](/docs/architecture/deployment-current.md) и [в Yandex Cloud](/docs/architecture/deployment-yandex-cloud.md)
 
 Диаграммы написаны в Mermaid и рендерятся прямо в GitHub/GitLab, поэтому не

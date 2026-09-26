@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="RTK CRM" id="model-rtk-crm" version="5.0.0">
+  <folder name="Бизнес-слой" id="folder-business" type="business">
+    <element id="el-001" xsi:type="archimate:BusinessActor" name="КАМ" documentation="Менеджер по вузам, около 20 человек"/>
+    <element id="el-002" xsi:type="archimate:BusinessRole" name="Руководитель" documentation="Руководитель менеджеров по вузам"/>
+    <element id="el-003" xsi:type="archimate:BusinessRole" name="Администратор платформы" documentation="Технические специалисты ИТ Школы"/>
+    <element id="el-004" xsi:type="archimate:BusinessService" name="Управление взаимодействием с вузами" documentation="Пять шагов ТЗ: импорт, доска, карточка, смена этапа, отчёт"/>
+    <element id="el-005" xsi:type="archimate:BusinessObject" name="Взаимодействие" documentation="Карточка вуза: договор, задачи, файлы"/>
+  </folder>
+  <folder name="Прикладной слой" id="folder-application" type="application">
+    <element id="el-006" xsi:type="archimate:ApplicationService" name="Interactions API"/>
+    <element id="el-007" xsi:type="archimate:ApplicationService" name="Catalogs / Import API"/>
+    <element id="el-008" xsi:type="archimate:ApplicationService" name="Reports / Export API"/>
+    <element id="el-009" xsi:type="archimate:ApplicationService" name="Audit API"/>
+    <element id="el-010" xsi:type="archimate:ApplicationService" name="Auth + RBAC"/>
+    <element id="el-011" xsi:type="archimate:ApplicationService" name="Integration API" documentation="Обмен с LMS и CMS по JSON (ФТ-5)"/>
+    <element id="el-012" xsi:type="archimate:ApplicationComponent" name="React SPA" documentation="React 18, TypeScript, Ant Design 5"/>
+    <element id="el-013" xsi:type="archimate:ApplicationComponent" name="FastAPI Backend" documentation="Python 3.11, SQLAlchemy 2 async"/>
+    <element id="el-014" xsi:type="archimate:ApplicationComponent" name="SQLAlchemy ORM / репозитории"/>
+    <element id="el-015" xsi:type="archimate:ApplicationComponent" name="Workflow B2B / B2C" documentation="14 и 4 этапа"/>
+    <element id="el-016" xsi:type="archimate:ApplicationComponent" name="Report cache" documentation="Redis / KeyDB"/>
+    <element id="el-017" xsi:type="archimate:ApplicationComponent" name="Планировщик уведомлений" documentation="APScheduler: зависшие заявки"/>
+    <element id="el-018" xsi:type="archimate:ApplicationComponent" name="File storage" documentation="S3 / MinIO, presigned URL"/>
+    <element id="el-019" xsi:type="archimate:ApplicationComponent" name="LMS ИТ Школы" documentation="Внешняя система, источник данных"/>
+    <element id="el-020" xsi:type="archimate:ApplicationComponent" name="Веб-сайт ИТ Школы (CMS)" documentation="Внешняя система"/>
+  </folder>
+  <folder name="Технологический слой" id="folder-technology" type="technology">
+    <element id="el-021" xsi:type="archimate:TechnologyService" name="PostgreSQL" documentation="Managed-кластер или контейнер"/>
+    <element id="el-022" xsi:type="archimate:TechnologyService" name="Yandex Object Storage" documentation="Файлы, регион РФ"/>
+    <element id="el-023" xsi:type="archimate:TechnologyService" name="KeyDB" documentation="Кэш агрегатов отчётов"/>
+    <element id="el-024" xsi:type="archimate:TechnologyService" name="Nginx" documentation="Статика SPA и прокси /api"/>
+    <element id="el-025" xsi:type="archimate:Node" name="ВМ Yandex Cloud" documentation="Основной контур, 152-ФЗ"/>
+  </folder>
+  <folder name="Связи" id="folder-relations" type="relations">
+    <element id="rel-026" xsi:type="archimate:AssignmentRelationship" source="el-001" target="el-004"/>
+    <element id="rel-027" xsi:type="archimate:AssignmentRelationship" source="el-002" target="el-004"/>
+    <element id="rel-028" xsi:type="archimate:AssignmentRelationship" source="el-003" target="el-004"/>
+    <element id="rel-029" xsi:type="archimate:AccessRelationship" source="el-004" target="el-005"/>
+    <element id="rel-030" xsi:type="archimate:RealizationRelationship" source="el-006" target="el-004"/>
+    <element id="rel-031" xsi:type="archimate:RealizationRelationship" source="el-007" target="el-004"/>
+    <element id="rel-032" xsi:type="archimate:RealizationRelationship" source="el-008" target="el-004"/>
+    <element id="rel-033" xsi:type="archimate:RealizationRelationship" source="el-009" target="el-004"/>
+    <element id="rel-034" xsi:type="archimate:RealizationRelationship" source="el-011" target="el-004"/>
+    <element id="rel-035" xsi:type="archimate:RealizationRelationship" source="el-012" target="el-006"/>
+    <element id="rel-036" xsi:type="archimate:RealizationRelationship" source="el-013" target="el-006"/>
+    <element id="rel-037" xsi:type="archimate:RealizationRelationship" source="el-013" target="el-007"/>
+    <element id="rel-038" xsi:type="archimate:RealizationRelationship" source="el-013" target="el-008"/>
+    <element id="rel-039" xsi:type="archimate:RealizationRelationship" source="el-013" target="el-009"/>
+    <element id="rel-040" xsi:type="archimate:RealizationRelationship" source="el-013" target="el-010"/>
+    <element id="rel-041" xsi:type="archimate:RealizationRelationship" source="el-013" target="el-011"/>
+    <element id="rel-042" xsi:type="archimate:FlowRelationship" source="el-013" target="el-014"/>
+    <element id="rel-043" xsi:type="archimate:FlowRelationship" source="el-014" target="el-015"/>
+    <element id="rel-044" xsi:type="archimate:FlowRelationship" source="el-013" target="el-018"/>
+    <element id="rel-045" xsi:type="archimate:FlowRelationship" source="el-013" target="el-016"/>
+    <element id="rel-046" xsi:type="archimate:FlowRelationship" source="el-017" target="el-014"/>
+    <element id="rel-047" xsi:type="archimate:FlowRelationship" source="el-012" target="el-013"/>
+    <element id="rel-048" xsi:type="archimate:FlowRelationship" source="el-019" target="el-011"/>
+    <element id="rel-049" xsi:type="archimate:FlowRelationship" source="el-020" target="el-011"/>
+    <element id="rel-050" xsi:type="archimate:FlowRelationship" source="el-012" target="el-020"/>
+    <element id="rel-051" xsi:type="archimate:ServingRelationship" source="el-021" target="el-014"/>
+    <element id="rel-052" xsi:type="archimate:ServingRelationship" source="el-022" target="el-018"/>
+    <element id="rel-053" xsi:type="archimate:ServingRelationship" source="el-023" target="el-016"/>
+    <element id="rel-054" xsi:type="archimate:ServingRelationship" source="el-024" target="el-012"/>
+    <element id="rel-055" xsi:type="archimate:ServingRelationship" source="el-024" target="el-013"/>
+    <element id="rel-056" xsi:type="archimate:CompositionRelationship" source="el-025" target="el-024"/>
+    <element id="rel-057" xsi:type="archimate:CompositionRelationship" source="el-025" target="el-021"/>
+    <element id="rel-058" xsi:type="archimate:CompositionRelationship" source="el-025" target="el-022"/>
+    <element id="rel-059" xsi:type="archimate:CompositionRelationship" source="el-025" target="el-023"/>
+  </folder>
+  <folder name="Виды" id="folder-views" type="diagrams">
+    <view id="view-060" name="Функциональная архитектура" type="archimate:ArchimateDiagramModel">
+      <child id="obj-061" xsi:type="archimate:DiagramObject" targetConnections="obj-061-conn" archimateElement="el-001">
+        <bounds x="40" y="40" width="180" height="60"/>
+      </child>
+      <child id="obj-062" xsi:type="archimate:DiagramObject" targetConnections="obj-062-conn" archimateElement="el-002">
+        <bounds x="260" y="40" width="180" height="60"/>
+      </child>
+      <child id="obj-063" xsi:type="archimate:DiagramObject" targetConnections="obj-063-conn" archimateElement="el-003">
+        <bounds x="480" y="40" width="180" height="60"/>
+      </child>
+      <child id="obj-064" xsi:type="archimate:DiagramObject" targetConnections="obj-064-conn" archimateElement="el-004">
+        <bounds x="240" y="160" width="220" height="60"/>
+      </child>
+      <child id="obj-065" xsi:type="archimate:DiagramObject" targetConnections="obj-065-conn" archimateElement="el-005">
+        <bounds x="40" y="280" width="180" height="60"/>
+      </child>
+      <child id="obj-066" xsi:type="archimate:DiagramObject" targetConnections="obj-066-conn" archimateElement="el-006">
+        <bounds x="40" y="400" width="180" height="60"/>
+      </child>
+      <child id="obj-067" xsi:type="archimate:DiagramObject" targetConnections="obj-067-conn" archimateElement="el-007">
+        <bounds x="250" y="400" width="180" height="60"/>
+      </child>
+      <child id="obj-068" xsi:type="archimate:DiagramObject" targetConnections="obj-068-conn" archimateElement="el-008">
+        <bounds x="460" y="400" width="180" height="60"/>
+      </child>
+      <child id="obj-069" xsi:type="archimate:DiagramObject" targetConnections="obj-069-conn" archimateElement="el-009">
+        <bounds x="670" y="400" width="180" height="60"/>
+      </child>
+      <child id="obj-070" xsi:type="archimate:DiagramObject" targetConnections="obj-070-conn" archimateElement="el-011">
+        <bounds x="250" y="520" width="180" height="60"/>
+      </child>
+      <child id="obj-071" xsi:type="archimate:DiagramObject" targetConnections="obj-071-conn" archimateElement="el-019">
+        <bounds x="40" y="640" width="180" height="60"/>
+      </child>
+      <child id="obj-072" xsi:type="archimate:DiagramObject" targetConnections="obj-072-conn" archimateElement="el-020">
+        <bounds x="460" y="640" width="180" height="60"/>
+      </child>
+      <connection id="conn-073" xsi:type="archimate:Connection" source="obj-061" target="obj-064" sourceConnections="obj-061-conn" targetConnections="obj-064-conn" archimateRelationship="rel-026"/>
+      <connection id="conn-074" xsi:type="archimate:Connection" source="obj-062" target="obj-064" sourceConnections="obj-062-conn" targetConnections="obj-064-conn" archimateRelationship="rel-027"/>
+      <connection id="conn-075" xsi:type="archimate:Connection" source="obj-063" target="obj-064" sourceConnections="obj-063-conn" targetConnections="obj-064-conn" archimateRelationship="rel-028"/>
+      <connection id="conn-076" xsi:type="archimate:Connection" source="obj-064" target="obj-065" sourceConnections="obj-064-conn" targetConnections="obj-065-conn" archimateRelationship="rel-029"/>
+      <connection id="conn-077" xsi:type="archimate:Connection" source="obj-066" target="obj-064" sourceConnections="obj-066-conn" targetConnections="obj-064-conn" archimateRelationship="rel-030"/>
+      <connection id="conn-078" xsi:type="archimate:Connection" source="obj-067" target="obj-064" sourceConnections="obj-067-conn" targetConnections="obj-064-conn" archimateRelationship="rel-031"/>
+      <connection id="conn-079" xsi:type="archimate:Connection" source="obj-068" target="obj-064" sourceConnections="obj-068-conn" targetConnections="obj-064-conn" archimateRelationship="rel-032"/>
+      <connection id="conn-080" xsi:type="archimate:Connection" source="obj-069" target="obj-064" sourceConnections="obj-069-conn" targetConnections="obj-064-conn" archimateRelationship="rel-033"/>
+      <connection id="conn-081" xsi:type="archimate:Connection" source="obj-070" target="obj-064" sourceConnections="obj-070-conn" targetConnections="obj-064-conn" archimateRelationship="rel-034"/>
+      <connection id="conn-082" xsi:type="archimate:Connection" source="obj-071" target="obj-070" sourceConnections="obj-071-conn" targetConnections="obj-070-conn" archimateRelationship="rel-048"/>
+      <connection id="conn-083" xsi:type="archimate:Connection" source="obj-072" target="obj-070" sourceConnections="obj-072-conn" targetConnections="obj-070-conn" archimateRelationship="rel-049"/>
+    </view>
+    <view id="view-084" name="Компонентная архитектура" type="archimate:ArchimateDiagramModel">
+      <child id="obj-085" xsi:type="archimate:DiagramObject" targetConnections="obj-085-conn" archimateElement="el-025">
+        <bounds x="700" y="40" width="180" height="60"/>
+      </child>
+      <child id="obj-086" xsi:type="archimate:DiagramObject" targetConnections="obj-086-conn" archimateElement="el-024">
+        <bounds x="700" y="160" width="180" height="60"/>
+      </child>
+      <child id="obj-087" xsi:type="archimate:DiagramObject" targetConnections="obj-087-conn" archimateElement="el-021">
+        <bounds x="40" y="40" width="180" height="60"/>
+      </child>
+      <child id="obj-088" xsi:type="archimate:DiagramObject" targetConnections="obj-088-conn" archimateElement="el-022">
+        <bounds x="250" y="40" width="180" height="60"/>
+      </child>
+      <child id="obj-089" xsi:type="archimate:DiagramObject" targetConnections="obj-089-conn" archimateElement="el-023">
+        <bounds x="460" y="40" width="180" height="60"/>
+      </child>
+      <child id="obj-090" xsi:type="archimate:DiagramObject" targetConnections="obj-090-conn" archimateElement="el-012">
+        <bounds x="40" y="200" width="180" height="60"/>
+      </child>
+      <child id="obj-091" xsi:type="archimate:DiagramObject" targetConnections="obj-091-conn" archimateElement="el-013">
+        <bounds x="250" y="200" width="180" height="60"/>
+      </child>
+      <child id="obj-092" xsi:type="archimate:DiagramObject" targetConnections="obj-092-conn" archimateElement="el-014">
+        <bounds x="40" y="340" width="180" height="60"/>
+      </child>
+      <child id="obj-093" xsi:type="archimate:DiagramObject" targetConnections="obj-093-conn" archimateElement="el-015">
+        <bounds x="250" y="340" width="180" height="60"/>
+      </child>
+      <child id="obj-094" xsi:type="archimate:DiagramObject" targetConnections="obj-094-conn" archimateElement="el-016">
+        <bounds x="460" y="340" width="180" height="60"/>
+      </child>
+      <child id="obj-095" xsi:type="archimate:DiagramObject" targetConnections="obj-095-conn" archimateElement="el-017">
+        <bounds x="670" y="340" width="180" height="60"/>
+      </child>
+      <child id="obj-096" xsi:type="archimate:DiagramObject" targetConnections="obj-096-conn" archimateElement="el-018">
+        <bounds x="880" y="340" width="180" height="60"/>
+      </child>
+      <child id="obj-097" xsi:type="archimate:DiagramObject" targetConnections="obj-097-conn" archimateElement="el-019">
+        <bounds x="460" y="200" width="180" height="60"/>
+      </child>
+      <child id="obj-098" xsi:type="archimate:DiagramObject" targetConnections="obj-098-conn" archimateElement="el-020">
+        <bounds x="670" y="200" width="180" height="60"/>
+      </child>
+      <connection id="conn-099" xsi:type="archimate:Connection" source="obj-091" target="obj-092" sourceConnections="obj-091-conn" targetConnections="obj-092-conn" archimateRelationship="rel-042"/>
+      <connection id="conn-100" xsi:type="archimate:Connection" source="obj-092" target="obj-093" sourceConnections="obj-092-conn" targetConnections="obj-093-conn" archimateRelationship="rel-043"/>
+      <connection id="conn-101" xsi:type="archimate:Connection" source="obj-091" target="obj-096" sourceConnections="obj-091-conn" targetConnections="obj-096-conn" archimateRelationship="rel-044"/>
+      <connection id="conn-102" xsi:type="archimate:Connection" source="obj-091" target="obj-094" sourceConnections="obj-091-conn" targetConnections="obj-094-conn" archimateRelationship="rel-045"/>
+      <connection id="conn-103" xsi:type="archimate:Connection" source="obj-095" target="obj-092" sourceConnections="obj-095-conn" targetConnections="obj-092-conn" archimateRelationship="rel-046"/>
+      <connection id="conn-104" xsi:type="archimate:Connection" source="obj-090" target="obj-091" sourceConnections="obj-090-conn" targetConnections="obj-091-conn" archimateRelationship="rel-047"/>
+      <connection id="conn-105" xsi:type="archimate:Connection" source="obj-090" target="obj-098" sourceConnections="obj-090-conn" targetConnections="obj-098-conn" archimateRelationship="rel-050"/>
+      <connection id="conn-106" xsi:type="archimate:Connection" source="obj-087" target="obj-092" sourceConnections="obj-087-conn" targetConnections="obj-092-conn" archimateRelationship="rel-051"/>
+      <connection id="conn-107" xsi:type="archimate:Connection" source="obj-088" target="obj-096" sourceConnections="obj-088-conn" targetConnections="obj-096-conn" archimateRelationship="rel-052"/>
+      <connection id="conn-108" xsi:type="archimate:Connection" source="obj-089" target="obj-094" sourceConnections="obj-089-conn" targetConnections="obj-094-conn" archimateRelationship="rel-053"/>
+      <connection id="conn-109" xsi:type="archimate:Connection" source="obj-086" target="obj-090" sourceConnections="obj-086-conn" targetConnections="obj-090-conn" archimateRelationship="rel-054"/>
+      <connection id="conn-110" xsi:type="archimate:Connection" source="obj-086" target="obj-091" sourceConnections="obj-086-conn" targetConnections="obj-091-conn" archimateRelationship="rel-055"/>
+      <connection id="conn-111" xsi:type="archimate:Connection" source="obj-085" target="obj-086" sourceConnections="obj-085-conn" targetConnections="obj-086-conn" archimateRelationship="rel-056"/>
+      <connection id="conn-112" xsi:type="archimate:Connection" source="obj-085" target="obj-087" sourceConnections="obj-085-conn" targetConnections="obj-087-conn" archimateRelationship="rel-057"/>
+      <connection id="conn-113" xsi:type="archimate:Connection" source="obj-085" target="obj-088" sourceConnections="obj-085-conn" targetConnections="obj-088-conn" archimateRelationship="rel-058"/>
+      <connection id="conn-114" xsi:type="archimate:Connection" source="obj-085" target="obj-089" sourceConnections="obj-085-conn" targetConnections="obj-089-conn" archimateRelationship="rel-059"/>
+    </view>
+  </folder>
+</archimate:model>

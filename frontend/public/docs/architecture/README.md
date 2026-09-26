@@ -16,6 +16,14 @@ Mermaid и отображаются в GitHub, GitLab и совместимых 
   и обслуживающие сервисы.
 - [Модель данных (ER)](/docs/architecture/er-model.md) — сущности, связи и правила целостности.
 
+## Модель в Archi
+
+- [`rtk-crm.archimate`](/docs/architecture/rtk-crm.archimate) — модель ArchiMate 3 для Archi.
+  Содержит два вида: функциональную архитектуру (пользовательский путь из
+  ТЗ) и компонентную (контейнеры и внешние системы). Открывается в
+  [Archi](https://www.archimatetool.com/) бесплатно, файл лежит в репозитории
+  рядом с Mermaid-схемами.
+
 ## Развёртывание
 
 - [Основной контур в Yandex Cloud](/docs/architecture/deployment-yandex-cloud.md) — ВМ,

@@ -44,6 +44,11 @@ MARKDOWN_FILES = [
 
 ASSET_DIRS = ["images"]
 
+# Двоичные и модельные артефакты, которые отдаются как файлы, а не как текст.
+BINARY_FILES = [
+    "architecture/rtk-crm.archimate",
+]
+
 # Дополнительная копия в корне зеркала: HelpPage грузит `/docs/ARCHITECTURE.md`.
 ROOT_ARCHITECTURE = "architecture/ARCHITECTURE.md"
 
@@ -100,8 +105,17 @@ def main() -> int:
             shutil.rmtree(target)
         shutil.copytree(DOCS_SOURCE / name, target)
 
+    for name in BINARY_FILES:
+        source = DOCS_SOURCE / name
+        if not source.exists():
+            print(f"Пропуск: нет файла {source}")
+            return 1
+        target = DOCS_OUTPUT / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
     print(f"Синхронизировано {len(MARKDOWN_FILES)} файлов + корневой ARCHITECTURE.md")
-    print(f"Статика: {', '.join(ASSET_DIRS)}")
+    print(f"Статика: {', '.join(ASSET_DIRS)}; модели: {', '.join(BINARY_FILES)}")
     return 0
 
 
