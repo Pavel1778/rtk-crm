@@ -480,3 +480,65 @@ Alembic-миграция схему описывала, но не применя
 Локальная верификация: 125 тестов зелёные, `ruff`/`mypy` чисто, `tsc` без
 ошибок; E2E на legacy-схеме — сверка применена, `compare_metadata` без
 расхождений.
+
+## Актуализация: запуск одной командой и CI SourceCraft (26.09)
+
+Задача — чтобы `docker compose up -d` работал на чистой машине и чтобы
+проверки выполнялись и на зеркале в SourceCraft.
+
+### 1. `docker compose` не собирался без переменных окружения
+
+`docker compose config` завершался с ошибкой интерполяции: compose требует
+`MINIO_ROOT_PASSWORD` и `KEYCLOAK_ADMIN_PASSWORD` (синтаксис `${VAR:?}`),
+а шаблона `.env.example` в корне репозитория не было — существовали только
+`backend/.env.example` и `frontend/.env.example`, где этих имён нет.
+
+Добавлен корневой `.env.example`. Имена переменных взяты из
+`docker-compose.yml` и `backend/core/config.py`, а не из стороннего описания:
+в частности, хранилище настраивается через `MINIO_ROOT_*`/`S3_*`, а не
+`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY`, ключ GigaChat называется
+`GIGACHAT_CREDENTIALS`, а не `GIGACHAT_AUTH_KEY`.
+
+Проверено: `docker compose --env-file <тест> config` → exit 0, 7 сервисов
+(`redis`, `minio`, `minio-init`, `backend`, `frontend`, `keycloak`, `nginx`).
+
+### 2. Переменные не доходили до контейнера backend
+
+Compose передавал в backend только `DATABASE_URL`, `REDIS_URL`, `S3_*`,
+`KEYCLOAK_URL`, `PYTHONPATH` и `CORS_ORIGINS`. Всё остальное, включая
+`SECRET_KEY`, `AUTH_MODE` и `GIGACHAT_*`, в контейнер не попадало: приложение
+работало на значениях по умолчанию из `config.py`, а переключить
+`AUTH_MODE=keycloak` через `.env` было невозможно.
+
+Добавлена передача `SECRET_KEY`, `AUTH_MODE`, `KEYCLOAK_REALM`,
+`KEYCLOAK_CLIENT_ID`, `KEYCLOAK_AUDIENCE`, `GIGACHAT_*`, `SEED_DEMO_DATA` и
+параметров уведомлений. Логин администратора Keycloak вынесен в
+`KEYCLOAK_ADMIN_USERNAME` (раньше был захардкожен `admin`).
+
+Проверено разбором `docker compose config`: значения доходят до сервиса
+backend.
+
+### 3. Миграции и seed вручную запускать не нужно
+
+`backend/main.py` в `lifespan` выполняет `create_tables()` → `ensure_schema()`
+→ `seed_demo()`. Поэтому команда вида `alembic upgrade head && python -m
+scripts.seed && uvicorn ...` в контейнере нерабочая: `alembic.ini` лежит в
+корне репозитория и в образ не попадает (build context — `backend/`), а
+`scripts/` в образ не копируется. Это уже приводило к прод-инциденту 24.09
+(см. раздел выше). В README зафиксировано, что инициализация автоматическая.
+
+### 4. CI для SourceCraft
+
+Добавлен `.sourcecraft/ci.yaml` с теми же проверками, что в
+`.github/workflows/ci.yml`: `ruff`, `mypy`, `pytest` для backend и
+`tsc --noEmit` + `npm run build` для фронтенда. Пути соответствуют структуре
+репозитория — тесты лежат в `tests/`, а не в `backend/tests/`.
+
+### Что не проверено
+
+Запуск контейнеров в этой среде выполнить не удалось: Docker-демон
+недоступен, доступна только CLI. Поэтому проверено статически —
+`docker compose config` собирается и переменные доходят до сервисов, — но
+фактический старт семи контейнеров, `curl /healthz` и `curl /readyz` на
+поднятом стеке остаются за проверкой на ВМ. Об этом же сказано в PR.
+
