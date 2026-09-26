@@ -3,6 +3,7 @@ import { App as AntApp, Button, Card, Form, Input, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 import { errorMessage } from '../api/client';
+import { isKeycloakMode, keycloak } from '../auth/keycloak';
 import { useAuthStore } from '../stores/authStore';
 
 interface LoginForm {
@@ -43,6 +44,24 @@ export default function LoginPage() {
         <Typography.Paragraph type="secondary">
           Система сопровождения взаимодействия с вузами-партнёрами
         </Typography.Paragraph>
+        {isKeycloakMode ? (
+          // Вход выполняет Keycloak: пароль вводится на его стороне и в
+          // приложение не попадает. Кнопка нужна на случай, если сессия
+          // истекла, а автоматический переход не сработал.
+          <>
+            <Typography.Paragraph type="secondary">
+              Аутентификация выполняется через единую систему входа (SSO).
+            </Typography.Paragraph>
+            <Button
+              type="primary"
+              block
+              size="large"
+              onClick={() => void keycloak.login()}
+            >
+              Войти через Keycloak
+            </Button>
+          </>
+        ) : (
         <Form<LoginForm> layout="vertical" onFinish={onFinish}>
           <Form.Item
             name="email"
@@ -87,6 +106,7 @@ export default function LoginPage() {
             </Button>
           </Form.Item>
         </Form>
+        )}
       </Card>
     </div>
   );

@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     # "keycloak" — токены выдаёт Keycloak, подпись проверяется по JWKS.
     auth_mode: str = "jwt"
     keycloak_url: str = ""
+    # Публичный адрес Keycloak — тот, по которому его открывает браузер.
+    # Keycloak кладёт его в claim `iss`, поэтому проверка issuer идёт по этому
+    # значению, а JWKS забирается по внутреннему `keycloak_url`. Так контейнер
+    # backend не зависит от доступности публичного адреса изнутри сети Docker
+    # (в облаке обращение к своему внешнему IP через NAT часто не работает).
+    # Пустая строка — issuer берётся из `keycloak_url`.
+    keycloak_public_url: str = ""
     keycloak_realm: str = "rtk-crm"
     keycloak_client_id: str = "rtk-crm-frontend"
     # Ожидаемая audience токена. Пустая строка отключает проверку: Keycloak
