@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-export const API_URL: string =
-  import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+// Пустая строка = same-origin: запросы идут на origin страницы, а путь
+// `/api/...` уже содержится в каждом вызове endpoints. Так в dev работает
+// Vite-прокси (`/api` → localhost:8000), а в проде — nginx, который
+// проксирует `/api/` на backend. Абсолютный URL здесь ломает оба случая:
+// браузер идёт в backend напрямую, минуя прокси, и получает CORS-отказ,
+// потому что origin страницы не совпадает с origin API.
+export const API_URL: string = import.meta.env.VITE_API_URL ?? '';
 
 export const api = axios.create({
   baseURL: API_URL,
