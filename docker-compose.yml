@@ -3,7 +3,12 @@ services:
     image: quay.io/keycloak/keycloak:24.0
     container_name: rtk_keycloak
     restart: always
-    command: start-dev
+    # start-dev импортирует realm при первом старте и хранит состояние в
+    # встроенной H2. Для закрытого контура с постоянным хранением нужен
+    # start --optimized с внешней БД (см. docs/KEYCLOAK.md).
+    command: start-dev --import-realm
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}

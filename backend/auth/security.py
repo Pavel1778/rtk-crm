@@ -1,5 +1,12 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
+from app.auth.keycloak import (
+    KeycloakUnavailable,
+    TokenValidationError,
+    decode_token,
+    roles_from_claims,
+)
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.entities import User
@@ -47,31 +54,128 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Извлекает пользователя из Bearer-токена."""
+    """Извлекает пользователя из Bearer-токена.
+
+    В режиме `AUTH_MODE=keycloak` подпись и claims проверяет Keycloak через
+    JWKS, но возвращается всё равно локальная запись `User`: она нужна для
+    связей в БД (автор комментария, исполнитель) и для RBAC по `role`.
+    Связь между аккаунтами — по email из токена (`preferred_username` или
+    `email`), поэтому учётную запись достаточно завести один раз.
+    """
     if credentials is None:
         raise CREDENTIALS_ERROR from None
-    try:
-        payload = jwt.decode(
-            credentials.credentials,
-            get_settings().secret_key,
-            algorithms=[get_settings().algorithm],
-        )
-        user_id = int(payload["sub"])
-    except (JWTError, KeyError, ValueError, TypeError):
-        raise CREDENTIALS_ERROR from None
 
-    user = await db.scalar(select(User).where(User.id == user_id))
+    settings = get_settings()
+    if settings.auth_mode.lower() == "keycloak":
+        user = await _user_from_keycloak_token(
+            credentials.credentials, request, db
+        )
+    else:
+        user = await _user_from_local_token(credentials.credentials, request, db)
+
     if user is None or not user.is_active:
         raise CREDENTIALS_ERROR
     request.state.user = user
     return user
 
 
+async def _user_from_local_token(
+    token: str, request: Request, db: AsyncSession
+) -> User | None:
+    """Путь JWT: HS256-подпись локальным секретом, `sub` — id пользователя."""
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm],
+        )
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError, TypeError):
+        raise CREDENTIALS_ERROR from None
+
+    return await db.scalar(select(User).where(User.id == user_id))
+
+
+async def _user_from_keycloak_token(
+    token: str, request: Request, db: AsyncSession
+) -> User | None:
+    """Путь Keycloak: RS256 по JWKS, затем поиск локальной учётной записи."""
+    try:
+        claims = decode_token(token)
+    except KeycloakUnavailable as exc:
+        # 503, а не 401: токен может быть корректным, проблема в Keycloak.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Сервис аутентификации недоступен",
+        ) from exc
+    except TokenValidationError:
+        raise CREDENTIALS_ERROR from None
+
+    email = claims.get("email") or claims.get("preferred_username")
+    if not email:
+        raise CREDENTIALS_ERROR from None
+
+    user = await db.scalar(select(User).where(User.email == email))
+    if user is not None:
+        # Роли в токене — источник истины для RBAC; локальная роль
+        # синхронизируется, чтобы зависимости require_* работали единообразно.
+        token_roles = roles_from_claims(claims)
+        request.state.keycloak_roles = token_roles
+        return user
+
+    # Аккаунт в Keycloak есть, а в CRM ещё нет: заводим по данным токена,
+    # иначе пользователь не сможет войти без ручного создания учётки.
+    role = _role_from_keycloak_claims(claims)
+    user = User(
+        email=email,
+        full_name=claims.get("name") or email,
+        hashed_password="!keycloak",  # локальный вход паролем запрещён
+        role=role,
+        is_admin=role is UserRole.ADMIN,
+        is_active=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    request.state.keycloak_roles = roles_from_claims(claims)
+    return user
+
+
+def _role_from_keycloak_claims(claims: dict[str, Any]) -> UserRole:
+    """Сопоставляет роли Keycloak роли CRM.
+
+    Приоритет: admin > manager > user (КАМ). Неизвестные роли Keycloak
+    игнорируются — наименьшие привилегии по умолчанию.
+    """
+    roles = {r.lower() for r in roles_from_claims(claims)}
+    if "admin" in roles:
+        return UserRole.ADMIN
+    if "manager" in roles:
+        return UserRole.MANAGER
+    return UserRole.USER
+
+
+
+def _effective_roles(request: Request, user: User) -> set[str]:
+    """Роли пользователя для проверки доступа.
+
+    В режиме keycloak источник истины — роли из токена
+    (`request.state.keycloak_roles`). В режиме jwt используется роль из БД.
+    """
+    token_roles = getattr(request.state, "keycloak_roles", None)
+    if token_roles is not None:
+        return {r.lower() for r in token_roles}
+    return {user.role.value}
+
+
 async def require_admin(
+    request: Request,
     user: User = Depends(get_current_user),
 ) -> User:
     """Доступ только для администратора (роль admin)."""
-    if not user.is_admin:
+    roles = _effective_roles(request, user)
+    if "admin" not in roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Требуется роль администратора",
@@ -80,10 +184,12 @@ async def require_admin(
 
 
 async def require_manager_or_admin(
+    request: Request,
     user: User = Depends(get_current_user),
 ) -> User:
     """Доступ к справочникам только менеджеру или администратору."""
-    if user.role not in {UserRole.MANAGER, UserRole.ADMIN}:
+    roles = _effective_roles(request, user)
+    if not roles & {"manager", "admin"}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Требуется роль менеджера или администратора",

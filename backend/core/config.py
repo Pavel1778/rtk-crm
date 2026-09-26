@@ -31,6 +31,21 @@ class Settings(BaseSettings):
     # closed-contour deployment option.
     mock_mode: bool = True
 
+    # Режим аутентификации: "jwt" — локальные пароли и HS256-токены,
+    # "keycloak" — токены выдаёт Keycloak, подпись проверяется по JWKS.
+    auth_mode: str = "jwt"
+    keycloak_url: str = ""
+    keycloak_realm: str = "rtk-crm"
+    keycloak_client_id: str = "rtk-crm-frontend"
+    # Ожидаемая audience токена. Пустая строка отключает проверку: Keycloak
+    # кладёт в aud не client_id, а "account", если в клиенте не включён
+    # Audience mapper, поэтому значение задаётся под конкретный realm.
+    keycloak_audience: str = ""
+    # Кэш публичных ключей realm. Ротация ключей обрабатывается принудительным
+    # обновлением, если в токене встретился неизвестный kid.
+    keycloak_jwks_ttl_seconds: int = 300
+    keycloak_jwks_timeout_seconds: float = 5.0
+
     # CORS — строка через запятую в env. Явный список: с allow_credentials=True
     # браузер отвергает ответы с `*` в Access-Control-Allow-Origin.
     # 127.0.0.1 и localhost считаются разными origin, поэтому нужны оба.
