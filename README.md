@@ -71,6 +71,61 @@ docs/             DEPLOYMENT.md, STACK.md, USER_GUIDE.md,
                   architecture/, security/, pitch.md
 ```
 
+## Быстрый старт через Docker Compose
+
+Всё приложение поднимается одной командой. Нужен только Docker с плагином
+Compose — Python и Node на машине не требуются.
+
+```bash
+git clone https://github.com/Pavel1778/rtk-crm.git rtk-crm
+cd rtk-crm
+cp .env.example .env
+# заполнить .env — см. ниже
+docker compose up -d --build
+```
+
+Обязательные значения в `.env`:
+
+| Переменная | Как получить |
+|---|---|
+| `SECRET_KEY` | `openssl rand -hex 32` |
+| `MINIO_ROOT_PASSWORD` | придумать (пароль хранилища файлов) |
+| `KEYCLOAK_ADMIN_PASSWORD` | придумать (админ Keycloak) |
+| `DATABASE_URL` | по умолчанию SQLite — для контейнера оставить как есть |
+
+Остальные переменные имеют рабочие значения по умолчанию. Без ключа
+GigaChat приложение запускается: вкладка «Сводка» сообщит, что сервис не
+настроен.
+
+Проверка готовности:
+
+```bash
+docker compose ps
+curl http://localhost:8000/healthz
+curl http://localhost:8000/readyz
+```
+
+Адреса после запуска:
+
+| Сервис | Адрес |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend / Swagger | http://localhost:8000/docs |
+| Keycloak | http://localhost:8080 |
+| MinIO Console | http://localhost:9001 |
+| Nginx | http://localhost |
+
+Схема БД и справочники создаются самим приложением при старте (lifespan):
+миграции и seed вручную запускать не нужно. Демо-данные включаются
+переменной `SEED_DEMO_DATA` (по умолчанию `true`).
+
+Остановить: `docker compose down`. Удалить вместе с данными:
+`docker compose down -v`.
+
+Альтернатива без Docker — раздел «Локальный запуск» ниже. Готовый
+интерактивный скрипт с меню: `./run.sh start` (или `run.bat start` на
+Windows).
+
 ## Локальный запуск
 
 ### Backend

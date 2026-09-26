@@ -1,0 +1,41 @@
+# CI для зеркала репозитория в SourceCraft.
+#
+# Повторяет проверки .github/workflows/ci.yml, чтобы результат не зависел от
+# площадки. Запускается на self-hosted worker (тег self-hosted) — так сборка
+# идёт на своей ВМ в Yandex Cloud, без внешних раннеров.
+#
+# Формат: https://sourcecraft.dev/portal/docs/ru/sourcecraft/operations/ci-cd
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+workflows:
+  ci:
+    tasks:
+      - name: backend
+        cubes:
+          - name: tests-ruff-mypy
+            image: python:3.11-slim
+            script:
+              - pip install --no-cache-dir -r backend/requirements.txt
+              - pip install --no-cache-dir ruff mypy
+              - ruff check backend/ tests/ scripts/ conftest.py
+              - mypy backend/
+              - DATABASE_URL=sqlite+aiosqlite:///./test.db SECRET_KEY=ci-test-secret pytest tests -q
+
+      - name: frontend
+        cubes:
+          - name: typecheck-build
+            image: node:20-alpine
+            script:
+              - cd frontend
+              - npm ci
+              - npx tsc --noEmit
+              - npm run build

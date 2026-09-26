@@ -10,7 +10,7 @@ services:
     volumes:
       - ./keycloak:/opt/keycloak/data/import:ro
     environment:
-      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
       KC_HTTP_ENABLED: "true"
     ports:
@@ -98,6 +98,22 @@ services:
       S3_SECURE: "false"
       KEYCLOAK_URL: "http://keycloak:8080"
       PYTHONPATH: "/"
+      # Подхватываются из .env; значения по умолчанию — как в backend/core/config.py.
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      AUTH_MODE: ${AUTH_MODE:-jwt}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-rtk-crm}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-rtk-crm-frontend}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-}
+      # Пустые значения выключают функцию: эндпоинт сводки отвечает 503.
+      GIGACHAT_CREDENTIALS: ${GIGACHAT_CREDENTIALS:-}
+      GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_B2B}
+      GIGACHAT_MODEL: ${GIGACHAT_MODEL:-GigaChat}
+      GIGACHAT_CA_BUNDLE: ${GIGACHAT_CA_BUNDLE:-}
+      GIGACHAT_VERIFY_SSL: ${GIGACHAT_VERIFY_SSL:-true}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      STUCK_TIMEOUT_DAYS: ${STUCK_TIMEOUT_DAYS:-14}
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
+      NOTIFICATIONS_INTERVAL_HOURS: ${NOTIFICATIONS_INTERVAL_HOURS:-12}
       CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1}"
     depends_on:
       - redis
