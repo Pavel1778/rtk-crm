@@ -858,13 +858,21 @@ img, svg, canvas, video, table { max-width: 100%; }
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1100;
+  z-index: 900;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  /* На низких экранах и при виртуальной клавиатуре баннер не должен
+     заслонять всю страницу: ограничиваем высоту и скроллим внутри. */
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px clamp(12px, 3vw, 32px);
+  /* iPhone с «чёлкой»: нижняя кромка безопасной зоны. */
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
   background: var(--atmr-bg-container);
   border-top: 1px solid var(--atmr-border-soft);
   box-shadow: var(--atmr-shadow-banner);
@@ -875,16 +883,132 @@ img, svg, canvas, video, table { max-width: 100%; }
   min-width: 0;
 }
 
+/* Нижний отступ под баннер, чтобы он не перекрывал футер и кнопки форм.
+   Высоту баннера измеряет CookieConsentBanner (ResizeObserver) и кладёт в
+   --cookie-banner-h; fallback рассчитан на трёхкнопочный мобильный вариант. */
+body.has-cookie-banner {
+  padding-bottom: var(--cookie-banner-h, 168px);
+}
+
+body.has-cookie-banner .ant-layout {
+  padding-bottom: var(--cookie-banner-h, 168px);
+}
+
+/* Модалка «Настройки cookie» на узких экранах: почти во всю ширину,
+   переключатели столбиком, кнопки на всю ширину (см. также
+   CookieSettingsModal.tsx). */
+@media (max-width: 575px) {
+  .cookie-settings-modal .ant-modal {
+    max-width: calc(100% - 24px);
+    margin: 0 auto;
+    /* Модалка выше экрана (4 категории + текст) — ограничиваем и скроллим
+       тело, чтобы кнопки «Сохранить выбор» / «Отмена» оставались доступны. */
+    top: 12px;
+    padding-bottom: 12px;
+  }
+  .cookie-settings-modal .ant-modal-content {
+    max-height: calc(100vh - 24px);
+    display: flex;
+    flex-direction: column;
+  }
+  .cookie-settings-modal .ant-modal-body {
+    padding: 16px 12px;
+    overflow-y: auto;
+  }
+  .cookie-settings-modal .cookie-settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .cookie-settings-modal .cookie-settings-row .ant-switch {
+    align-self: flex-start;
+  }
+  .cookie-settings-modal .ant-modal-footer {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .cookie-settings-modal .ant-modal-footer .ant-btn {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+}
+
+/* Согласия и политики: карточка прижата к краям на мобильных, длинные
+   таблицы скроллятся внутри себя, текст не мельче 14px для читаемости. */
+@media (max-width: 767px) {
+  .policy-card .ant-card-body {
+    padding: 16px 12px;
+  }
+  .policy-card .ant-typography {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  /* antd вешает .ant-typography прямо на h1..h5, поэтому селектор потомка
+     не срабатывает — заголовки надо вернуть покрупнее явно. */
+  .policy-card h1.ant-typography,
+  .policy-card h2.ant-typography {
+    font-size: 20px;
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+  .policy-card h3.ant-typography {
+    font-size: 17px;
+    line-height: 1.35;
+    margin-top: 20px;
+  }
+  .policy-card h4.ant-typography,
+  .policy-card h5.ant-typography {
+    font-size: 15.5px;
+    line-height: 1.4;
+    margin-top: 18px;
+    margin-bottom: 6px;
+  }
+  .policy-table .ant-table {
+    font-size: 14px;
+  }
+}
+
+/* Кнопки в одной строке на широких экранах; на узких — столбиком,
+   чтобы подписи не обрезались и не уезжали за экран. */
+.cookie-banner__actions .ant-btn {
+  white-space: normal;
+  height: auto;
+  min-height: 32px;
+}
+
 @media (max-width: 767px) {
   .cookie-banner {
     flex-direction: column;
+    /* column + wrap выстраивает элементы во вторую колонку справа, из-за чего
+       кнопки уезжали за пределы экрана. В столбик — только nowrap. */
+    flex-wrap: nowrap;
     align-items: stretch;
+    gap: 10px;
+    /* Компактнее, чтобы перекрывать как можно меньше контента. */
+    max-height: 55vh;
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  .cookie-banner__text {
+    flex: 0 0 auto;
+  }
+  .cookie-banner__text .ant-typography {
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .cookie-banner__text > .ant-typography {
+    font-size: 13.5px;
   }
   .cookie-banner__actions {
-    justify-content: stretch;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
   }
   .cookie-banner__actions .ant-btn {
-    flex: 1 1 auto;
+    width: 100%;
+    margin: 0;
   }
 }
 

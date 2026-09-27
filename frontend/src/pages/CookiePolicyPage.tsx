@@ -15,7 +15,7 @@ const RETENTION: Record<string, string> = {
 export default function CookiePolicyPage() {
   return (
     <div className="page-container" style={{ paddingBlock: 24 }}>
-      <Card style={{ maxWidth: 900, margin: '0 auto' }}>
+      <Card className="policy-card" style={{ maxWidth: 900, margin: '0 auto' }}>
         <Title level={2}>Политика обработки файлов cookie</Title>
         <Paragraph type="secondary">Дата последнего обновления: сентябрь 2026</Paragraph>
 
@@ -41,6 +41,8 @@ export default function CookiePolicyPage() {
           rowKey="key"
           pagination={false}
           size="small"
+          className="policy-table"
+          scroll={{ x: 640 }}
           style={{ marginBottom: 24 }}
           columns={[
             { title: 'Категория', dataIndex: 'title', width: 180 },

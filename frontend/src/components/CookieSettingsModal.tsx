@@ -55,6 +55,8 @@ export default function CookieSettingsModal({ open, onClose }: CookieSettingsMod
       okText="Сохранить выбор"
       cancelText="Отмена"
       width={560}
+      rootClassName="cookie-settings-modal"
+      style={{ maxWidth: 'calc(100vw - 24px)' }}
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Typography.Text type="secondary">
@@ -64,6 +66,7 @@ export default function CookieSettingsModal({ open, onClose }: CookieSettingsMod
         {COOKIE_CATEGORIES.map((category) => (
           <div
             key={category.key}
+            className="cookie-settings-row"
             style={{
               display: 'flex',
               gap: 16,

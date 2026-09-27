@@ -6,7 +6,7 @@ const { Paragraph, Title } = Typography;
 export default function PrivacyPolicyPage() {
   return (
     <div className="page-container" style={{ paddingBlock: 24 }}>
-      <Card style={{ maxWidth: 900, margin: '0 auto' }}>
+      <Card className="policy-card" style={{ maxWidth: 900, margin: '0 auto' }}>
         <Title level={2}>Политика обработки персональных данных</Title>
         <Paragraph type="secondary">Дата последнего обновления: сентябрь 2026</Paragraph>
 

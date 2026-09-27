@@ -218,6 +218,7 @@ production Render/Supabase.
 | Disabled opacity 0.55 | `✅ OK` | `frontend/src/index.css:401-404` |
 | Cookie schema и necessary locked | `✅ OK` | `frontend/src/lib/cookieConsent.ts:1-94`; banner/settings components |
 | Privacy routes и footer links | `✅ OK` | `frontend/src/pages/CookiePolicyPage.tsx`, `PrivacyPolicyPage.tsx`, `frontend/src/components/AppFooter.tsx:21-24` |
+| Cookie-баннер на мобильных | `✅ OK` | `scripts/capture_cookie_mobile.py` — баннер 25–35% экрана, кнопки столбиком, модалка в пределах экрана |
 
 ## 6. Нефункциональные требования и документация
 
@@ -620,6 +621,66 @@ Mini-Of-Entity. Файл открывается в [Archi](https://www.archimate
 расходится с источниками (`tests/test_docs_mirror.py` — 6 passed), а у
 презентации нет визуальных дефектов при рендере.
 
+## Актуализация: cookie-баннер на мобильных (27.09)
+
+Проверка на реальных размерах экранов выявила пять дефектов в согласии на
+cookie, которые видны только на телефоне.
+
+### Что было сломано
+
+| Дефект | Проявление |
+|---|---|
+| Баннер занимал экран | На iPhone SE (375×667) баннер — 70% высоты, кнопки столбиком в три ряда |
+| `column` + `flex-wrap` | Кнопки уезжали во вторую колонку за пределы экрана |
+| z-index баннера 1100 | Перекрывал футер модалки настроек: «Сохранить выбор» не нажималась |
+| Модалка выше экрана | 4 категории + текст не влезали, кнопки оказывались за нижней кромкой |
+| Хардкод отступа | `padding-bottom: 168px` был меньше реальной высоты мобильного баннера |
+
+### Что изменено
+
+- `.cookie-banner`: `z-index` снижен до 900 (модалка antd — 1000, поэтому
+  футер снова доступен); ограничение `max-height: 55vh` со скроллом внутри;
+  `env(safe-area-inset-bottom)` для iPhone с «чёлкой».
+- Мобильные `.cookie-banner__actions`: `flex-wrap: nowrap`, столбик,
+  кнопки на всю ширину — три ряда подписей больше не обрезаются.
+- Модалка `.cookie-settings-modal`: на `≤575px` ограничена
+  `max-height: calc(100vh - 24px)`, тело скроллится, футер — `column-reverse`
+  с кнопками на всю ширину.
+- `CookieConsentBanner.tsx`: высота баннера измеряется `ResizeObserver` и
+  пишется в `--cookie-banner-h`; `body.has-cookie-banner` берёт отступ из
+  этой переменной вместо хардкода.
+- Политики `.policy-card`: текст 14px, таблица cookie-категорий скроллится
+  локально (`scroll={{ x: 640 }}`), заголовки сохранены крупнее.
+
+### Проверка
+
+Скрипт `scripts/capture_cookie_mobile.py` снимает до/после и проверяет
+баннер, кнопки, модалку, localStorage и страницы политик. Прогон на старой
+сборке воспроизводит дефекты, на новой — проходит:
+
+```
+before: iphone-se: баннер занимает 70% экрана
+before: iphone-se/galaxy-s20/iphone-14-pro-max: кнопку сохранения модалки перекрывает другой элемент
+after:  OK
+```
+
+| Устройство | Высота баннера до | после |
+|---|---|---|
+| iPhone SE 375×667 | 70% | 35% |
+| Galaxy S20 360×800 | — | 29% |
+| iPhone 14 Pro Max 430×932 | — | 25% |
+| iPad 820×1180 | — | 10% |
+| Desktop 1440×900 | — | 9% |
+
+Дополнительно: ни на одной странице нет горизонтальной прокрутки, отступ
+`body` совпадает с высотой баннера на всех проверенных маршрутах, модалка и
+её футер целиком в пределах экрана, контраст кнопок 13.9 (dark) и 16.8
+(light). Полный прогон backend-тестов — 200 passed.
+
+Скриншоты: `docs/images/mobile/cookie-{before,after}-*`,
+`policy-after-*`. Зеркало документации синхронизировано
+(`python scripts/sync_public_docs.py`).
+
 ## Синхронизация репозиториев (27.09)
 
 Работа идёт в двух зеркалах: `github.com/Pavel1778/rtk-crm` — основное,
@@ -673,7 +734,7 @@ Linux-стенде и в URL вкладки «Помощь».
   на файлы кода, а не на пересказ ТЗ.
 - `docs/architecture/er.mmd`, `er-model.pdf`, `er.archimate` — ER-модель:
   Mermaid-исходник, отрендеренная диаграмма и модель ArchiMate 3 (32 элемента).
-- `docs/rtk-crm-documentation.pdf` — единый PDF (63 страницы) со всеми
+- `docs/rtk-crm-documentation.pdf` — единый PDF (64 страницы) со всеми
   разделами, включая ER и Q&A для жюри.
 - `docs/presentation/RTK-CRM-LCT2026.pptx` — презентация, 11 слайдов.
 - `docs/examples/` — образцы форматов от кейсодержателя для демонстрации
