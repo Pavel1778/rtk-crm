@@ -451,4 +451,93 @@ def test_realm_export_is_valid_json() -> None:
     assert client["attributes"]["pkce.code.challenge.method"] == "S256"
 
     users = {u["username"]: u for u in data["users"]}
-    assert users["admin@rtk-crm.local"]["realmRoles"] == ["admin"]
+    assert users["admin@rtk.ru"]["realmRoles"] == ["admin"]
+
+    # Адреса и пароли должны совпадать с seed (DEMO_USERS): backend ищет
+    # локальную учётную запись по email из токена, и при расхождении создаёт
+    # новую — демо-карточки остаются привязаны к прежнему пользователю.
+    from app.seed import DEMO_USERS
+
+    # Роль realm `kam` соответствует роли БД `user` (см. _role_from_keycloak_claims).
+    realm_role_by_db_role = {"admin": "admin", "manager": "manager", "user": "kam"}
+    for email, _full_name, password, role in DEMO_USERS:
+        assert email in users, f"нет пользователя realm для {email}"
+        assert users[email]["realmRoles"] == [realm_role_by_db_role[role.value]]
+        assert users[email]["credentials"][0]["value"] == password
+
+
+async def test_issuer_uses_public_url_but_jwks_uses_internal(
+    monkeypatch: pytest.MonkeyPatch, rsa_keys
+) -> None:
+    """Issuer проверяется по публичному адресу, JWKS берётся по внутреннему.
+
+    В контейнерной сети backend обращается к Keycloak по `http://keycloak:8080`,
+    а браузер — по внешнему адресу ВМ, и именно внешний попадает в `iss`.
+    Если проверять issuer по внутреннему адресу, все токены отклонялись бы.
+    """
+    private_pem, jwk = rsa_keys
+    public_url = "http://203.0.113.10:8080"
+    monkeypatch.setenv("AUTH_MODE", "keycloak")
+    monkeypatch.setenv("KEYCLOAK_URL", "http://keycloak:8080")
+    monkeypatch.setenv("KEYCLOAK_PUBLIC_URL", public_url)
+    monkeypatch.setenv("KEYCLOAK_REALM", REALM)
+    monkeypatch.setenv("KEYCLOAK_CLIENT_ID", "rtk-crm-frontend")
+    monkeypatch.setenv("KEYCLOAK_AUDIENCE", "rtk-crm-frontend")
+    get_settings.cache_clear()
+    kc.reset_cache()
+
+    requested: list[str] = []
+
+    def fake_get(url: str, **kwargs: Any) -> httpx.Response:
+        requested.append(url)
+        return jwks_response(url, jwk)
+
+    monkeypatch.setattr(kc.httpx, "get", fake_get)
+
+    token = make_token(private_pem, issuer=f"{public_url}/realms/{REALM}")
+    key = kc.get_signing_key(token)
+    assert key["kid"] == KID
+
+    # Ключи запрошены у внутреннего адреса, а не у публичного.
+    assert requested == ["http://keycloak:8080/realms/rtk-crm/protocol/openid-connect/certs"]
+    assert kc.decode_token(token)["iss"] == f"{public_url}/realms/{REALM}"
+
+    get_settings.cache_clear()
+    kc.reset_cache()
+
+
+def test_realm_accepts_redirect_uri_from_vm_ip() -> None:
+    """Вход на стенде по IP ВМ: проверяем шаблоны redirect_uri.
+
+    Keycloak трактует `*` только как хвостовой шаблон: строка `http://*/*`
+    не совпадает ни с `http://203.0.113.10:3000/`, ни с любым другим адресом,
+    поэтому вход на стенде падал с `Invalid parameter: redirect_uri`. Тест
+    фиксирует, что в realm остаётся рабочий шаблон `http://*`, покрывающий и
+    локальный запуск, и адрес ВМ с любым портом.
+    """
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "keycloak" / "realm-export.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    redirects = data["clients"][0]["redirectUris"]
+
+    assert "http://*" in redirects
+
+    # Правило матчинга Keycloak: '*' — только хвостовой шаблон. Повторяем его
+    # здесь, чтобы тест ловил шаблоны, которые выглядят как wildcard, но ни с
+    # чем не совпадают.
+    def matches(pattern: str, uri: str) -> bool:
+        if not pattern.endswith("*"):
+            return pattern == uri
+        return uri.startswith(pattern[:-1])
+
+    for uri in (
+        "http://203.0.113.10:3000/",
+        "http://203.0.113.10:8080/",
+        "http://10.0.0.5/",
+        "http://localhost:5173/",
+    ):
+        assert any(matches(p, uri) for p in redirects), uri
+
+    assert not any("*" in p[:-1] for p in redirects)
+

@@ -218,7 +218,9 @@ def markdown_to_story(markdown: str, base_dir: Path) -> list:
     return story
 
 
-def render_guide_pdf(markdown: str, title: str, base_dir: Path) -> BytesIO:
+def render_guide_pdf(
+    markdown: str, title: str, base_dir: Path, author: str = "Команда RTK CRM"
+) -> BytesIO:
     """Собирает PDF-руководство и возвращает поток с его содержимым."""
     output = BytesIO()
     doc = SimpleDocTemplate(
@@ -229,6 +231,8 @@ def render_guide_pdf(markdown: str, title: str, base_dir: Path) -> BytesIO:
         topMargin=_MARGIN,
         bottomMargin=_MARGIN,
         title=title,
+        author=author,
+        creator="RTK CRM",
     )
     doc.build(markdown_to_story(markdown, base_dir))
     output.seek(0)

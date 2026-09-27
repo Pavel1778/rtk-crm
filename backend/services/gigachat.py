@@ -27,6 +27,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -38,6 +39,25 @@ SYSTEM_PROMPT = (
     "что уже сделано, что требует внимания и какой следующий шаг. "
     "Не выдумывай факты, которых нет в данных. Не более 150 слов."
 )
+
+# Корневой сертификат НУЦ Минцифры. Нужен потому, что токен GigaChat выдаётся
+# с сертификатом этого УЦ, которого нет в стандартном наборе доверенных корней
+# Python и большинства Linux-образов. В контейнере лежит в `/certs` (монтируется
+# из `certs/` репозитория), при локальном запуске берётся из `certs/` рядом с
+# исходниками.
+CA_FILENAME = "russian_trusted_root_ca.pem"
+BUNDLED_CA_PATH = Path("/certs") / CA_FILENAME
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+CA_SEARCH_PATHS = (
+    BUNDLED_CA_PATH,
+    _BACKEND_DIR / "certs" / CA_FILENAME,
+    _BACKEND_DIR.parent / "certs" / CA_FILENAME,
+)
+
+# Значение поля «Модель» для текста, собранного из данных карточки без
+# обращения к GigaChat. Отдельная строка нужна, чтобы демо-сводку нельзя было
+# принять за ответ модели: интерфейс показывает это поле рядом с текстом.
+FALLBACK_MODEL = "демо-сводка (GigaChat не вызывался)"
 
 
 class GigaChatDisabled(RuntimeError):
@@ -61,10 +81,22 @@ _token_cache = _TokenCache()
 
 
 def _client_kwargs() -> dict[str, Any]:
+    """Параметры httpx с доверенным корнем для TLS GigaChat.
+
+    Порядок: явный `GIGACHAT_CA_BUNDLE` → вшитый в образ сертификат НУЦ
+    Минцифры → отключение проверки только если это задано явно. Отключение
+    оставлено как крайняя мера для отладки: по умолчанию проверка включена.
+    """
     settings = get_settings()
     kwargs: dict[str, Any] = {"timeout": settings.gigachat_timeout_seconds}
-    if settings.gigachat_ca_bundle:
-        kwargs["verify"] = settings.gigachat_ca_bundle
+    bundle = settings.gigachat_ca_bundle
+    if not bundle:
+        for candidate in CA_SEARCH_PATHS:
+            if candidate.is_file():
+                bundle = str(candidate)
+                break
+    if bundle:
+        kwargs["verify"] = bundle
     elif not settings.gigachat_verify_ssl:
         kwargs["verify"] = False
     return kwargs
@@ -180,3 +212,44 @@ def summarize(context: dict[str, Any]) -> str:
         raise GigaChatUnavailable("Неожиданный формат ответа GigaChat") from exc
 
     return str(content).strip()
+
+
+def build_fallback_summary(context: dict[str, Any]) -> str:
+    """Сводка из данных карточки без обращения к модели.
+
+    Используется, когда внешний сервис недоступен, а функция включена в режиме
+    демонстрации (`GIGACHAT_FALLBACK_ENABLED=true`). Текст собирается только из
+    полей карточки, поэтому он детерминирован и не может содержать
+    сгенерированных утверждений. Модель в ответе помечается `FALLBACK_MODEL`,
+    чтобы демо-текст нельзя было принять за ответ GigaChat.
+    """
+    university = context.get("university_name") or "вуз не указан"
+    stage = context.get("stage_name") or "этап не указан"
+    product = context.get("product_name")
+    scope = context.get("scope")
+    kam = context.get("assigned_kam_name")
+
+    lines = [f"Демо-сводка по взаимодействию: {university}."]
+    if product:
+        lines.append(f"Продукт: {product}.")
+    lines.append(f"Текущий этап: {stage}.")
+    if scope:
+        lines.append(f"Направление: {scope}.")
+    if kam:
+        lines.append(f"Ответственный: {kam}.")
+
+    actions = context.get("actions") or []
+    if actions:
+        done = sum(1 for a in actions if a.get("is_completed"))
+        lines.append(f"Задачи: {len(actions)}, выполнено {done}.")
+        pending = [a.get("title") for a in actions if not a.get("is_completed")]
+        if pending:
+            lines.append("В работе: " + ", ".join(str(t) for t in pending) + ".")
+
+    comments = context.get("comments") or []
+    if comments:
+        last = comments[-1].get("text")
+        if last:
+            lines.append(f"Последний комментарий: {last}")
+
+    return "\n".join(lines)

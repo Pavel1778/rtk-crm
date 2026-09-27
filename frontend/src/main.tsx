@@ -8,6 +8,7 @@ import 'dayjs/locale/ru';
 import './index.css';
 
 import App from './App';
+import { initKeycloak, isKeycloakMode } from './auth/keycloak';
 import { antDarkTheme, antTheme } from './theme/theme';
 import { useThemeStore } from './stores/themeStore';
 
@@ -59,10 +60,25 @@ function Root() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <Root />
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+
+/** Рендерит приложение. Вызывается после инициализации Keycloak. */
+function renderApp() {
+  root.render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <Root />
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+}
+
+if (isKeycloakMode) {
+  // Инициализацию ждём до первого рендера: иначе App смонтируется без
+  // токена, запрос /api/auth/me уйдёт без Authorization и вернёт 401 —
+  // пользователь на мгновение увидит форму входа, хотя сессия есть.
+  // При `login-required` браузер до разрешения промиса уходит на Keycloak.
+  void initKeycloak().then(renderApp);
+} else {
+  renderApp();
+}

@@ -343,7 +343,7 @@ def slide_short(s):
     fill_text(tbox, [
         {"text": "Техническая суть решения", "size": 15, "bold": True,
          "color": VIOLET, "space_after": 6},
-        {"text": "React 18 + TypeScript + Ant Design на клиенте; FastAPI, SQLAlchemy 2 (async), PostgreSQL и JWT на сервере. Ролевой доступ и audit log для изменяющих операций.", "size": 11.5}])
+        {"text": "React 18 + TypeScript + Ant Design на клиенте; FastAPI, SQLAlchemy 2 (async), PostgreSQL и JWT на сервере. Вход через Keycloak (Code Flow + PKCE) или локальный JWT. Ролевой доступ и audit log для изменяющих операций.", "size": 11.5}])
     fill_text(mbox, [
         {"text": "Маркетинговая суть решения", "size": 15, "bold": True,
          "color": VIOLET, "space_after": 6},
@@ -364,7 +364,7 @@ def slide_detail(s):
             "Комментарии, файлы и история изменений"]),
         ("Управляемость и отчётность", [
             "Настройка этапов workflow администратором",
-            "Ключевые показатели и распределение по этапам",
+            "Интеграция с LMS и CMS: dry-run и импорт",
             "Экспорт отчётов в XLSX, XLS, PDF и JSON"]),
     ]
     x = 0.75
@@ -387,11 +387,18 @@ def slide_tech(s):
         ("Данные и инфраструктура", ["PostgreSQL (Managed или контейнер)",
                                      "Yandex Object Storage для файлов",
                                      "KeyDB для кэша, Docker Compose, Nginx"]),
+        ("Интеграции и защита", ["Keycloak: Code Flow + PKCE, RS256",
+                                 "LMS и CMS: контракт обмена, dry-run",
+                                 "GigaChat: сводка по взаимодействию"]),
     ]
-    for (title, items), x, w in zip(cards, (0.68, 4.83, 9.15), (3.55, 3.72, 3.55)):
-        add_text(s, x + 0.22, 2.02, w - 0.44, 0.6, [
+    positions = [
+        (0.68, 1.75, 5.9), (6.75, 1.75, 5.9),
+        (0.68, 4.0, 5.9), (6.75, 4.0, 5.9),
+    ]
+    for (title, items), (x, y, w) in zip(cards, positions):
+        add_text(s, x + 0.22, y, w - 0.44, 0.5, [
             {"text": title, "size": 15, "bold": True, "color": VIOLET, "space_after": 0}])
-        add_text(s, x + 0.22, 2.72, w - 0.44, 3.6, [
+        add_text(s, x + 0.22, y + 0.6, w - 0.44, 1.5, [
             {"text": "•  " + it, "size": 11.5, "space_after": 10} for it in items])
 
 
@@ -469,14 +476,14 @@ def slide_demo(s):
     add_pill(s, 0.38, 0.35, 5.4, 0.52, "Демонстрация и результаты")
     # В экраны браузерных макетов шаблона подставляем реальные скриншоты.
     add_picture_contained(s, IMG_DIR / "02-kanban-board.png", 1.33, 1.62, 4.53, 2.41)
-    add_picture_contained(s, IMG_DIR / "07-reports.png", 7.50, 1.62, 4.53, 2.41)
+    add_picture_contained(s, IMG_DIR / "11-integration.png", 7.50, 1.62, 4.53, 2.41)
     add_text(s, 1.30, 4.16, 4.8, 1.6, [
         {"text": "Kanban-доска", "size": 13, "bold": True, "color": VIOLET, "space_after": 4},
         {"text": "Портфель взаимодействий с фильтрами по вузу и продукту, переключением B2B/B2C и перемещением карточек по этапам.", "size": 10.5, "space_after": 3},
         {"text": "Демо: " + DEMO, "size": 10.5, "bold": True, "color": PINK, "space_after": 0}])
     add_text(s, 7.47, 4.16, 4.8, 1.6, [
-        {"text": "Отчёты и экспорт", "size": 13, "bold": True, "color": VIOLET, "space_after": 4},
-        {"text": "Ключевые показатели, распределение по этапам и выгрузка в XLSX, XLS, PDF и JSON с учётом выбранной воронки.", "size": 10.5, "space_after": 3},
+        {"text": "Интеграция с LMS и CMS", "size": 13, "bold": True, "color": VIOLET, "space_after": 4},
+        {"text": "Контракт обмена, предпросмотр пакета без записи (dry-run) и идемпотентный импорт по номеру договора. Отчёты выгружаются в XLSX, XLS, PDF и JSON.", "size": 10.5, "space_after": 3},
         {"text": "API: " + API, "size": 10.5, "bold": True, "color": PINK, "space_after": 0}])
 
     # Результаты нагрузочного прогона — короткой строкой под скриншотами.

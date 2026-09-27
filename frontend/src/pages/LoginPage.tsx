@@ -1,8 +1,9 @@
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
-import { App as AntApp, Button, Card, Form, Input, Typography } from 'antd';
+import { App as AntApp, Button, Card, Divider, Form, Input, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 import { errorMessage } from '../api/client';
+import { isKeycloakMode, keycloak } from '../auth/keycloak';
 import { useAuthStore } from '../stores/authStore';
 
 interface LoginForm {
@@ -43,6 +44,24 @@ export default function LoginPage() {
         <Typography.Paragraph type="secondary">
           Система сопровождения взаимодействия с вузами-партнёрами
         </Typography.Paragraph>
+        {isKeycloakMode && (
+          // Основной путь — единая система входа: пароль вводится на стороне
+          // Keycloak и в приложение не попадает. Форма ниже остаётся рабочим
+          // запасным вариантом (AUTH_MODE=jwt / Keycloak недоступен).
+          <>
+            <Button
+              type="primary"
+              block
+              size="large"
+              onClick={() => void keycloak.login()}
+            >
+              Войти через Keycloak
+            </Button>
+            <Divider plain style={{ margin: '16px 0' }}>
+              или вход по учётной записи CRM
+            </Divider>
+          </>
+        )}
         <Form<LoginForm> layout="vertical" onFinish={onFinish}>
           <Form.Item
             name="email"

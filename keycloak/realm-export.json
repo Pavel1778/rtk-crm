@@ -2,7 +2,7 @@
   "realm": "rtk-crm",
   "enabled": true,
   "displayName": "RTK CRM",
-  "sslRequired": "external",
+  "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
@@ -42,12 +42,10 @@
       "redirectUris": [
         "http://localhost:3000/*",
         "http://localhost:5173/*",
-        "http://localhost/*"
+        "http://*"
       ],
       "webOrigins": [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost"
+        "*"
       ],
       "protocolMappers": [
         {
@@ -78,8 +76,8 @@
   ],
   "users": [
     {
-      "username": "admin@rtk-crm.local",
-      "email": "admin@rtk-crm.local",
+      "username": "admin@rtk.ru",
+      "email": "admin@rtk.ru",
       "firstName": "Администратор",
       "lastName": "Системы",
       "enabled": true,
@@ -87,15 +85,17 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Admin123!",
+          "value": "admin123",
           "temporary": false
         }
       ],
-      "realmRoles": ["admin"]
+      "realmRoles": [
+        "admin"
+      ]
     },
     {
-      "username": "manager@rtk-crm.local",
-      "email": "manager@rtk-crm.local",
+      "username": "manager@rtk.ru",
+      "email": "manager@rtk.ru",
       "firstName": "Менеджер",
       "lastName": "ИТ-Школы",
       "enabled": true,
@@ -103,15 +103,17 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Manager123!",
+          "value": "manager123",
           "temporary": false
         }
       ],
-      "realmRoles": ["manager"]
+      "realmRoles": [
+        "manager"
+      ]
     },
     {
-      "username": "kam@rtk-crm.local",
-      "email": "kam@rtk-crm.local",
+      "username": "kam@rtk.ru",
+      "email": "kam@rtk.ru",
       "firstName": "КАМ",
       "lastName": "Демо",
       "enabled": true,
@@ -119,11 +121,13 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Kam123!",
+          "value": "kam123",
           "temporary": false
         }
       ],
-      "realmRoles": ["kam"]
+      "realmRoles": [
+        "kam"
+      ]
     }
   ]
 }

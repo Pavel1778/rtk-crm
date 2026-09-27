@@ -19,6 +19,11 @@ CRM для кейса «ИТ Школа» хакатона «Лидеры циф
 - **Роли**: менеджер и администратор (доступ к справочникам и настройкам —
   только у администратора).
 - **Адаптив**: на мобильной доска показывается одна колонка с выбором этапа.
+- **Интеграция с LMS и CMS**: контракт обмена, предпросмотр пакета (dry-run)
+  и идемпотентный импорт по `contract_number` (mock-адаптер).
+- **ИИ-сводка**: краткая выжимка по карточке через GigaChat.
+- **Вход через Keycloak**: Authorization Code Flow с PKCE; локальный
+  JWT-вход остаётся запасным вариантом.
 
 ## Ограничение бизнес-модели
 
@@ -60,6 +65,7 @@ backend/          FastAPI-приложение (пакет backend)
   api/              роутеры: auth, universities, directories,
                     stages, interactions, reports
   seed.py           справочники + демо-данные
+  certs/            корневой сертификат НУЦ Минцифры для TLS к GigaChat
   start.sh          старт без Docker (Render, Start Command)
 frontend/         React-приложение (Vite)
   src/api/          axios-клиент и описание эндпоинтов
@@ -67,6 +73,7 @@ frontend/         React-приложение (Vite)
                     SettingsPage, LoginPage
   src/components/   MainLayout, kanban, interaction
 infra/yandex-cloud/ прод-стек для ВМ: setup-vm.sh, docker-compose, nginx
+render.yaml       Blueprint для контура Render + Vercel + Supabase
 docs/             DEPLOYMENT.md, STACK.md, USER_GUIDE.md,
                   architecture/, security/, pitch.md
 ```
@@ -168,6 +175,24 @@ http://127.0.0.1:5173 — dev-сервер проксирует `/api` на `loc
 | Менеджер | `manager@rtk.ru` | `manager123` |
 | КАМ | `kam@rtk.ru` | `kam123` |
 
+## Вход и аутентификация
+
+Система поддерживает два режима, переключаемых `AUTH_MODE` на backend и
+`VITE_AUTH_MODE` на frontend.
+
+**Локальный JWT** (`jwt`, по умолчанию) — вход по email и паролю из формы.
+Подходит для демонстрации и запуска без Keycloak.
+
+**Keycloak** (`keycloak`) — кнопка **Войти через Keycloak** на странице
+входа. Используется Authorization Code Flow с PKCE (`S256`): публичный
+клиент без client secret, код авторизации бесполезен для перехватчика.
+Backend проверяет RS256-токен по JWKS realm и берёт роли из claims.
+
+Если Keycloak недоступен, страница входа не пустует: фронтенд проверяет
+доступность сервера и показывает форму email/пароль как запасной путь.
+
+Подробности — в [docs/KEYCLOAK.md](docs/KEYCLOAK.md).
+
 ## Деплой
 
 Поддерживаются два контура; код один и тот же, различия — только в
@@ -190,8 +215,11 @@ Render, frontend — статика на Vercel, база — Supabase PostgreSQ
 
 ## Документация
 
+- [rtk-crm-documentation.pdf](docs/rtk-crm-documentation.pdf) — единый PDF со всей документацией
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) — развёртывание
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) — архитектура
+- [KEYCLOAK.md](docs/KEYCLOAK.md) — вход через Keycloak и локальный JWT
+- [AI.md](docs/AI.md) — сводка по взаимодействию (GigaChat)
 - [USER_GUIDE.md](docs/USER_GUIDE.md) — руководство пользователя
 - [ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) — руководство администратора
 - [SECURITY.md](docs/SECURITY.md) — безопасность, 152-ФЗ и privacy
@@ -234,9 +262,20 @@ Render, frontend — статика на Vercel, база — Supabase PostgreSQ
 
 ![Конструктор воркфлоу](docs/images/08-workflow-constructor.png)
 
-### Настройки
+### Пользователи (администратор)
 
-![Настройки](docs/images/09-settings.png)
+![Пользователи](docs/images/09-settings.png)
+
+### Журнал аудита (администратор)
+
+![Журнал аудита](docs/images/12-audit-log.png)
+
+### Интеграция с LMS и CMS
+
+Вкладка описывает обмен с внешними системами заказчика: контракт обмена,
+предпросмотр пакета (dry-run) и идемпотентный импорт по `contract_number`.
+
+![Интеграция с LMS и CMS](docs/images/11-integration.png)
 
 ### Встроенная документация `/help`
 

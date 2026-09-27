@@ -97,6 +97,10 @@ services:
       S3_BUCKET: ${S3_BUCKET:-rtk-crm}
       S3_SECURE: "false"
       KEYCLOAK_URL: "http://keycloak:8080"
+      # Публичный адрес Keycloak (браузерный). По нему проверяется issuer
+      # токена: Keycloak подставляет в `iss` внешний адрес, а не внутренний.
+      # Для ВМ: KEYCLOAK_PUBLIC_URL=http://<ip-вм>:8080
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-}
       PYTHONPATH: "/"
       # Подхватываются из .env; значения по умолчанию — как в backend/core/config.py.
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
@@ -108,8 +112,11 @@ services:
       GIGACHAT_CREDENTIALS: ${GIGACHAT_CREDENTIALS:-}
       GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_B2B}
       GIGACHAT_MODEL: ${GIGACHAT_MODEL:-GigaChat}
-      GIGACHAT_CA_BUNDLE: ${GIGACHAT_CA_BUNDLE:-}
+      # Сертификат НУЦ Минцифры вшит в образ; монтирование позволяет обновлять
+      # его без пересборки.
+      GIGACHAT_CA_BUNDLE: ${GIGACHAT_CA_BUNDLE:-/certs/russian_trusted_root_ca.pem}
       GIGACHAT_VERIFY_SSL: ${GIGACHAT_VERIFY_SSL:-true}
+      GIGACHAT_FALLBACK_ENABLED: ${GIGACHAT_FALLBACK_ENABLED:-true}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       STUCK_TIMEOUT_DAYS: ${STUCK_TIMEOUT_DAYS:-14}
       NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
@@ -131,8 +138,17 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:8000
-        VITE_KEYCLOAK_URL: http://localhost:8080
+        # Пустой VITE_API_URL = same-origin: запросы идут на /api того же
+        # хоста, а проксирует их nginx фронтенда. Абсолютный адрес
+        # (http://localhost:8000) сломал бы доступ с ВМ: браузер жюри пошёл бы
+        # на свой localhost, а не на стенд.
+        VITE_API_URL: ""
+        VITE_AUTH_MODE: ${AUTH_MODE:-jwt}
+        # Адрес Keycloak, по которому его открывает браузер. Для ВМ:
+        # http://<ip-вм>:8080 — тот же, что и KEYCLOAK_PUBLIC_URL.
+        VITE_KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+        VITE_KEYCLOAK_REALM: ${KEYCLOAK_REALM:-rtk-crm}
+        VITE_KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-rtk-crm-frontend}
     container_name: rtk_frontend
     restart: always
     ports:

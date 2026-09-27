@@ -1,0 +1,46 @@
+# Render Blueprint: backend RTK CRM в контуре «Render + Vercel + Supabase».
+# Подробности развёртывания — docs/DEPLOYMENT.md, раздел 2.
+#
+# Секреты помечены sync: false: их значения задаются в панели Render и в
+# репозиторий не попадают. Остальные переменные безопасны по умолчанию.
+services:
+  - type: web
+    name: rtk-crm-backend
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      # production включает HSTS и строгую проверку SECRET_KEY при старте.
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        sync: false
+      # Демо-контур: без демо-данных база пустая и войти некуда.
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: MOCK_MODE
+        value: "true"
+      # Сводка по карточке (ФТ-6). Ключ задаётся в панели; без него функция
+      # выключена и эндпоинт отвечает 503. Сертификат НУЦ Минцифры вшит в образ.
+      - key: GIGACHAT_CREDENTIALS
+        sync: false
+      - key: GIGACHAT_SCOPE
+        value: GIGACHAT_API_B2B
+      - key: GIGACHAT_MODEL
+        value: GigaChat
+      - key: GIGACHAT_CA_BUNDLE
+        value: /certs/russian_trusted_root_ca.pem
+      - key: GIGACHAT_VERIFY_SSL
+        value: "true"
+      # При сбое внешнего сервиса отдаётся детерминированная сводка из данных
+      # карточки вместо 502.
+      - key: GIGACHAT_FALLBACK_ENABLED
+        value: "true"

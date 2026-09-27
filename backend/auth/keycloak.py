@@ -43,14 +43,33 @@ _cache = _JwksCache()
 
 
 def _issuer() -> str:
+    """Ожидаемый issuer токена: публичный адрес Keycloak.
+
+    Keycloak формирует `iss` из адреса, по которому к нему пришёл браузер, —
+    это внешний адрес, а не внутренний `http://keycloak:8080`. Поэтому issuer
+    проверяется по `keycloak_public_url`, а ключи забираются по `keycloak_url`.
+    """
     settings = get_settings()
-    return f"{settings.keycloak_url.rstrip('/')}/realms/{settings.keycloak_realm}"
+    base = settings.keycloak_public_url or settings.keycloak_url
+    return f"{base.rstrip('/')}/realms/{settings.keycloak_realm}"
+
+
+def _jwks_url() -> str:
+    """Адрес JWKS: внутренний `keycloak_url`.
+
+    Публичный адрес нужен только для сверки `iss`. Обращение к внешнему адресу
+    изнутри контейнера часто не работает (в облаке внешний IP может быть
+    недоступен через NAT), поэтому ключи забираются по внутреннему адресу.
+    """
+    settings = get_settings()
+    base = settings.keycloak_url or settings.keycloak_public_url
+    return f"{base.rstrip('/')}/realms/{settings.keycloak_realm}"
 
 
 def _fetch_jwks() -> dict[str, dict[str, Any]]:
     """Загружает набор ключей realm и раскладывает его по `kid`."""
     settings = get_settings()
-    url = f"{_issuer()}/protocol/openid-connect/certs"
+    url = f"{_jwks_url()}/protocol/openid-connect/certs"
     try:
         response = httpx.get(url, timeout=settings.keycloak_jwks_timeout_seconds)
         response.raise_for_status()

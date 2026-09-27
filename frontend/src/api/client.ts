@@ -1,5 +1,11 @@
 import axios from 'axios';
 
+import {
+  ensureFreshKeycloakToken,
+  isKeycloakMode,
+  logoutKeycloak,
+} from '../auth/keycloak';
+
 // Пустая строка = same-origin: запросы идут на origin страницы, а путь
 // `/api/...` уже содержится в каждом вызове endpoints. Так в dev работает
 // Vite-прокси (`/api` → localhost:8000), а в проде — nginx, который
@@ -27,8 +33,11 @@ export function setToken(token: string | null): void {
   }
 }
 
-api.interceptors.request.use((config) => {
-  const token = getToken();
+api.interceptors.request.use(async (config) => {
+  // В режиме Keycloak источник токена — keycloak-js, а не localStorage:
+  // он обновляет access token перед запросом, поэтому 401 после истечения
+  // срока жизни не возникает.
+  const token = isKeycloakMode ? await ensureFreshKeycloakToken() : getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -53,7 +62,10 @@ api.interceptors.response.use(
     }
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       setToken(null);
-      if (window.location.pathname !== '/login') {
+      if (isKeycloakMode) {
+        // Сессия Keycloak истекла: повторный вход возможен только через него.
+        await logoutKeycloak();
+      } else if (window.location.pathname !== '/login') {
         window.location.assign('/login');
       }
     }

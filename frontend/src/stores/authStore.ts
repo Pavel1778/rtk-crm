@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { login as apiLogin, me as apiMe } from '../api/endpoints';
 import { setToken } from '../api/client';
+import { isKeycloakMode, logoutKeycloak } from '../auth/keycloak';
 import type { User, UserRole } from '../types';
 
 interface AuthState {
@@ -31,11 +32,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   restore: async () => {
+    // В режиме Keycloak токен уже получен через keycloak-js и подставляется
+    // перехватчиком axios. Здесь остаётся только узнать локальную учётную
+    // запись — backend находит её по email из токена и создаёт при первом
+    // входе, поэтому пользователю не нужен отдельный шаг регистрации.
     try {
       const user = await apiMe();
       set({ user, initialized: true });
     } catch {
-      setToken(null);
+      // В Keycloak-режиме localStorage не используется: чистка здесь
+      // сбросила бы токен, которым управляет keycloak-js.
+      if (!isKeycloakMode) {
+        setToken(null);
+      }
       set({ user: null, initialized: true });
     }
   },
@@ -43,6 +52,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: () => {
     setToken(null);
     set({ user: null });
+    if (isKeycloakMode) {
+      // Завершаем сессию в Keycloak, иначе login-required сразу вернёт
+      // пользователя обратно без формы входа.
+      void logoutKeycloak();
+    }
   },
 }));
 
