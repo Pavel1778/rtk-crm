@@ -51,6 +51,9 @@ ASSET_DIRS = ["images"]
 # Двоичные и модельные артефакты, которые отдаются как файлы, а не как текст.
 BINARY_FILES = [
     "architecture/rtk-crm.archimate",
+    "architecture/functional.archimate",
+    "architecture/functional.mmd",
+    "architecture/functional.pdf",
     "architecture/er.archimate",
     "architecture/er.mmd",
     "architecture/er-model.pdf",

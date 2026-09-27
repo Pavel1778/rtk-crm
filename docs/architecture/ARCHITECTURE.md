@@ -10,10 +10,20 @@ RTK CRM — это B2B CRM-система для менеджеров Росте
 - **C4 Level 2** — [Containers / Components](c4-components.md)
 - **Функциональная архитектура** — [пользовательский путь и сервисы](functional.md)
 - **Модель данных (ER)** — [сущности и связи](er-model.md)
-- **ER в Archi** — [`er.archimate`](er.archimate) (ArchiMate 3, открывается в Archi)
-  и [PDF-версия диаграммы](er-model.pdf)
-- **Модель Archi** — [функциональная и компонентная архитектура](rtk-crm.archimate)
-  (ArchiMate 3, открывается в Archi)
+
+### Модели в Archi (ArchiMate 3)
+
+Требование ТЗ 6.7 — функциональная и компонентная архитектура в Archi.
+Модели открываются в [Archi](https://www.archimatetool.com/) бесплатно.
+
+- **Функциональная** — [`functional.archimate`](functional.archimate):
+  пользовательский путь из 5 шагов (авторизация → просмотр → фильтрация →
+  актуализация статуса → отчёт) и обслуживающие сервисы.
+  [PDF-версия](functional.pdf).
+- **Компонентная** — [`rtk-crm.archimate`](rtk-crm.archimate): контейнеры,
+  внешние системы и целевое развёртывание.
+- **Модель данных (ER)** — [`er.archimate`](er.archimate): 14 сущностей и
+  правила `ON DELETE`. [PDF-версия](er-model.pdf).
 - **Развёртывание** — [текущее](deployment-current.md) и [в Yandex Cloud](deployment-yandex-cloud.md)
 
 Диаграммы написаны в Mermaid и рендерятся прямо в GitHub/GitLab, поэтому не

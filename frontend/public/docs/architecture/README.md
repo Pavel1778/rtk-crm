@@ -16,13 +16,19 @@ Mermaid и отображаются в GitHub, GitLab и совместимых 
   и обслуживающие сервисы.
 - [Модель данных (ER)](/docs/architecture/er-model.md) — сущности, связи и правила целостности.
 
-## Модель в Archi
+## Модели в Archi
 
-- [`rtk-crm.archimate`](/docs/architecture/rtk-crm.archimate) — модель ArchiMate 3 для Archi.
-  Содержит два вида: функциональную архитектуру (пользовательский путь из
-  ТЗ) и компонентную (контейнеры и внешние системы). Открывается в
-  [Archi](https://www.archimatetool.com/) бесплатно, файл лежит в репозитории
-  рядом с Mermaid-схемами.
+Требование ТЗ 6.7 — функциональная и компонентная архитектура в Archi.
+Все модели в формате ArchiMate 3, открываются в
+[Archi](https://www.archimatetool.com/) бесплатно, файлы лежат в репозитории
+рядом с Mermaid-схемами.
+
+- [`functional.archimate`](/docs/architecture/functional.archimate) — функциональная модель:
+  пользовательский путь КАМ из 5 шагов (авторизация, просмотр, фильтрация,
+  актуализация статуса, отчёт) и обслуживающие сервисы. Готовая
+  [PDF-версия](/docs/architecture/functional.pdf), Mermaid-исходник — [`functional.mmd`](/docs/architecture/functional.mmd).
+- [`rtk-crm.archimate`](/docs/architecture/rtk-crm.archimate) — компонентная модель: контейнеры,
+  внешние системы и целевое развёртывание.
 - [`er.archimate`](/docs/architecture/er.archimate) — модель данных (ER) в ArchiMate 3: 14
   сущностей предметной области и связи между ними с правилами `ON DELETE`.
   Готовая [PDF-версия диаграммы](/docs/architecture/er-model.pdf) приложена рядом.

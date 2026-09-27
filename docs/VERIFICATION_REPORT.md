@@ -235,6 +235,7 @@ production Render/Supabase.
 | SECURITY.md с 152-ФЗ и миграцией Yandex Cloud | `✅ OK` | `docs/SECURITY.md:1-34` |
 | DEPLOYMENT.md Render/Vercel/Supabase/Yandex Cloud | `✅ OK` | `docs/DEPLOYMENT.md`; credentials заменены placeholders |
 | ARCHITECTURE и C4 Mermaid | `✅ OK` | `docs/architecture/ARCHITECTURE.md`, `c4-context.md`, `c4-components.md` |
+| Archi: функциональная и компонентная (ТЗ 6.7) | `✅ OK` | `functional.archimate` (5 шагов пути + сервисы), `rtk-crm.archimate` (контейнеры); ER — `er.archimate`. PDF: `functional.pdf`, `er-model.pdf` |
 | Pitch 11 слайдов | `✅ OK` | `docs/pitch.md` |
 | QA 20 вопросов/ответов | `✅ OK` | `docs/qa-jury.md` |
 | Реальные screenshots в `docs/images/` | `✅ OK` | 10 PNG в `docs/images/`, подставляются в руководства и PDF через `scripts/render_guide_pdfs.py` |
@@ -737,9 +738,14 @@ Linux-стенде и в URL вкладки «Помощь».
 
 - `docs/qa-jury.md` — 40 вопросов (20 продуктовых и 20 технических) с опорой
   на файлы кода, а не на пересказ ТЗ.
+- `docs/architecture/functional.archimate`, `functional.pdf`, `functional.mmd` —
+  функциональная модель (ТЗ 6.7): пользовательский путь из 5 шагов и сервисы,
+  модель ArchiMate 3 и отрендеренная диаграмма.
+- `docs/architecture/rtk-crm.archimate` — компонентная модель (ТЗ 6.7):
+  контейнеры, внешние системы и целевое развёртывание.
 - `docs/architecture/er.mmd`, `er-model.pdf`, `er.archimate` — ER-модель:
   Mermaid-исходник, отрендеренная диаграмма и модель ArchiMate 3 (32 элемента).
-- `docs/rtk-crm-documentation.pdf` — единый PDF (65 страниц) со всеми
+- `docs/rtk-crm-documentation.pdf` — единый PDF (67 страниц) со всеми
   разделами, включая ER и Q&A для жюри.
 - `docs/presentation/RTK-CRM-LCT2026.pptx` — презентация, 11 слайдов.
 - `docs/examples/` — образцы форматов от кейсодержателя для демонстрации
@@ -790,7 +796,7 @@ Linux-стенде и в URL вкладки «Помощь».
 | 1 | `github.com/Pavel1778/rtk-crm` | публичный: README, LICENSE (MIT), бейдж CI |
 | 2 | `docs/presentation/RTK-CRM-LCT2026.pptx` + PDF | лежат в репозитории рядом |
 | 3 | `crm-rtk.pixel-minds.ru` | открывается; демо-логины проверены |
-| 4 | `docs/rtk-crm-documentation.pdf` | 65 страниц |
+| 4 | `docs/rtk-crm-documentation.pdf` | 67 страниц |
 
 Проверено без сессии: `/help` — 200, `/docs/rtk-crm-documentation.pdf` — 200,
 `/docs/USER_GUIDE.md` — 200, `/health` — 200. Три демо-логина отвечают 200 на

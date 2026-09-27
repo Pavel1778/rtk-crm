@@ -10,10 +10,20 @@ RTK CRM — это B2B CRM-система для менеджеров Росте
 - **C4 Level 2** — [Containers / Components](/docs/architecture/c4-components.md)
 - **Функциональная архитектура** — [пользовательский путь и сервисы](/docs/architecture/functional.md)
 - **Модель данных (ER)** — [сущности и связи](/docs/architecture/er-model.md)
-- **ER в Archi** — [`er.archimate`](/docs/architecture/er.archimate) (ArchiMate 3, открывается в Archi)
-  и [PDF-версия диаграммы](/docs/architecture/er-model.pdf)
-- **Модель Archi** — [функциональная и компонентная архитектура](/docs/architecture/rtk-crm.archimate)
-  (ArchiMate 3, открывается в Archi)
+
+### Модели в Archi (ArchiMate 3)
+
+Требование ТЗ 6.7 — функциональная и компонентная архитектура в Archi.
+Модели открываются в [Archi](https://www.archimatetool.com/) бесплатно.
+
+- **Функциональная** — [`functional.archimate`](/docs/architecture/functional.archimate):
+  пользовательский путь из 5 шагов (авторизация → просмотр → фильтрация →
+  актуализация статуса → отчёт) и обслуживающие сервисы.
+  [PDF-версия](/docs/architecture/functional.pdf).
+- **Компонентная** — [`rtk-crm.archimate`](/docs/architecture/rtk-crm.archimate): контейнеры,
+  внешние системы и целевое развёртывание.
+- **Модель данных (ER)** — [`er.archimate`](/docs/architecture/er.archimate): 14 сущностей и
+  правила `ON DELETE`. [PDF-версия](/docs/architecture/er-model.pdf).
 - **Развёртывание** — [текущее](/docs/architecture/deployment-current.md) и [в Yandex Cloud](/docs/architecture/deployment-yandex-cloud.md)
 
 Диаграммы написаны в Mermaid и рендерятся прямо в GitHub/GitLab, поэтому не

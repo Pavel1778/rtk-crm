@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="RTK CRM — функциональная архитектура" id="model-rtk-crm-functional" version="5.0.0">
+  <folder name="Бизнес-слой" id="fn-folder-business" type="business">
+    <element id="fn-el-01" xsi:type="archimate:BusinessActor" name="КАМ" documentation="Менеджер по вузам, около 20 человек. Ведёт только свои вузы."/>
+    <element id="fn-el-02" xsi:type="archimate:BusinessRole" name="Руководитель" documentation="Видит взаимодействия всех менеджеров и сводную аналитику."/>
+    <element id="fn-el-03" xsi:type="archimate:BusinessRole" name="Администратор платформы" documentation="Справочники, этапы воркфлоу, пользователи и роли."/>
+    <element id="fn-el-04" xsi:type="archimate:BusinessProcess" name="Шаг 1. Авторизация" documentation="Вход по логину и паролю или через Keycloak. Роль определяет объём прав."/>
+    <element id="fn-el-05" xsi:type="archimate:BusinessProcess" name="Шаг 2. Просмотр взаимодействий" documentation="КАМ видит только свои вузы, руководитель и администратор — все."/>
+    <element id="fn-el-06" xsi:type="archimate:BusinessProcess" name="Шаг 3. Фильтрация" documentation="Отбор по вузу, продукту и направлению, переключение контура B2B/B2C."/>
+    <element id="fn-el-07" xsi:type="archimate:BusinessProcess" name="Шаг 4. Актуализация статуса" documentation="Комментарий, прикрепление файлов и смена этапа взаимодействия."/>
+    <element id="fn-el-08" xsi:type="archimate:BusinessProcess" name="Шаг 5. Формирование отчёта" documentation="Сводка и выгрузка в XLSX, XLS, PDF и JSON."/>
+    <element id="fn-el-09" xsi:type="archimate:BusinessObject" name="Взаимодействие" documentation="Карточка пары «вуз + продукт»: договор, задачи, файлы, история этапов."/>
+  </folder>
+  <folder name="Прикладной слой" id="fn-folder-application" type="application">
+    <element id="fn-el-10" xsi:type="archimate:ApplicationService" name="Auth Service (Keycloak)" documentation="Аутентификация, JWT, роли и разграничение доступа."/>
+    <element id="fn-el-11" xsi:type="archimate:ApplicationService" name="Board Service (Kanban)" documentation="Доска по этапам, фильтры и смена этапа перемещением карточки."/>
+    <element id="fn-el-12" xsi:type="archimate:ApplicationService" name="Interaction Service (карточки)" documentation="Карточка взаимодействия: договор, задачи, комментарии, история."/>
+    <element id="fn-el-13" xsi:type="archimate:ApplicationService" name="Report Service (отчёты)" documentation="Агрегаты и выгрузка отчётов в XLSX, XLS, PDF и JSON."/>
+    <element id="fn-el-14" xsi:type="archimate:ApplicationService" name="File Service (MinIO / S3)" documentation="Хранение вложений, presigned URL, лимиты по типу и размеру."/>
+    <element id="fn-el-15" xsi:type="archimate:ApplicationService" name="Integration Service (LMS / CMS)" documentation="Обмен с LMS и CMS по JSON: предпросмотр и идемпотентный импорт."/>
+    <element id="fn-el-16" xsi:type="archimate:ApplicationService" name="AI Service (GigaChat)" documentation="Сводка по карточке (ФТ-6). Вызывается только по запросу пользователя."/>
+  </folder>
+  <folder name="Связи" id="fn-folder-relations" type="relations">
+    <element id="fn-rel-01" xsi:type="archimate:TriggeringRelationship" source="fn-el-04" target="fn-el-05" documentation="После входа доступен список взаимодействий"/>
+    <element id="fn-rel-02" xsi:type="archimate:TriggeringRelationship" source="fn-el-05" target="fn-el-06" documentation="Фильтры сужают список"/>
+    <element id="fn-rel-03" xsi:type="archimate:TriggeringRelationship" source="fn-el-06" target="fn-el-07" documentation="Из списка открывается карточка и меняется этап"/>
+    <element id="fn-rel-04" xsi:type="archimate:TriggeringRelationship" source="fn-el-07" target="fn-el-08" documentation="После актуализации формируется отчёт"/>
+    <element id="fn-rel-05" xsi:type="archimate:AssignmentRelationship" source="fn-el-01" target="fn-el-04" documentation="КАМ выполняет шаг"/>
+    <element id="fn-rel-06" xsi:type="archimate:AssignmentRelationship" source="fn-el-01" target="fn-el-05" documentation="КАМ просматривает свои вузы"/>
+    <element id="fn-rel-07" xsi:type="archimate:AssignmentRelationship" source="fn-el-02" target="fn-el-05" documentation="Руководитель просматривает все вузы"/>
+    <element id="fn-rel-08" xsi:type="archimate:AssignmentRelationship" source="fn-el-01" target="fn-el-07" documentation="КАМ актуализирует статус"/>
+    <element id="fn-rel-09" xsi:type="archimate:AssignmentRelationship" source="fn-el-02" target="fn-el-08" documentation="Руководитель формирует сводный отчёт"/>
+    <element id="fn-rel-10" xsi:type="archimate:AssignmentRelationship" source="fn-el-03" target="fn-el-09" documentation="Администратор ведёт справочники и этапы"/>
+    <element id="fn-rel-11" xsi:type="archimate:AccessRelationship" source="fn-el-07" target="fn-el-09" documentation="Актуализация читает и изменяет карточку"/>
+    <element id="fn-rel-12" xsi:type="archimate:AccessRelationship" source="fn-el-08" target="fn-el-09" documentation="Отчёт читает карточки и агрегаты"/>
+    <element id="fn-rel-13" xsi:type="archimate:ServingRelationship" source="fn-el-10" target="fn-el-04"/>
+    <element id="fn-rel-14" xsi:type="archimate:ServingRelationship" source="fn-el-11" target="fn-el-05"/>
+    <element id="fn-rel-15" xsi:type="archimate:ServingRelationship" source="fn-el-12" target="fn-el-05"/>
+    <element id="fn-rel-16" xsi:type="archimate:ServingRelationship" source="fn-el-11" target="fn-el-06"/>
+    <element id="fn-rel-17" xsi:type="archimate:ServingRelationship" source="fn-el-12" target="fn-el-07"/>
+    <element id="fn-rel-18" xsi:type="archimate:ServingRelationship" source="fn-el-14" target="fn-el-07"/>
+    <element id="fn-rel-19" xsi:type="archimate:ServingRelationship" source="fn-el-16" target="fn-el-07"/>
+    <element id="fn-rel-20" xsi:type="archimate:ServingRelationship" source="fn-el-13" target="fn-el-08"/>
+    <element id="fn-rel-21" xsi:type="archimate:ServingRelationship" source="fn-el-15" target="fn-el-08"/>
+  </folder>
+  <folder name="Виды" id="fn-folder-views" type="diagrams">
+    <view id="fn-view-01" name="Функциональная архитектура" type="archimate:ArchimateDiagramModel">
+      <child id="fn-obj-01" xsi:type="archimate:DiagramObject" archimateElement="fn-el-01">
+        <bounds x="40" y="40" width="180" height="60"/>
+      </child>
+      <child id="fn-obj-02" xsi:type="archimate:DiagramObject" archimateElement="fn-el-02">
+        <bounds x="260" y="40" width="180" height="60"/>
+      </child>
+      <child id="fn-obj-03" xsi:type="archimate:DiagramObject" archimateElement="fn-el-03">
+        <bounds x="480" y="40" width="180" height="60"/>
+      </child>
+      <child id="fn-obj-04" xsi:type="archimate:DiagramObject" archimateElement="fn-el-04">
+        <bounds x="40" y="180" width="200" height="70"/>
+      </child>
+      <child id="fn-obj-05" xsi:type="archimate:DiagramObject" archimateElement="fn-el-05">
+        <bounds x="300" y="180" width="200" height="70"/>
+      </child>
+      <child id="fn-obj-06" xsi:type="archimate:DiagramObject" archimateElement="fn-el-06">
+        <bounds x="560" y="180" width="200" height="70"/>
+      </child>
+      <child id="fn-obj-07" xsi:type="archimate:DiagramObject" archimateElement="fn-el-07">
+        <bounds x="820" y="180" width="200" height="70"/>
+      </child>
+      <child id="fn-obj-08" xsi:type="archimate:DiagramObject" archimateElement="fn-el-08">
+        <bounds x="1080" y="180" width="200" height="70"/>
+      </child>
+      <child id="fn-obj-09" xsi:type="archimate:DiagramObject" archimateElement="fn-el-09">
+        <bounds x="820" y="320" width="200" height="60"/>
+      </child>
+      <child id="fn-obj-10" xsi:type="archimate:DiagramObject" archimateElement="fn-el-10">
+        <bounds x="40" y="460" width="200" height="60"/>
+      </child>
+      <child id="fn-obj-11" xsi:type="archimate:DiagramObject" archimateElement="fn-el-11">
+        <bounds x="300" y="460" width="200" height="60"/>
+      </child>
+      <child id="fn-obj-12" xsi:type="archimate:DiagramObject" archimateElement="fn-el-12">
+        <bounds x="560" y="460" width="200" height="60"/>
+      </child>
+      <child id="fn-obj-13" xsi:type="archimate:DiagramObject" archimateElement="fn-el-13">
+        <bounds x="1080" y="460" width="200" height="60"/>
+      </child>
+      <child id="fn-obj-14" xsi:type="archimate:DiagramObject" archimateElement="fn-el-14">
+        <bounds x="820" y="460" width="200" height="60"/>
+      </child>
+      <child id="fn-obj-15" xsi:type="archimate:DiagramObject" archimateElement="fn-el-15">
+        <bounds x="560" y="580" width="200" height="60"/>
+      </child>
+      <child id="fn-obj-16" xsi:type="archimate:DiagramObject" archimateElement="fn-el-16">
+        <bounds x="820" y="580" width="200" height="60"/>
+      </child>
+      <connection id="fn-conn-01" xsi:type="archimate:Connection" source="fn-obj-04" target="fn-obj-05" archimateRelationship="fn-rel-01"/>
+      <connection id="fn-conn-02" xsi:type="archimate:Connection" source="fn-obj-05" target="fn-obj-06" archimateRelationship="fn-rel-02"/>
+      <connection id="fn-conn-03" xsi:type="archimate:Connection" source="fn-obj-06" target="fn-obj-07" archimateRelationship="fn-rel-03"/>
+      <connection id="fn-conn-04" xsi:type="archimate:Connection" source="fn-obj-07" target="fn-obj-08" archimateRelationship="fn-rel-04"/>
+      <connection id="fn-conn-05" xsi:type="archimate:Connection" source="fn-obj-01" target="fn-obj-04" archimateRelationship="fn-rel-05"/>
+      <connection id="fn-conn-06" xsi:type="archimate:Connection" source="fn-obj-01" target="fn-obj-05" archimateRelationship="fn-rel-06"/>
+      <connection id="fn-conn-07" xsi:type="archimate:Connection" source="fn-obj-02" target="fn-obj-05" archimateRelationship="fn-rel-07"/>
+      <connection id="fn-conn-08" xsi:type="archimate:Connection" source="fn-obj-01" target="fn-obj-07" archimateRelationship="fn-rel-08"/>
+      <connection id="fn-conn-09" xsi:type="archimate:Connection" source="fn-obj-02" target="fn-obj-08" archimateRelationship="fn-rel-09"/>
+      <connection id="fn-conn-10" xsi:type="archimate:Connection" source="fn-obj-03" target="fn-obj-09" archimateRelationship="fn-rel-10"/>
+      <connection id="fn-conn-11" xsi:type="archimate:Connection" source="fn-obj-07" target="fn-obj-09" archimateRelationship="fn-rel-11"/>
+      <connection id="fn-conn-12" xsi:type="archimate:Connection" source="fn-obj-08" target="fn-obj-09" archimateRelationship="fn-rel-12"/>
+      <connection id="fn-conn-13" xsi:type="archimate:Connection" source="fn-obj-10" target="fn-obj-04" archimateRelationship="fn-rel-13"/>
+      <connection id="fn-conn-14" xsi:type="archimate:Connection" source="fn-obj-11" target="fn-obj-05" archimateRelationship="fn-rel-14"/>
+      <connection id="fn-conn-15" xsi:type="archimate:Connection" source="fn-obj-12" target="fn-obj-05" archimateRelationship="fn-rel-15"/>
+      <connection id="fn-conn-16" xsi:type="archimate:Connection" source="fn-obj-11" target="fn-obj-06" archimateRelationship="fn-rel-16"/>
+      <connection id="fn-conn-17" xsi:type="archimate:Connection" source="fn-obj-12" target="fn-obj-07" archimateRelationship="fn-rel-17"/>
+      <connection id="fn-conn-18" xsi:type="archimate:Connection" source="fn-obj-14" target="fn-obj-07" archimateRelationship="fn-rel-18"/>
+      <connection id="fn-conn-19" xsi:type="archimate:Connection" source="fn-obj-16" target="fn-obj-07" archimateRelationship="fn-rel-19"/>
+      <connection id="fn-conn-20" xsi:type="archimate:Connection" source="fn-obj-13" target="fn-obj-08" archimateRelationship="fn-rel-20"/>
+      <connection id="fn-conn-21" xsi:type="archimate:Connection" source="fn-obj-15" target="fn-obj-08" archimateRelationship="fn-rel-21"/>
+    </view>
+  </folder>
+</archimate:model>

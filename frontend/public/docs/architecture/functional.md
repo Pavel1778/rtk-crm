@@ -1,10 +1,52 @@
 # Функциональная архитектура
 
-Схема отражает пользовательский путь из раздела 2 ТЗ (5 шагов) и сервисы
-бэкенда, которые его обслуживают. Диаграмма в формате Mermaid отображается
-в GitHub/GitLab; при необходимости экспортируется в PNG/PDF для презентации.
+Схема отражает пользовательский путь КАМ (5 шагов: авторизация, просмотр,
+фильтрация, актуализация статуса, отчёт) и сервисы бэкенда, которые его
+обслуживают. Диаграмма в формате Mermaid отображается в GitHub/GitLab;
+при необходимости экспортируется в PNG/PDF для презентации.
 
-## Пользовательский путь
+Та же модель в ArchiMate 3 — [`functional.archimate`](/docs/architecture/functional.archimate)
+(открывается в [Archi](https://www.archimatetool.com/)), готовая
+[PDF-версия](/docs/architecture/functional.pdf). Mermaid-исходник для рендера —
+[`functional.mmd`](/docs/architecture/functional.mmd).
+
+## Пользовательский путь и сервисы в Archi
+
+```mermaid
+flowchart TD
+    subgraph BIZ["Бизнес-слой: пользовательский путь (раздел 2 ТЗ)"]
+        direction LR
+        S1["Шаг 1. Авторизация<br/>логин/пароль или Keycloak"]
+        S2["Шаг 2. Просмотр взаимодействий<br/>КАМ — свои вузы, руководитель — все"]
+        S3["Шаг 3. Фильтрация<br/>вуз, продукт, направление, B2B/B2C"]
+        S4["Шаг 4. Актуализация статуса<br/>комментарий + файлы + смена этапа"]
+        S5["Шаг 5. Отчёт<br/>сводка и выгрузка XLSX/XLS/PDF/JSON"]
+        S1 --> S2 --> S3 --> S4 --> S5
+    end
+    subgraph APP["Прикладной слой: сервисы"]
+        AUTH["Auth Service (Keycloak)"]
+        BOARD["Board Service (Kanban)"]
+        CARD["Interaction Service (карточки)"]
+        REPORT["Report Service (отчёты)"]
+        FILES["File Service (MinIO / S3)"]
+        INTEG["Integration Service (LMS / CMS)"]
+        AI["AI Service (GigaChat, ФТ-6)"]
+    end
+    OBJ[("Взаимодействие<br/>вуз + продукт")]
+    S1 --> AUTH
+    S2 --> BOARD
+    S2 --> CARD
+    S3 --> BOARD
+    S4 --> CARD
+    S4 --> FILES
+    S4 -.->|по запросу| AI
+    S5 --> REPORT
+    S5 --> INTEG
+    S4 --> OBJ
+    S5 --> OBJ
+```
+
+## Операционный цикл: импорт → доска → карточка → отчёт
 
 ```mermaid
 flowchart LR
@@ -19,9 +61,9 @@ flowchart LR
     s5 -.->|аудит| f3[Журнал действий + CSV]
 ```
 
-## Шаги и обслуживающие сервисы
+## Операции и обслуживающие сервисы
 
-| Шаг ТЗ | Экран | Backend-сервис | Ключевые сущности |
+| Этап цикла | Экран | Backend-сервис | Ключевые сущности |
 |---|---|---|---|
 | 1. Импорт данных | `DirectoryPage` | `services/excel_import.py`, `services/import_report.py` | `University`, `ITProduct`, `Interaction` |
 | 2. Доска | `BoardPage` | `api/interactions.py` (list, board) | `Interaction`, `WorkflowStageRef` |

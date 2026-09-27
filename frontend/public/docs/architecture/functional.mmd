@@ -1,0 +1,31 @@
+flowchart TD
+    subgraph BIZ["Бизнес-слой: пользовательский путь (раздел 2 ТЗ)"]
+        direction LR
+        S1["Шаг 1. Авторизация<br/>логин/пароль или Keycloak"]
+        S2["Шаг 2. Просмотр взаимодействий<br/>КАМ — свои вузы, руководитель — все"]
+        S3["Шаг 3. Фильтрация<br/>вуз, продукт, направление, B2B/B2C"]
+        S4["Шаг 4. Актуализация статуса<br/>комментарий + файлы + смена этапа"]
+        S5["Шаг 5. Отчёт<br/>сводка и выгрузка XLSX/XLS/PDF/JSON"]
+        S1 --> S2 --> S3 --> S4 --> S5
+    end
+    subgraph APP["Прикладной слой: сервисы"]
+        AUTH["Auth Service (Keycloak)"]
+        BOARD["Board Service (Kanban)"]
+        CARD["Interaction Service (карточки)"]
+        REPORT["Report Service (отчёты)"]
+        FILES["File Service (MinIO / S3)"]
+        INTEG["Integration Service (LMS / CMS)"]
+        AI["AI Service (GigaChat, ФТ-6)"]
+    end
+    OBJ[("Взаимодействие<br/>вуз + продукт")]
+    S1 --> AUTH
+    S2 --> BOARD
+    S2 --> CARD
+    S3 --> BOARD
+    S4 --> CARD
+    S4 --> FILES
+    S4 -.->|по запросу| AI
+    S5 --> REPORT
+    S5 --> INTEG
+    S4 --> OBJ
+    S5 --> OBJ
