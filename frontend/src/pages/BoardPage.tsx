@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   DndContext,
@@ -37,15 +37,11 @@ import {
 
 import { errorMessage } from '../api/client';
 import {
-  createInteraction,
-  getBoard,
   listProducts,
   listUniversities,
   listUsers,
-  moveInteraction,
 } from '../api/endpoints';
 import type {
-  BoardResponse,
   InteractionCard,
   ITProduct,
   University,
@@ -54,6 +50,7 @@ import type {
   WorkflowStage,
 } from '../types';
 import { useRole } from '../stores/authStore';
+import { useBoard, useCreateInteraction, useMoveInteraction } from '../hooks/useBoard';
 import InteractionDrawer from '../components/interaction/InteractionDrawer';
 import DateRangeFilter, { type DateRangeValue } from '../components/DateRangeFilter';
 import MobileStageFilter from '../components/kanban/MobileStageFilter';
@@ -208,8 +205,6 @@ export default function BoardPage() {
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
   const role = useRole();
-  const [data, setData] = useState<BoardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState<WorkflowScope>('b2b');
   const [productFilter, setProductFilter] = useState<number | undefined>();
@@ -220,40 +215,40 @@ export default function BoardPage() {
   const [openCard, setOpenCard] = useState<InteractionCard | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      setData(
-        await getBoard({
-          search: search || undefined,
-          product_id: productFilter,
-          scope,
-          date_from: dates.date_from,
-          date_to: dates.date_to,
-        })
-      );
-    } catch (error) {
-      message.error(errorMessage(error, 'Не удалось загрузить доску'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Раньше фильтры применялись через setTimeout(load, 0): замыкание load
-  // захватывало старое значение search/productFilter, поэтому запрос уходил
-  // без фильтров. Эффект с зависимостями пересоздаёт load с актуальными
-  // значениями; debounce защищает от лишних запросов при быстрой смене.
+  // Фильтры с debounce: иначе каждый ввод символа в поиске уходит запросом.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void load();
-    }, FILTER_DEBOUNCE_MS);
+    const timer = setTimeout(() => setDebouncedSearch(search), FILTER_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, search, productFilter, dates.date_from, dates.date_to]);
+  }, [search]);
+
+  const filters = useMemo(
+    () => ({
+      scope,
+      search: debouncedSearch,
+      product_id: productFilter,
+      date_from: dates.date_from,
+      date_to: dates.date_to,
+    }),
+    [scope, debouncedSearch, productFilter, dates.date_from, dates.date_to]
+  );
+
+  const boardQuery = useBoard(filters);
+  const data = boardQuery.data ?? null;
+  // Спиннер только на первой загрузке: при смене фильтров показываем прежние
+  // данные, иначе доска «мигает» на каждый запрос.
+  const loading = boardQuery.isLoading;
+  const moveMutation = useMoveInteraction();
 
   useEffect(() => {
     void listProducts().then(setProducts).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (boardQuery.isError) {
+      message.error(errorMessage(boardQuery.error, 'Не удалось загрузить доску'));
+    }
+  }, [boardQuery.isError, boardQuery.error, message]);
 
   // На телефоне показываем первый этап, а не «все»: одна колонка читается
   // лучше длинной простыни. Флаг touched не даёт вернуть выбор обратно,
@@ -278,20 +273,18 @@ export default function BoardPage() {
     setActiveCard(card);
   };
 
-  const onDragEnd = async (event: DragEndEvent) => {
+  const onDragEnd = (event: DragEndEvent) => {
     setActiveCard(null);
     const over = event.over;
     if (!over) return;
     const stageId = (over.data.current as { stageId: number }).stageId;
     const card = (event.active.data.current as { card: InteractionCard }).card;
     if (card.stage_id === stageId) return;
-    try {
-      await moveInteraction(card.id, stageId);
-      await load();
-      message.success('Взаимодействие перемещено');
-    } catch (error) {
-      message.error(errorMessage(error, 'Не удалось переместить'));
-    }
+    // Оптимистично: карточка переезжает сразу, откат — в хуке при ошибке.
+    moveMutation.mutate(
+      { id: card.id, stageId },
+      { onSuccess: () => message.success('Взаимодействие перемещено') }
+    );
   };
 
   const columns = data?.columns ?? [];
@@ -373,7 +366,10 @@ export default function BoardPage() {
             </Col>
           )}
           <Col>
-            <Button icon={<ReloadOutlined />} onClick={load}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => void boardQuery.refetch()}
+            >
               Обновить
             </Button>
           </Col>
@@ -434,17 +430,10 @@ export default function BoardPage() {
         open={creating}
         scope={scope}
         onClose={() => setCreating(false)}
-        onCreated={async () => {
-          setCreating(false);
-          await load();
-        }}
+        onCreated={() => setCreating(false)}
       />
 
-      <InteractionDrawer
-        card={openCard}
-        onClose={() => setOpenCard(null)}
-        onChanged={load}
-      />
+      <InteractionDrawer card={openCard} onClose={() => setOpenCard(null)} />
     </div>
   );
 }
@@ -468,9 +457,9 @@ function CreateInteractionModal({
   const [universityId, setUniversityId] = useState<number | null>(null);
   const [productId, setProductId] = useState<number | null>(null);
   const [kamId, setKamId] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const canAssign = role === 'admin' || role === 'manager';
+  const createMutation = useCreateInteraction();
 
   useEffect(() => {
     if (open) {
@@ -488,9 +477,8 @@ function CreateInteractionModal({
       message.warning('Выберите вуз');
       return;
     }
-    setSaving(true);
     try {
-      await createInteraction({
+      await createMutation.mutateAsync({
         university_id: universityId,
         product_id: productId,
         assigned_kam_id: kamId,
@@ -503,8 +491,6 @@ function CreateInteractionModal({
       onCreated();
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось создать'));
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -571,7 +557,12 @@ function CreateInteractionModal({
               .map((u) => ({ value: u.id, label: u.full_name }))}
           />
         )}
-        <Button type="primary" block loading={saving} onClick={submit}>
+        <Button
+          type="primary"
+          block
+          loading={createMutation.isPending}
+          onClick={submit}
+        >
           Создать
         </Button>
       </Space>

@@ -28,54 +28,70 @@ import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
 
 import { errorMessage } from '../../api/client';
-import {
-  createAction,
-  createComment,
-  deleteAction,
-  deleteComment,
-  deleteFile,
-  downloadFile,
-  getInteraction,
-  listActions,
-  listComments,
-  listFiles,
-  listStages,
-  listUsers,
-  summarizeInteraction,
-  updateAction,
-  updateInteraction,
-  uploadFile,
-} from '../../api/endpoints';
+import { downloadFile, summarizeInteraction } from '../../api/endpoints';
 import type {
   ActionItem,
-  AttachedFile,
-  CommentItem,
-  Interaction,
   InteractionCard,
   InteractionSummary,
-  User,
-  WorkflowStage,
 } from '../../types';
 import { useAuthStore } from '../../stores/authStore';
+import {
+  useActions,
+  useComments,
+  useCreateAction,
+  useCreateComment,
+  useDeleteAction,
+  useDeleteComment,
+  useDeleteFile,
+  useFiles,
+  useInteraction,
+  useStageOptions,
+  useToggleAction,
+  useUpdateInteraction,
+  useUploadFile,
+  useUserOptions,
+} from '../../hooks/useInteraction';
 
 interface DrawerProps {
   card: InteractionCard | null;
   onClose: () => void;
-  onChanged: () => void;
 }
 
-export default function InteractionDrawer({ card, onClose, onChanged }: DrawerProps) {
+export default function InteractionDrawer({ card, onClose }: DrawerProps) {
   const { message, modal } = AntApp.useApp();
   const user = useAuthStore((s) => s.user);
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
-  const [full, setFull] = useState<Interaction | null>(null);
-  const [actions, setActions] = useState<ActionItem[]>([]);
-  const [comments, setComments] = useState<CommentItem[]>([]);
-  const [files, setFiles] = useState<AttachedFile[]>([]);
-  const [stages, setStages] = useState<WorkflowStage[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+
+  const interactionId = card?.id ?? null;
+  const canAssign = user?.role === 'admin' || user?.role === 'manager';
+
+  // Данные читаются из общего кэша: правка в карточке обновляет и доску,
+  // и наоборот — отдельные load() больше не нужны.
+  const interactionQuery = useInteraction(interactionId);
+  const actionsQuery = useActions(interactionId);
+  const commentsQuery = useComments(interactionId);
+  const filesQuery = useFiles(interactionId);
+  const stagesQuery = useStageOptions();
+  const usersQuery = useUserOptions(!!canAssign);
+
+  const full = interactionQuery.data ?? null;
+  const actions = actionsQuery.data ?? [];
+  const comments = commentsQuery.data ?? [];
+  const files = filesQuery.data ?? [];
+  const stages = stagesQuery.data ?? [];
+  const users = usersQuery.data ?? [];
+  const loading = interactionQuery.isLoading;
+
+  const updateMutation = useUpdateInteraction();
+  const createActionMutation = useCreateAction(interactionId);
+  const createCommentMutation = useCreateComment(interactionId, user?.full_name ?? null);
+  const toggleActionMutation = useToggleAction(interactionId);
+  const deleteActionMutation = useDeleteAction(interactionId);
+  const deleteCommentMutation = useDeleteComment(interactionId);
+  const uploadMutation = useUploadFile(interactionId);
+  const deleteFileMutation = useDeleteFile(interactionId);
+
   const [uploading, setUploading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [actionForm] = Form.useForm();
@@ -102,55 +118,26 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
     }
   };
 
-  const load = async () => {
-    if (!card) return;
-    setLoading(true);
-    try {
-      const [detail, acts, cmts, fls] = await Promise.all([
-        getInteraction(card.id),
-        listActions(card.id),
-        listComments(card.id),
-        listFiles(card.id),
-      ]);
-      setFull(detail);
-      setActions(acts);
-      setComments(cmts);
-      setFiles(fls);
-    } catch (error) {
-      message.error(errorMessage(error, 'Не удалось загрузить карточку'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    // Сводка относится к конкретной карточке: при переключении сбрасываем,
+    // чтобы не показать текст предыдущего взаимодействия.
+    setSummary(null);
+    setSummaryDisabled(false);
+    setCommentText('');
+  }, [interactionId]);
 
   useEffect(() => {
-    if (card) {
-      // Сводка относится к конкретной карточке: при переключении сбрасываем,
-      // чтобы не показать текст предыдущего взаимодействия.
-      setSummary(null);
-      setSummaryDisabled(false);
-      void load();
-      void listStages().then(setStages).catch(() => undefined);
-      // Список сотрудников нужен только ролям, которые могут переназначать
-      // ответственного КАМ: КАМ сам себе карточки не передаёт.
-      if (user?.role === 'admin' || user?.role === 'manager') {
-        void listUsers().then(setUsers).catch(() => undefined);
-      }
-    } else {
-      setFull(null);
+    if (interactionQuery.isError) {
+      message.error(errorMessage(interactionQuery.error, 'Не удалось загрузить карточку'));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card?.id]);
+  }, [interactionQuery.isError, interactionQuery.error, message]);
 
   const save = async (payload: Record<string, unknown>, successText: string) => {
     if (!card) return;
     try {
-      await updateInteraction(card.id, payload);
-      message.success(successText);
-      await load();
-      onChanged();
-    } catch (error) {
-      message.error(errorMessage(error, 'Не удалось сохранить'));
+      await updateMutation.mutateAsync({ id: card.id, payload, successText });
+    } catch {
+      // Сообщение об ошибке и откат значения — в хуке мутации.
     }
   };
 
@@ -158,14 +145,12 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
     if (!card) return;
     try {
       const values = await actionForm.validateFields();
-      await createAction(card.id, {
+      await createActionMutation.mutateAsync({
         title: values.title,
         description: values.description || undefined,
         due_date: values.due_date ? values.due_date.format('YYYY-MM-DD') : undefined,
       });
       actionForm.resetFields();
-      await load();
-      onChanged();
     } catch (error) {
       if (error instanceof Error) {
         message.error(errorMessage(error, 'Не удалось добавить задачу'));
@@ -175,13 +160,14 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
 
   const submitComment = async () => {
     if (!card || !commentText.trim()) return;
+    const text = commentText.trim();
+    setCommentText('');
     try {
-      await createComment(card.id, commentText.trim());
-      setCommentText('');
-      await load();
-      onChanged();
-    } catch (error) {
-      message.error(errorMessage(error, 'Не удалось добавить комментарий'));
+      await createCommentMutation.mutateAsync(text);
+    } catch {
+      // Текст остался в поле ввода? Возвращаем, чтобы пользователь не потерял
+      // набранное при откате оптимистичного комментария.
+      setCommentText((current) => (current === '' ? text : current));
     }
   };
 
@@ -216,10 +202,8 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
 
     setUploading(true);
     try {
-      await uploadFile(card.id, file);
+      await uploadMutation.mutateAsync(file);
       message.success('Файл загружен');
-      await load();
-      onChanged();
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось загрузить файл'));
     } finally {
@@ -240,10 +224,8 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
 
   const handleDeleteFile = async (fileId: number) => {
     try {
-      await deleteFile(fileId);
+      await deleteFileMutation.mutateAsync(fileId);
       message.success('Файл удалён');
-      await load();
-      onChanged();
     } catch (error) {
       message.error(errorMessage(error, 'Не удалось удалить файл'));
     }
@@ -458,9 +440,10 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                               type="text"
                               size="small"
                               onClick={() =>
-                                updateAction(record.id, {
-                                  is_completed: !record.is_completed,
-                                }).then(load)
+                                toggleActionMutation.mutate({
+                                  actionId: record.id,
+                                  isCompleted: !record.is_completed,
+                                })
                               }
                             >
                               {record.is_completed ? 'Вернуть' : 'Готово'}
@@ -472,7 +455,7 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                               onClick={() =>
                                 modal.confirm({
                                   title: 'Удалить задачу?',
-                                  onOk: () => deleteAction(record.id).then(load),
+                                  onOk: () => deleteActionMutation.mutateAsync(record.id),
                                 })
                               }
                             >
@@ -518,7 +501,7 @@ export default function InteractionDrawer({ card, onClose, onChanged }: DrawerPr
                               onClick={() =>
                                 modal.confirm({
                                   title: 'Удалить комментарий?',
-                                  onOk: () => deleteComment(comment.id).then(load),
+                                  onOk: () => deleteCommentMutation.mutateAsync(comment.id),
                                 })
                               }
                             >
