@@ -33,35 +33,62 @@ export const keycloak = new Keycloak({
 let initPromise: Promise<boolean> | null = null;
 
 /**
- * Инициализирует Keycloak и при отсутствии сессии уводит на форму входа.
+ * Проверяет, отвечает ли Keycloak, до вызова `keycloak.init`.
  *
- * Возвращает `true`, если пользователь аутентифицирован. При
- * `onLoad: 'login-required'` неаутентифицированный браузер получает
- * редирект на Keycloak, поэтому в этом случае промис не разрешается до
- * возврата пользователя с токеном.
- *
- * Ошибка инициализации (Keycloak недоступен) не считается ошибкой входа:
- * промис разрешается `false`, и приложение показывает форму входа с
- * сообщением — иначе при недоступном Keycloak экран оставался бы пустым.
+ * `keycloak-js` в режиме `check-sso` уводит верхнее окно на Keycloak, если
+ * сервер не ответил (тихая проверка не удалась → полноценный редирект).
+ * При недоступном Keycloak это оставляет пользователя на странице ошибки
+ * браузера вместо формы входа, поэтому сначала убеждаемся, что сервер жив.
  */
-export function initKeycloak(): Promise<boolean> {
+async function isKeycloakReachable(timeoutMs: number): Promise<boolean> {
+  const url = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`;
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+/**
+ * Инициализирует Keycloak, не уводя браузер на форму входа принудительно.
+ *
+ * Возвращает `true`, если сессия SSO уже есть. При `check-sso` вход
+ * выполняется только по явному действию пользователя (кнопка на странице
+ * входа): так остаётся доступна и форма email/пароль, а жюри может показать
+ * вход через Keycloak из интерфейса, а не через автоматический редирект.
+ *
+ * Если Keycloak не отвечает, инициализация пропускается: показывается форма
+ * входа, и браузер не уходит на недоступный сервер.
+ */
+export function initKeycloak(reachTimeoutMs = 4000): Promise<boolean> {
   if (!isKeycloakMode) {
     return Promise.resolve(false);
   }
   if (!initPromise) {
-    initPromise = keycloak
-      .init({
-        onLoad: 'login-required',
-        pkceMethod: 'S256',
-        // Сторонние cookie в iframe блокируются браузерами по умолчанию,
-        // а проверка через iframe не нужна: срок жизни токена отслеживает
-        // updateToken перед каждым запросом.
-        checkLoginIframe: false,
-      })
-      .catch((error: unknown) => {
-        console.error('Не удалось инициализировать Keycloak', error);
+    initPromise = isKeycloakReachable(reachTimeoutMs).then((reachable) => {
+      if (!reachable) {
+        console.warn('Keycloak недоступен, показана форма входа');
         return false;
-      });
+      }
+      return keycloak
+        .init({
+          onLoad: 'check-sso',
+          pkceMethod: 'S256',
+          // Сторонние cookie в iframe блокируются браузерами по умолчанию,
+          // а проверка через iframe не нужна: срок жизни токена отслеживает
+          // updateToken перед каждым запросом.
+          checkLoginIframe: false,
+        })
+        .catch((error: unknown) => {
+          console.error('Не удалось инициализировать Keycloak', error);
+          return false;
+        });
+    });
   }
   return initPromise;
 }

@@ -1,5 +1,5 @@
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
-import { App as AntApp, Button, Card, Form, Input, Typography } from 'antd';
+import { App as AntApp, Button, Card, Divider, Form, Input, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 import { errorMessage } from '../api/client';
@@ -44,14 +44,11 @@ export default function LoginPage() {
         <Typography.Paragraph type="secondary">
           Система сопровождения взаимодействия с вузами-партнёрами
         </Typography.Paragraph>
-        {isKeycloakMode ? (
-          // Вход выполняет Keycloak: пароль вводится на его стороне и в
-          // приложение не попадает. Кнопка нужна на случай, если сессия
-          // истекла, а автоматический переход не сработал.
+        {isKeycloakMode && (
+          // Основной путь — единая система входа: пароль вводится на стороне
+          // Keycloak и в приложение не попадает. Форма ниже остаётся рабочим
+          // запасным вариантом (AUTH_MODE=jwt / Keycloak недоступен).
           <>
-            <Typography.Paragraph type="secondary">
-              Аутентификация выполняется через единую систему входа (SSO).
-            </Typography.Paragraph>
             <Button
               type="primary"
               block
@@ -60,8 +57,11 @@ export default function LoginPage() {
             >
               Войти через Keycloak
             </Button>
+            <Divider plain style={{ margin: '16px 0' }}>
+              или вход по учётной записи CRM
+            </Divider>
           </>
-        ) : (
+        )}
         <Form<LoginForm> layout="vertical" onFinish={onFinish}>
           <Form.Item
             name="email"
@@ -106,7 +106,6 @@ export default function LoginPage() {
             </Button>
           </Form.Item>
         </Form>
-        )}
       </Card>
     </div>
   );
