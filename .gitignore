@@ -91,3 +91,10 @@ nginx/certs/
 nginx/*.bak
 nginx/*.http.bak
 nginx/*.http.bak
+
+# Генераторы артефактов и инструменты съёмки: держим только локально,
+# в сдачу идут готовые PPTX/PDF, а не способ их получения.
+docs/presentation/build_presentation.py
+scripts/capture_*.py
+*.bak
+*.tmp

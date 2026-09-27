@@ -126,6 +126,23 @@ def analyze(pdf: Path, *, strict_font: bool = True) -> int:
             print(f"  Слайд {number}: наложение {a[:30]!r} / {b[:30]!r}")
             problems += 1
 
+        # Номера шагов шаблона («01»…«03») стоят в узкой рамке у правого края.
+        # Фирменный Montserrat шире шаблонного Arial, и при переносе двухзначный
+        # маркер разваливался на «0» и «2». Ловим такие случаи как дефект.
+        for block in blocks:
+            text = block[4].strip()
+            parts = text.split("\n")
+            if (
+                len(parts) == 2
+                and all(p.isdigit() and len(p) == 1 for p in parts)
+                and block[0] > 880
+            ):
+                print(
+                    f"  Слайд {number}: номер шага разбит на две строки "
+                    f"{text!r}"
+                )
+                problems += 1
+
         # Мелкий шрифт. Номера слайдов шаблона — служебный декор, их не считаем.
         small = [
             s for s in spans
@@ -159,6 +176,61 @@ def _is_stub(span) -> bool:
         and text.strip().isdigit()
         and bbox[0] > 800
     )
+
+
+# Слайды блока решения: карточки рисуем сами, поэтому проверяем, что текст
+# остаётся внутри своей карточки и ничего не выезжает за её рамку.
+SOLUTION_SLIDES = (1, 2, 3, 4, 5, 6)
+
+
+def check_text_in_cards(pdf: Path) -> int:
+    """Текст не должен пересекать рамку карточки: либо внутри, либо вне.
+
+    Ранее проверялись только наложения текстовых блоков, поэтому текст,
+    вылезавший за пределы карточки (но не пересекавший другой текст), дефектом
+    не считался. Здесь сверяем каждый текстовый блок с прямоугольниками карточек.
+    """
+    try:
+        import pymupdf
+    except ImportError:
+        return 0
+
+    doc = pymupdf.open(str(pdf))
+    problems = 0
+    for index in SOLUTION_SLIDES:
+        if index > len(doc):
+            continue
+        page = doc[index - 1]
+        cards = []
+        for drawing in page.get_drawings():
+            rect = drawing["rect"]
+            # Крупные заливки-подложки карточек; фон слайда и полосы не считаем.
+            if rect.width > 144 and rect.height > 60 and not (
+                rect.width > 900 and rect.height > 520
+            ):
+                cards.append(rect)
+        for block in page.get_text("blocks"):
+            if block[6] != 0 or not block[4].strip():
+                continue
+            box = pymupdf.Rect(block[:4])
+            for card in cards:
+                inter = box & card
+                if inter.is_empty:
+                    continue
+                if box in card:
+                    break
+                covered = (inter.width * inter.height) / max(
+                    1.0, box.width * box.height
+                )
+                if covered < 0.999 and (box.height - inter.height) > TOL:
+                    print(
+                        f"  Слайд {index}: текст выходит за карточку "
+                        f"({covered * 100:.0f}% внутри) {block[4].strip()[:45]!r}"
+                    )
+                    problems += 1
+                    break
+    print(f"Текст внутри карточек: дефектов {problems}")
+    return problems
 
 
 def check_template_fidelity() -> int:
@@ -255,6 +327,7 @@ def main() -> int:
         if pdf is None:
             return 1 if problems else 0
         problems += analyze(pdf, strict_font=not args.no_font_check)
+        problems += check_text_in_cards(pdf)
     return 1 if problems else 0
 
 

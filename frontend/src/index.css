@@ -295,16 +295,16 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 
 /* ═══════ ПЛИТКИ МЕТРИК ═══════ */
+/* Плитки метрик. Карточек пять, а не четыре, поэтому фиксированная сетка
+   оставляла пятую плитку одну во втором ряду. auto-fit сам подбирает число
+   колонок: на широком экране все пять в один ряд, на узком — 2–3. */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 @media (min-width: 768px) {
-  .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-}
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
+  .stats-grid { gap: 16px; }
 }
 .stat-card {
   padding: clamp(12px, 2vw, 20px);

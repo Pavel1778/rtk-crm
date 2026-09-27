@@ -10,7 +10,7 @@
 | Frontend typecheck + сборка | `cd frontend && npm run build` |
 | Локальный backend | `uvicorn backend.main:app --reload` |
 | Локальный frontend | `cd frontend && npm run dev` |
-| Пересборка презентации | `python3 docs/presentation/build_presentation.py` |
+| Пересборка презентации | `python3 scripts/check_presentation_layout.py` — проверка вёрстки готового PPTX/PDF |
 | Рендер презентации в PDF | `soffice --headless --convert-to pdf --outdir /tmp/render docs/presentation/RTK-CRM-LCT2026.pptx` |
 
 Линтера во frontend нет: `npm run build` запускает `tsc` и падает на ошибках типов.

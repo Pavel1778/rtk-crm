@@ -84,3 +84,43 @@ async def test_demo_interactions_recover_when_products_missing(clean_db) -> None
         assert created is True
         interactions = await session.scalar(select(func.count(Interaction.id)))
         assert interactions > 0
+
+
+async def test_seed_demo_backfills_b2c_on_existing_b2b_base(clean_db) -> None:
+    """База с одними B2B-карточками должна получить B2C-карточки.
+
+    Регрессия: раньше `_seed_demo_interactions` возвращалась сразу при
+    непустой таблице взаимодействий, поэтому контур, засеянный до появления
+    B2C-воронки, навсегда показывал пустую B2C-доску.
+    """
+    from app.db.session import SessionLocal
+    from app.models.enums import WorkflowScope
+
+    async with SessionLocal() as session:
+        await seed_demo(session)
+
+    async with SessionLocal() as session:
+        # Оставляем только B2B-карточки и их задачи — состояние старой базы.
+        b2c_ids = list(
+            await session.scalars(
+                select(Interaction.id).where(
+                    Interaction.scope == WorkflowScope.B2C
+                )
+            )
+        )
+        assert b2c_ids
+        for interaction in await session.scalars(
+            select(Interaction).where(Interaction.id.in_(b2c_ids))
+        ):
+            await session.delete(interaction)
+        await session.commit()
+
+    async with SessionLocal() as session:
+        created = await seed_demo(session)
+        assert created is True
+        b2c_count = await session.scalar(
+            select(func.count(Interaction.id)).where(
+                Interaction.scope == WorkflowScope.B2C
+            )
+        )
+    assert b2c_count == len(b2c_ids), "B2C-карточки должны досоздаться"
