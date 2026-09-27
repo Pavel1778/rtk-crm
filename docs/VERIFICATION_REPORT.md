@@ -673,7 +673,7 @@ Linux-стенде и в URL вкладки «Помощь».
   на файлы кода, а не на пересказ ТЗ.
 - `docs/architecture/er.mmd`, `er-model.pdf`, `er.archimate` — ER-модель:
   Mermaid-исходник, отрендеренная диаграмма и модель ArchiMate 3 (32 элемента).
-- `docs/rtk-crm-documentation.pdf` — единый PDF (61 страница) со всеми
+- `docs/rtk-crm-documentation.pdf` — единый PDF (63 страницы) со всеми
   разделами, включая ER и Q&A для жюри.
 - `docs/presentation/RTK-CRM-LCT2026.pptx` — презентация, 11 слайдов.
 - `docs/examples/` — образцы форматов от кейсодержателя для демонстрации
