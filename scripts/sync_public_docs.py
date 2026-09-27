@@ -49,6 +49,7 @@ ASSET_DIRS = ["images"]
 # Двоичные и модельные артефакты, которые отдаются как файлы, а не как текст.
 BINARY_FILES = [
     "architecture/rtk-crm.archimate",
+    "rtk-crm-documentation.pdf",
 ]
 
 # Дополнительная копия в корне зеркала: HelpPage грузит `/docs/ARCHITECTURE.md`.

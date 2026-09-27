@@ -148,6 +148,14 @@ def capture_desktop(page: Page, theme: str, target: Path) -> None:
         page.wait_for_timeout(700)
     shoot(page, target, "09-settings")
 
+    # Вкладка «Интеграция»: схема обмена, предпросмотр и импорт пакета.
+    page.goto("http://localhost:5173/integration", wait_until="networkidle")
+    shoot(page, target, "11-integration")
+
+    # Журнал аудита — отдельный раздел только для администратора.
+    page.goto("http://localhost:5173/audit", wait_until="networkidle")
+    shoot(page, target, "12-audit-log")
+
     for name, path in [
         ("07-reports", "/reports"),
         ("10-help-docs", "/help"),
