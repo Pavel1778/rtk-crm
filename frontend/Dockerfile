@@ -17,8 +17,15 @@ ENV VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL
 ENV VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM
 ENV VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID
 
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
+RUN npm config set registry https://npm-mirror.gitverse.ru \
+ && npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 120000
+
 COPY package*.json ./
-RUN npm ci
+RUN npm install --no-audit --no-fund
 
 COPY . .
 RUN npm run build

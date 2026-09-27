@@ -4,10 +4,16 @@ FROM python:3.11-slim
 WORKDIR /
 
 # Системные зависимости
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i 's|deb.debian.org|mirror.yandex.ru|g; s|security.debian.org|mirror.yandex.ru|g' /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    if [ -f /etc/apt/sources.list ]; then \
+        sed -i 's|deb.debian.org|mirror.yandex.ru|g; s|security.debian.org|mirror.yandex.ru|g' /etc/apt/sources.list; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl fonts-dejavu-core; \
+    rm -rf /var/lib/apt/lists/*
 
 # Корневой сертификат НУЦ Минцифры: токен GigaChat выдаётся с сертификатом
 # этого УЦ, которого нет в стандартном наборе доверенных корней образа.
