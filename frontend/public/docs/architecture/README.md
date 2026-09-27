@@ -23,6 +23,11 @@ Mermaid и отображаются в GitHub, GitLab и совместимых 
   ТЗ) и компонентную (контейнеры и внешние системы). Открывается в
   [Archi](https://www.archimatetool.com/) бесплатно, файл лежит в репозитории
   рядом с Mermaid-схемами.
+- [`er.archimate`](/docs/architecture/er.archimate) — модель данных (ER) в ArchiMate 3: 14
+  сущностей предметной области и связи между ними с правилами `ON DELETE`.
+  Готовая [PDF-версия диаграммы](/docs/architecture/er-model.pdf) приложена рядом.
+  Mermaid-исходник — [`er.mmd`](/docs/architecture/er.mmd), пересборка:
+  `python scripts/extract_er_diagram.py`.
 
 ## Развёртывание
 

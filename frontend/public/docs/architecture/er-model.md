@@ -4,6 +4,12 @@ ER-диаграмма по фактическим моделям SQLAlchemy
 (`backend/models/entities.py`). Диаграмма экспортируется в PNG/PDF средствами
 GitHub или Mermaid CLI; исходник версионируется вместе с кодом.
 
+Готовые артефакты рядом: [`er.mmd`](/docs/architecture/er.mmd) — извлечённый Mermaid-исходник,
+[`er-model.pdf`](/docs/architecture/er-model.pdf) — отрендеренная диаграмма,
+[`er.archimate`](/docs/architecture/er.archimate) — та же схема в ArchiMate 3 для Archi.
+Пересборка: `python scripts/extract_er_diagram.py`, затем
+`mmdc -i er.mmd -o er-model.pdf`.
+
 ```mermaid
 erDiagram
     USERS ||--o{ INTERACTIONS : "assigned_kam"

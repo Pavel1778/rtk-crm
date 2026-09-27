@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="RTK CRM — модель данных (ER)" id="model-rtk-crm-er" version="5.0.0">
+  <folder name="Данные (ER)" id="er-folder-data" type="application">
+    <element id="er-el-01" xsi:type="archimate:DataObject" name="User (Пользователь)" documentation="users. Ключ: email. Роль и признак активности."/>
+    <element id="er-el-02" xsi:type="archimate:DataObject" name="Role (Роль)" documentation="users.role: user | manager | admin. Отдельной таблицы нет — значение колонки."/>
+    <element id="er-el-03" xsi:type="archimate:DataObject" name="University (Вуз)" documentation="universities. Контакты представителя вуза."/>
+    <element id="er-el-04" xsi:type="archimate:DataObject" name="ITDirection (Направление ИТ)" documentation="it_directions. Справочник направлений."/>
+    <element id="er-el-05" xsi:type="archimate:DataObject" name="ITProduct (Продукт / программа)" documentation="it_products. Продукт или программа ИТ Школы, связан с направлением."/>
+    <element id="er-el-06" xsi:type="archimate:DataObject" name="Workflow (набор этапов)" documentation="Набор этапов B2B (14) или B2C (4). Отдельной таблицы нет — реализован через workflow_stages.scope."/>
+    <element id="er-el-07" xsi:type="archimate:DataObject" name="WorkflowStageRef (Этап / статус)" documentation="workflow_stages. code, scope, order, color, is_active. Уникальность по (scope, code) и (scope, order)."/>
+    <element id="er-el-08" xsi:type="archimate:DataObject" name="Transition (смена этапа)" documentation="Отдельной таблицы нет: переход фиксируется изменением interactions.stage_id и записью в action_logs."/>
+    <element id="er-el-09" xsi:type="archimate:DataObject" name="Interaction (Взаимодействие)" documentation="interactions. Пара [вуз + продукт], движется по этапам. scope совпадает со scope этапа."/>
+    <element id="er-el-10" xsi:type="archimate:DataObject" name="B2CRequest (заявка B2C)" documentation="Отдельной таблицы нет: заявка B2C — Interaction со scope = b2c и упрощённой воронкой."/>
+    <element id="er-el-11" xsi:type="archimate:DataObject" name="Action (Задача)" documentation="actions. Срок, ответственный, признак выполнения."/>
+    <element id="er-el-12" xsi:type="archimate:DataObject" name="Comment (Комментарий)" documentation="comments. Текст и автор."/>
+    <element id="er-el-13" xsi:type="archimate:DataObject" name="AttachedFile (Файл)" documentation="attached_files. Имя, путь, размер, MIME-тип, загрузивший."/>
+    <element id="er-el-14" xsi:type="archimate:DataObject" name="ActionLog (Запись аудита)" documentation="action_logs. CREATE/UPDATE/DELETE, сущность, старые и новые значения, IP."/>
+  </folder>
+  <folder name="Связи" id="er-folder-relations" type="relations">
+    <element id="er-rel-01" xsi:type="archimate:AssociationRelationship" source="er-el-01" target="er-el-11" documentation="author_id → users.id, ON DELETE SET NULL, 1:N"/>
+    <element id="er-rel-02" xsi:type="archimate:AssociationRelationship" source="er-el-01" target="er-el-12" documentation="author_id → users.id, ON DELETE SET NULL, 1:N"/>
+    <element id="er-rel-03" xsi:type="archimate:AssociationRelationship" source="er-el-01" target="er-el-13" documentation="uploaded_by → users.id, ON DELETE SET NULL, 1:N"/>
+    <element id="er-rel-04" xsi:type="archimate:AssociationRelationship" source="er-el-01" target="er-el-14" documentation="user_id → users.id, ON DELETE SET NULL, 1:N"/>
+    <element id="er-rel-05" xsi:type="archimate:AssociationRelationship" source="er-el-01" target="er-el-09" documentation="assigned_kam_id → users.id, ON DELETE SET NULL, 1:N"/>
+    <element id="er-rel-06" xsi:type="archimate:AssociationRelationship" source="er-el-01" target="er-el-02" documentation="Роль назначается пользователю (значение колонки users.role)"/>
+    <element id="er-rel-07" xsi:type="archimate:AssociationRelationship" source="er-el-03" target="er-el-09" documentation="university_id → universities.id, ON DELETE CASCADE, 1:N"/>
+    <element id="er-rel-08" xsi:type="archimate:AssociationRelationship" source="er-el-04" target="er-el-05" documentation="direction_id → it_directions.id, ON DELETE SET NULL, 1:N"/>
+    <element id="er-rel-09" xsi:type="archimate:AssociationRelationship" source="er-el-05" target="er-el-09" documentation="product_id → it_products.id, ON DELETE SET NULL, 1:N"/>
+    <element id="er-rel-10" xsi:type="archimate:AssociationRelationship" source="er-el-06" target="er-el-07" documentation="Набор этапов группирует этапы по scope, 1:N"/>
+    <element id="er-rel-11" xsi:type="archimate:AssociationRelationship" source="er-el-07" target="er-el-09" documentation="stage_id → workflow_stages.id, ON DELETE RESTRICT, 1:N"/>
+    <element id="er-rel-12" xsi:type="archimate:AssociationRelationship" source="er-el-07" target="er-el-08" documentation="Переход меняет этап взаимодействия"/>
+    <element id="er-rel-13" xsi:type="archimate:AssociationRelationship" source="er-el-09" target="er-el-11" documentation="interaction_id → interactions.id, ON DELETE CASCADE, 1:N"/>
+    <element id="er-rel-14" xsi:type="archimate:AssociationRelationship" source="er-el-09" target="er-el-12" documentation="interaction_id → interactions.id, ON DELETE CASCADE, 1:N"/>
+    <element id="er-rel-15" xsi:type="archimate:AssociationRelationship" source="er-el-09" target="er-el-13" documentation="interaction_id → interactions.id, ON DELETE CASCADE, 1:N"/>
+    <element id="er-rel-16" xsi:type="archimate:AssociationRelationship" source="er-el-09" target="er-el-10" documentation="Заявка B2C — частный случай взаимодействия (scope = b2c)"/>
+    <element id="er-rel-17" xsi:type="archimate:AssociationRelationship" source="er-el-09" target="er-el-14" documentation="Мутации журналируются по entity_type и entity_id (без FK)"/>
+    <element id="er-rel-18" xsi:type="archimate:AssociationRelationship" source="er-el-08" target="er-el-09" documentation="Смена этапа применяется к взаимодействию"/>
+  </folder>
+  <folder name="Виды" id="er-folder-views" type="diagrams">
+    <view id="er-view-01" name="ER-модель данных" type="archimate:ArchimateDiagramModel">
+      <child id="er-obj-01" xsi:type="archimate:DiagramObject" archimateElement="er-el-02">
+        <bounds x="40" y="40" width="200" height="60"/>
+      </child>
+      <child id="er-obj-02" xsi:type="archimate:DiagramObject" archimateElement="er-el-01">
+        <bounds x="280" y="40" width="200" height="60"/>
+      </child>
+      <child id="er-obj-03" xsi:type="archimate:DiagramObject" archimateElement="er-el-03">
+        <bounds x="40" y="170" width="200" height="60"/>
+      </child>
+      <child id="er-obj-04" xsi:type="archimate:DiagramObject" archimateElement="er-el-04">
+        <bounds x="280" y="170" width="200" height="60"/>
+      </child>
+      <child id="er-obj-05" xsi:type="archimate:DiagramObject" archimateElement="er-el-05">
+        <bounds x="520" y="170" width="200" height="60"/>
+      </child>
+      <child id="er-obj-06" xsi:type="archimate:DiagramObject" archimateElement="er-el-06">
+        <bounds x="40" y="300" width="200" height="60"/>
+      </child>
+      <child id="er-obj-07" xsi:type="archimate:DiagramObject" archimateElement="er-el-07">
+        <bounds x="280" y="300" width="200" height="60"/>
+      </child>
+      <child id="er-obj-08" xsi:type="archimate:DiagramObject" archimateElement="er-el-08">
+        <bounds x="520" y="300" width="200" height="60"/>
+      </child>
+      <child id="er-obj-09" xsi:type="archimate:DiagramObject" archimateElement="er-el-09">
+        <bounds x="280" y="430" width="200" height="60"/>
+      </child>
+      <child id="er-obj-10" xsi:type="archimate:DiagramObject" archimateElement="er-el-10">
+        <bounds x="520" y="430" width="200" height="60"/>
+      </child>
+      <child id="er-obj-11" xsi:type="archimate:DiagramObject" archimateElement="er-el-14">
+        <bounds x="760" y="430" width="200" height="60"/>
+      </child>
+      <child id="er-obj-12" xsi:type="archimate:DiagramObject" archimateElement="er-el-11">
+        <bounds x="40" y="560" width="200" height="60"/>
+      </child>
+      <child id="er-obj-13" xsi:type="archimate:DiagramObject" archimateElement="er-el-12">
+        <bounds x="280" y="560" width="200" height="60"/>
+      </child>
+      <child id="er-obj-14" xsi:type="archimate:DiagramObject" archimateElement="er-el-13">
+        <bounds x="520" y="560" width="200" height="60"/>
+      </child>
+      <connection id="er-conn-01" xsi:type="archimate:Connection" source="er-obj-02" target="er-obj-12" archimateRelationship="er-rel-01"/>
+      <connection id="er-conn-02" xsi:type="archimate:Connection" source="er-obj-02" target="er-obj-13" archimateRelationship="er-rel-02"/>
+      <connection id="er-conn-03" xsi:type="archimate:Connection" source="er-obj-02" target="er-obj-14" archimateRelationship="er-rel-03"/>
+      <connection id="er-conn-04" xsi:type="archimate:Connection" source="er-obj-02" target="er-obj-11" archimateRelationship="er-rel-04"/>
+      <connection id="er-conn-05" xsi:type="archimate:Connection" source="er-obj-02" target="er-obj-09" archimateRelationship="er-rel-05"/>
+      <connection id="er-conn-06" xsi:type="archimate:Connection" source="er-obj-02" target="er-obj-01" archimateRelationship="er-rel-06"/>
+      <connection id="er-conn-07" xsi:type="archimate:Connection" source="er-obj-03" target="er-obj-09" archimateRelationship="er-rel-07"/>
+      <connection id="er-conn-08" xsi:type="archimate:Connection" source="er-obj-04" target="er-obj-05" archimateRelationship="er-rel-08"/>
+      <connection id="er-conn-09" xsi:type="archimate:Connection" source="er-obj-05" target="er-obj-09" archimateRelationship="er-rel-09"/>
+      <connection id="er-conn-10" xsi:type="archimate:Connection" source="er-obj-06" target="er-obj-07" archimateRelationship="er-rel-10"/>
+      <connection id="er-conn-11" xsi:type="archimate:Connection" source="er-obj-07" target="er-obj-09" archimateRelationship="er-rel-11"/>
+      <connection id="er-conn-12" xsi:type="archimate:Connection" source="er-obj-07" target="er-obj-08" archimateRelationship="er-rel-12"/>
+      <connection id="er-conn-13" xsi:type="archimate:Connection" source="er-obj-09" target="er-obj-12" archimateRelationship="er-rel-13"/>
+      <connection id="er-conn-14" xsi:type="archimate:Connection" source="er-obj-09" target="er-obj-13" archimateRelationship="er-rel-14"/>
+      <connection id="er-conn-15" xsi:type="archimate:Connection" source="er-obj-09" target="er-obj-14" archimateRelationship="er-rel-15"/>
+      <connection id="er-conn-16" xsi:type="archimate:Connection" source="er-obj-09" target="er-obj-10" archimateRelationship="er-rel-16"/>
+      <connection id="er-conn-17" xsi:type="archimate:Connection" source="er-obj-09" target="er-obj-11" archimateRelationship="er-rel-17"/>
+      <connection id="er-conn-18" xsi:type="archimate:Connection" source="er-obj-08" target="er-obj-09" archimateRelationship="er-rel-18"/>
+    </view>
+  </folder>
+</archimate:model>

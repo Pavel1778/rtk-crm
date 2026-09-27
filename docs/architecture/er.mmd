@@ -1,0 +1,107 @@
+erDiagram
+    USERS ||--o{ INTERACTIONS : "assigned_kam"
+    USERS ||--o{ ACTIONS : "author"
+    USERS ||--o{ COMMENTS : "author"
+    USERS ||--o{ ATTACHED_FILES : "uploaded_by"
+    USERS ||--o{ ACTION_LOGS : "user"
+
+    UNIVERSITIES ||--o{ INTERACTIONS : "university"
+    IT_DIRECTIONS ||--o{ IT_PRODUCTS : "direction"
+    IT_PRODUCTS ||--o{ INTERACTIONS : "product"
+    WORKFLOW_STAGES ||--o{ INTERACTIONS : "stage"
+
+    INTERACTIONS ||--o{ ACTIONS : "tasks"
+    INTERACTIONS ||--o{ COMMENTS : "comments"
+    INTERACTIONS ||--o{ ATTACHED_FILES : "files"
+
+    USERS {
+        int id PK
+        string email UK
+        string full_name
+        string hashed_password
+        enum role "user|manager|admin"
+        bool is_admin
+        bool is_active
+    }
+
+    UNIVERSITIES {
+        int id PK
+        string name
+        string city
+        string contact_person
+        string contact_email
+        string contact_phone
+    }
+
+    IT_DIRECTIONS {
+        int id PK
+        string name UK
+    }
+
+    IT_PRODUCTS {
+        int id PK
+        string name UK
+        int direction_id FK
+    }
+
+    WORKFLOW_STAGES {
+        int id PK
+        string code
+        enum scope "b2b|b2c"
+        string name
+        int order
+        string color
+        bool is_active
+    }
+
+    INTERACTIONS {
+        int id PK
+        int university_id FK
+        int product_id FK
+        int stage_id FK
+        enum scope "b2b|b2c"
+        string contract_number
+        string contract_date
+        int assigned_kam_id FK
+        string university_specialist
+        text notes
+        bool is_active
+    }
+
+    ACTIONS {
+        int id PK
+        int interaction_id FK
+        string title
+        text description
+        string due_date
+        bool is_completed
+        int author_id FK
+    }
+
+    COMMENTS {
+        int id PK
+        int interaction_id FK
+        text text
+        int author_id FK
+    }
+
+    ATTACHED_FILES {
+        int id PK
+        int interaction_id FK
+        string filename
+        string file_path
+        int size
+        string mime_type
+        int uploaded_by FK
+    }
+
+    ACTION_LOGS {
+        int id PK
+        int user_id FK
+        string action "CREATE|UPDATE|DELETE"
+        string entity_type
+        int entity_id
+        text old_value
+        text new_value
+        string ip_address
+    }

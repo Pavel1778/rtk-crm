@@ -42,6 +42,7 @@ MARKDOWN_FILES = [
     "security/SAST-SCA.md",
     "KEYCLOAK.md",
     "AI.md",
+    "qa-jury.md",
 ]
 
 ASSET_DIRS = ["images"]
@@ -49,6 +50,9 @@ ASSET_DIRS = ["images"]
 # Двоичные и модельные артефакты, которые отдаются как файлы, а не как текст.
 BINARY_FILES = [
     "architecture/rtk-crm.archimate",
+    "architecture/er.archimate",
+    "architecture/er.mmd",
+    "architecture/er-model.pdf",
     "rtk-crm-documentation.pdf",
 ]
 
