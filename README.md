@@ -236,7 +236,6 @@ Render, frontend — статика на Vercel, база — Supabase PostgreSQ
 - [rtk-crm-documentation.pdf](docs/rtk-crm-documentation.pdf) — единый PDF со всей документацией
 - [RTK-CRM-LCT2026.pptx](docs/presentation/RTK-CRM-LCT2026.pptx) — презентация, 11 слайдов по шаблону ЛЦТ
 - [RTK-CRM-LCT2026.pdf](docs/presentation/RTK-CRM-LCT2026.pdf) — та же презентация в PDF
-- [README презентации](docs/presentation/README.md) — структура слайдов и пересборка
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) — развёртывание
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) — архитектура
 - [KEYCLOAK.md](docs/KEYCLOAK.md) — вход через Keycloak и локальный JWT
