@@ -79,3 +79,7 @@ _check_*.py
 _extract_*
 _fix_*
 
+nginx/certs/
+nginx/*.bak
+nginx/*.http.bak
+nginx/*.http.bak
