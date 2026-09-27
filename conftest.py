@@ -16,8 +16,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent
 BACKEND_DIR = REPO_ROOT / "backend"
 
-# Тесты работают на локальном SQLite: внешняя СУБД не требуется.
-os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
+# Тесты работают на локальном SQLite: внешняя СУБД не требуется. Значение
+# присваиваем, а не setdefault: иначе экспортированный DATABASE_URL из .env
+# (dev.db) переживает установку и прогон тестов вычищает демо-базу.
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("SEED_DEMO_DATA", "false")
 

@@ -251,8 +251,19 @@ img, svg, canvas, video, table { max-width: 100%; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--atmr-border-soft);
 }
+
+/* Фильтры отчёта: те же отступы, что у фильтров доски, иначе переключатель
+   B2B/B2C и кнопки «Применить/Сбросить» липли к KPI-карточкам. */
+.report-filters {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--atmr-border-soft);
+}
+
 @media (max-width: 767px) {
   .page-filters { flex-direction: column; }
   .page-filters > * { width: 100% !important; }
@@ -295,16 +306,26 @@ img, svg, canvas, video, table { max-width: 100%; }
 }
 
 /* ═══════ ПЛИТКИ МЕТРИК ═══════ */
-/* Плитки метрик. Карточек пять, а не четыре, поэтому фиксированная сетка
-   оставляла пятую плитку одну во втором ряду. auto-fit сам подбирает число
-   колонок: на широком экране все пять в один ряд, на узком — 2–3. */
+/* Карточек пять, а не четыре, поэтому фиксированные 4 колонки оставляли
+   пятую плитку сиротой во втором ряду. Раскладку задаём явно. */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 @media (min-width: 768px) {
   .stats-grid { gap: 16px; }
+}
+@media (max-width: 1199px) {
+  .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Нечётное последнее число плиток: растягиваем его на две колонки, чтобы
+   ряд был заполнен (3+2 на планшете, 2+2+2 на мобильных). */
+@media (max-width: 1199px) {
+  .stats-grid > *:last-child:nth-child(odd) { grid-column: span 2; }
 }
 .stat-card {
   padding: clamp(12px, 2vw, 20px);
