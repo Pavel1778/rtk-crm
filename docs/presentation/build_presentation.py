@@ -46,8 +46,8 @@ TEAM_NAME = "RTK CRM"
 CITY = "Москва"
 CONTACT = "sabadaspaha@gmail.com"
 REPO = "github.com/Pavel1778/rtk-crm"
-DEMO = "Yandex Cloud (ВМ с nginx)"
-API = "https://<домен>/api"
+DEMO = "https://crm-rtk.pixel-minds.ru"
+API = "https://crm-rtk.pixel-minds.ru/api"
 
 TEAM = [
     {"name": "Сабадаш Павел", "role": "Капитан, backend и инфраструктура", "tg": "Pasha1778"},

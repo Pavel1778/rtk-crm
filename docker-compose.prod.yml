@@ -28,7 +28,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://crm-rtk.pixel-minds.ru,http://localhost:3000,http://localhost}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       PYTHONPATH: "/"
     depends_on:

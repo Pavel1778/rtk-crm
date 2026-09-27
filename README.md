@@ -6,6 +6,18 @@ CRM для кейса «ИТ Школа» хакатона «Лидеры циф
 
 [![CI](https://github.com/Pavel1778/rtk-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/rtk-crm/actions/workflows/ci.yml)
 
+## Прототип
+
+**Рабочий прототип:** https://crm-rtk.pixel-minds.ru
+
+Демо-доступ:
+
+| Роль | Логин | Пароль |
+|---|---|---|
+| Администратор | `admin@rtk.ru` | `admin123` |
+| Руководитель | `manager@rtk.ru` | `manager123` |
+| КАМ | `kam@rtk.ru` | `kam123` |
+
 ## Что реализовано
 
 - **Kanban-доска** взаимодействий с перемещением карточек между этапами

@@ -401,7 +401,7 @@ flowchart LR
 5. Направить A-запись домена на IP, выпустить сертификат Let's Encrypt,
    переключить `TLS_ENABLED=true`.
 6. Перенести данные из внешней БД: `pg_dump` → `pg_restore` в контейнер `rtk_postgres`.
-7. Проверить `https://<домен>/api/health`, затем переключить DNS на IP ВМ.
+7. Проверить `https://crm-rtk.pixel-minds.ru/api/health`, затем переключить DNS на IP ВМ.
 
 Подробности и команды — в `infra/yandex-cloud/README.md`.
 

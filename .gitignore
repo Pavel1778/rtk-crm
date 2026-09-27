@@ -61,6 +61,14 @@ uploads/
 Данные оплат*
 Загрузка пользователей*
 
+# Исключение: примеры форматов для демонстрации импорта. Обезличенная копия
+# «Загрузка пользователей.xlsx» без реальных ПДн (см.
+# scripts/anonymize_case_data.py и docs/examples/README.md).
+!docs/examples/vendors.xlsx
+!docs/examples/users_b2c.xlsx
+!frontend/public/docs/examples/vendors.xlsx
+!frontend/public/docs/examples/users_b2c.xlsx
+
 # IDE
 .vscode/
 .idea/

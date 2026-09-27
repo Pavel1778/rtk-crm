@@ -43,6 +43,7 @@ MARKDOWN_FILES = [
     "KEYCLOAK.md",
     "AI.md",
     "qa-jury.md",
+    "examples/README.md",
 ]
 
 ASSET_DIRS = ["images"]
@@ -54,6 +55,11 @@ BINARY_FILES = [
     "architecture/er.mmd",
     "architecture/er-model.pdf",
     "rtk-crm-documentation.pdf",
+    "examples/vendors.xlsx",
+    "examples/users_b2c.xlsx",
+    "examples/payments_b2c.json",
+    "examples/report-b2b-2026-09-24.pdf",
+    "examples/report-longnames-2026-09-24.pdf",
 ]
 
 # Дополнительная копия в корне зеркала: HelpPage грузит `/docs/ARCHITECTURE.md`.

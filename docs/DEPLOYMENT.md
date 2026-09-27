@@ -25,7 +25,7 @@ frontend (React/Vite) и nginx. Пошаговая инструкция по с�
 
 ```
 Пользователь
-   │  https://<домен>  (или http://<IP> в режиме отладки)
+   │  https://crm-rtk.pixel-minds.ru  (или http://<IP> в режиме отладки)
    ▼
 nginx  ── /            ──▶ frontend  (статика Vite)
        ── /api/        ──▶ backend   (uvicorn + FastAPI)
