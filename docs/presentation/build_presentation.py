@@ -58,7 +58,9 @@ TEAM = [
 ]
 
 # Слайды шаблона, которые остаются в презентации (1-based), в нужном порядке.
-KEEP = [7, 8, 9, 10, 11, 13, 17, 19, 20, 16, 27]
+# Позиции 1-6 — брендированные слайды решения; позиции 7-11 — обязательный блок
+# ЛЦТ (слайды шаблона 7-11) в исходном дизайне, как требует организатор.
+KEEP = [13, 17, 19, 20, 16, 27, 7, 8, 9, 10, 11]
 
 
 def keep_only(prs: Presentation, keep: list[int]) -> None:
@@ -230,6 +232,7 @@ def pick(slide, prefix, *, count=None):
 
 
 def slide_title(s):
+    """Титульный слайд — шаблон ЛЦТ, слайд 7. Только текст, без новых фигур."""
     add_text(s, 0.83, 1.55, 11.6, 1.5, [
         {"text": TEAM_NAME, "size": 66, "bold": True, "color": WHITE, "space_after": 0}])
     add_text(s, 0.9, 3.05, 10.5, 0.9, [
@@ -238,10 +241,9 @@ def slide_title(s):
     add_text(s, 0.9, 3.75, 10.5, 0.7, [
         {"text": "Лидеры цифровой трансформации 2026 · кейс №6",
          "size": 15, "color": RGBColor(0xF3, 0xC9, 0xE4), "space_after": 0}])
-    add_pill(s, 0.9, 4.62, 3.5, 0.52, "Команда из 5 человек", size=13)
-    add_text(s, 0.9, 5.42, 11.0, 0.5, [
-        {"text": f"{CITY} · {REPO}", "size": 13,
-         "color": RGBColor(0xE6, 0xD2, 0xEF), "space_after": 0}])
+    add_text(s, 0.9, 4.62, 11.0, 0.52, [
+        {"text": "Команда из 5 человек · Москва · " + REPO,
+         "size": 15, "color": RGBColor(0xE6, 0xD2, 0xEF), "space_after": 0}])
 
 
 def slide_about(s):
@@ -251,59 +253,63 @@ def slide_about(s):
         pick(s, "Уникальность решения", count=1)[0],
     )
     fill_text(team_box, [
-        {"text": "О команде", "size": 20, "bold": True, "color": VIOLET, "space_after": 8},
-        {"text": "Капитан: Сабадаш Павел, backend и инфраструктура", "size": 12},
-        {"text": "Кол-во участников: 5 человек", "size": 12},
-        {"text": "Краткое описание: команда собралась на хакатоне ЛЦТ 2026 вокруг задачи ИТ Школы — связать коммуникации с вузами в один управляемый процесс.", "size": 11, "color": MUTED},
-        {"text": "Город и регион: Москва", "size": 12}])
+        {"text": "О команде", "size": 16, "bold": True, "color": VIOLET, "space_after": 8},
+        {"text": "Капитан: Сабадаш Павел, backend и инфраструктура", "size": 14},
+        {"text": "Кол-во участников: 5 человек", "size": 14},
+        {"text": "Город и регион: Москва", "size": 14},
+        {"text": "Собрались на ЛЦТ 2026 вокруг задачи ИТ Школы.", "size": 14, "color": MUTED}])
     fill_text(solution_box, [
-        {"text": "Краткое описание решения", "size": 20, "bold": True,
+        {"text": "Краткое описание решения", "size": 16, "bold": True,
          "color": VIOLET, "space_after": 8},
-        {"text": "CRM, которая ведёт взаимодействие с вузом от первого контакта до результата: Kanban по этапам workflow, карточка взаимодействия, задачи, комментарии, файлы и отчёты с экспортом.", "size": 12}])
+        {"text": "CRM ведёт взаимодействие с вузом от первого контакта до результата: Kanban, карточка, задачи, комментарии, файлы, отчёты.", "size": 14}])
     fill_text(unique_box, [
-        {"text": "Уникальность решения", "size": 20, "bold": True,
+        {"text": "Уникальность решения", "size": 16, "bold": True,
          "color": VIOLET, "space_after": 8},
-        {"text": "Настраиваемый workflow: этапы, порядок и цвета меняет администратор без доработки кода. Отдельные воронки B2B (14 этапов) и B2C (4 этапа) с корректной фильтрацией в UI, API и отчётах.", "size": 12}])
+        {"text": "Настраиваемый workflow без доработки кода. Воронки B2B (14 этапов) и B2C (4 этапа) не смешиваются в UI, API и отчётах.", "size": 14}])
+
+
+def _slot_columns(slide):
+    """Колонки карточек команды на слайде-шаблоне, слева направо."""
+    names = pick(slide, "Имя Фамилия")
+    roles = pick(slide, "Роль в команде")
+    return names, roles
+
+
+def trim_team_slots(slide, keep: int) -> int:
+    """Удалить карточки-места сверх числа участников (правило организатора).
+
+    Возвращает число удалённых колонок. Шаблон рассчитан на 5 участников; если
+    в команде меньше, лишние карточки нельзя оставлять пустыми.
+    """
+    names, _ = _slot_columns(slide)
+    if keep >= len(names):
+        return 0
+    columns = sorted(sh.left for sh in names)
+    removed = 0
+    for left in columns[keep:]:
+        band_lo = left - Inches(0.2)
+        band_hi = left + Inches(2.2)
+        for sh in list(slide.shapes):
+            if sh.left is None:
+                continue
+            center = sh.left + (sh.width or 0) // 2
+            if band_lo <= center <= band_hi:
+                sh._element.getparent().remove(sh._element)
+        removed += 1
+    return removed
 
 
 def slide_team(s):
-    name_boxes = pick(s, "Имя Фамилия", count=5)
-    role_boxes = pick(s, "Роль в команде", count=5)
-    slots = [sh.left for sh in name_boxes]
-    for member, nx_emu, nb, rb in zip(TEAM, slots, name_boxes, role_boxes):
-        nx = nx_emu / 914400
-        initials = "".join(p[0] for p in member["name"].split()[:2]).upper()
-        circ = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(nx), Inches(2.25),
-                                  Inches(1.45), Inches(1.45))
-        circ.fill.solid()
-        circ.fill.fore_color.rgb = PINK
-        circ.line.color.rgb = WHITE
-        circ.line.width = Pt(2)
-        circ.shadow.inherit = False
-        tf = circ.text_frame
-        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-        par = tf.paragraphs[0]
-        par.alignment = PP_ALIGN.CENTER
-        run = par.add_run()
-        run.text = initials
-        run.font.name = FONT
-        run.font.size = Pt(26)
-        run.font.bold = True
-        run.font.color.rgb = WHITE
-
-        fill_text(nb, [{"text": member["name"], "size": 14, "bold": True,
-                        "color": INK, "space_after": 0}])
+    """Слайд состава команды — шаблон ЛЦТ, слайд 9. Места без лишних карточек."""
+    trim_team_slots(s, len(TEAM))
+    name_boxes, role_boxes = _slot_columns(s)
+    for member, nb, rb in zip(TEAM, name_boxes, role_boxes, strict=False):
+        fill_text(nb, [{"text": member["name"], "size": 16, "bold": True,
+                        "color": VIOLET, "space_after": 0}])
         fill_text(rb, [
-            {"text": member["role"], "size": 10, "color": BODY, "space_after": 2},
-            {"text": f"Telegram: @{member['tg']}", "size": 10, "color": MUTED,
+            {"text": member["role"], "size": 14, "color": BODY, "space_after": 2},
+            {"text": f"Telegram: @{member['tg']}", "size": 14, "color": MUTED,
              "space_after": 0}])
-
-        url = f"https://t.me/{member['tg']}"
-        s.shapes.add_picture(qr_stream(url), Inches(nx + 0.42), Inches(5.55),
-                             Inches(0.78), Inches(0.78))
-    add_text(s, 0.65, 6.60, 5.0, 0.4, [
-        {"text": "QR-код ведёт на профиль участника в Telegram",
-         "size": 9, "color": MUTED, "space_after": 0}])
 
 
 def widen(shape, *, left=None, top=None, width=None, height=None):
@@ -318,36 +324,36 @@ def widen(shape, *, left=None, top=None, width=None, height=None):
 
 
 def slide_history(s):
+    """История команды — шаблон ЛЦТ, слайд 10. Геометрия блоков не меняется."""
     hbox = pick(s, "Краткая история команды", count=1)[0]
     wbox = pick(s, "Почему вы выбрали", count=1)[0]
     cbox = pick(s, "С какими основными", count=1)[0]
-    for box, top in ((hbox, 1.34), (wbox, 3.12), (cbox, 4.96)):
-        widen(box, left=0.95, width=11.4, top=top, height=1.5)
     fill_text(hbox, [
-        {"text": "Краткая история команды", "size": 15, "bold": True,
+        {"text": "Краткая история команды", "size": 14, "bold": True,
          "color": VIOLET, "space_after": 5},
-        {"text": "Команда сложилась на хакатоне ЛЦТ 2026: backend, frontend, аналитика, отчёты и QA. Роли распределили по сильным сторонам, работали итерациями с ежедневной синхронизацией.", "size": 11.5}])
+        {"text": "Команда сложилась на хакатоне ЛЦТ 2026: backend, frontend, аналитика, отчёты и QA. Роли распределили по сильным сторонам.", "size": 14}])
     fill_text(wbox, [
-        {"text": "Почему выбрали эту задачу", "size": 15, "bold": True,
+        {"text": "Почему выбрали эту задачу", "size": 14, "bold": True,
          "color": VIOLET, "space_after": 5},
-        {"text": "Задача ИТ Школы — про реальный процесс, а не учебный кейс: взаимодействие с вузами живёт в таблицах и чатах. Хотелось собрать это в один прозрачный контур.", "size": 11.5}])
+        {"text": "Задача ИТ Школы про реальный процесс, а не учебный кейс: взаимодействие с вузами живёт в таблицах и чатах. Собрали это в один прозрачный контур.", "size": 14}])
     fill_text(cbox, [
-        {"text": "Сложности и вызовы", "size": 15, "bold": True,
+        {"text": "Сложности и вызовы", "size": 14, "bold": True,
          "color": VIOLET, "space_after": 5},
-        {"text": "Свести две разные воронки — B2B (14 этапов) и B2C (4 этапа) — так, чтобы фильтры, создание заявок и отчёты не путали их между собой. Отдельно занимались версткой PDF-отчётов и контрастом тёмной темы.", "size": 11.5}])
+        {"text": "Свести две воронки — B2B (14 этапов) и B2C (4 этапа) — так, чтобы фильтры, создание заявок и отчёты не путали их между собой. Отдельно занимались вёрсткой PDF-отчётов и контрастом тёмной темы.", "size": 14}])
 
 
 def slide_short(s):
+    """Коротко о решении — шаблон ЛЦТ, слайд 11. Текст в родных плейсхолдерах."""
     tbox = pick(s, "Техническая суть решения", count=1)[0]
     mbox = pick(s, "Маркетинговая суть решения", count=1)[0]
     fill_text(tbox, [
-        {"text": "Техническая суть решения", "size": 15, "bold": True,
+        {"text": "Техническая суть решения", "size": 20, "bold": True,
          "color": VIOLET, "space_after": 6},
-        {"text": "React 18 + TypeScript + Ant Design на клиенте; FastAPI, SQLAlchemy 2 (async), PostgreSQL и JWT на сервере. Вход через Keycloak (Code Flow + PKCE) или локальный JWT. Ролевой доступ и audit log для изменяющих операций.", "size": 11.5}])
+        {"text": "React 18 + TypeScript + Ant Design; FastAPI, SQLAlchemy 2 (async), PostgreSQL. Вход через Keycloak (Code Flow + PKCE) или локальный JWT, ролевой доступ и audit log.", "size": 14}])
     fill_text(mbox, [
-        {"text": "Маркетинговая суть решения", "size": 15, "bold": True,
+        {"text": "Маркетинговая суть решения", "size": 20, "bold": True,
          "color": VIOLET, "space_after": 6},
-        {"text": "Продукт закрывает потребность ИТ Школы в управляемом взаимодействии с вузами и переносится на другие подразделения с похожим процессом: продажи, партнёрства, работа с филиалами.", "size": 11.5}])
+        {"text": "Закрывает потребность ИТ Школы в управляемом взаимодействии с вузами и переносится на подразделения с похожим процессом: продажи, партнёрства, работа с филиалами.", "size": 14}])
 
 
 def slide_detail(s):
@@ -395,7 +401,7 @@ def slide_tech(s):
         (0.68, 1.75, 5.9), (6.75, 1.75, 5.9),
         (0.68, 4.0, 5.9), (6.75, 4.0, 5.9),
     ]
-    for (title, items), (x, y, w) in zip(cards, positions):
+    for (title, items), (x, y, w) in zip(cards, positions, strict=False):
         add_text(s, x + 0.22, y, w - 0.44, 0.5, [
             {"text": title, "size": 15, "bold": True, "color": VIOLET, "space_after": 0}])
         add_text(s, x + 0.22, y + 0.6, w - 0.44, 1.5, [
@@ -503,9 +509,9 @@ def slide_demo(s):
         {"text": f"{CITY} · {CONTACT}", "size": 9, "color": MUTED, "space_after": 0}])
 
 
-BUILDERS = [slide_title, slide_about, slide_team, slide_history, slide_short,
-            slide_detail, slide_tech, slide_marketing, slide_business,
-            slide_unique, slide_demo]
+BUILDERS = [slide_detail, slide_tech, slide_marketing, slide_business,
+            slide_unique, slide_demo,
+            slide_title, slide_about, slide_team, slide_history, slide_short]
 
 
 def set_metadata(prs: Presentation) -> None:
@@ -524,7 +530,7 @@ def build() -> Path:
     prs = Presentation(str(TEMPLATE))
     keep_only(prs, KEEP)
     assert len(prs.slides) == len(BUILDERS), (len(prs.slides), len(BUILDERS))
-    for slide, fn in zip(prs.slides, BUILDERS):
+    for slide, fn in zip(prs.slides, BUILDERS, strict=True):
         fn(slide)
     unify_font(prs)
     set_page_numbers(prs)

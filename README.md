@@ -129,10 +129,16 @@ curl http://localhost:8000/readyz
 | Сервис | Адрес |
 |---|---|
 | Frontend | http://localhost:3000 |
-| Backend / Swagger | http://localhost:8000/docs |
+| Backend / Swagger UI | http://localhost:8000/docs |
 | Keycloak | http://localhost:8080 |
 | MinIO Console | http://localhost:9001 |
 | Nginx | http://localhost |
+
+> **Swagger UI и `/docs` на домене.** Swagger UI отдаёт сам backend по
+> `/docs` — локально это `http://localhost:8000/docs`. На публичном домене
+> путь `/docs` занят статической документацией фронтенда
+> (`frontend/public/docs/`), поэтому Swagger UI живёт под тем же адресом,
+> что и API: `https://crm-rtk.pixel-minds.ru` + `/api` (см. `frontend/nginx.conf`).
 
 Схема БД и справочники создаются самим приложением при старте (lifespan):
 миграции и seed вручную запускать не нужно. Демо-данные включаются
@@ -228,6 +234,9 @@ Render, frontend — статика на Vercel, база — Supabase PostgreSQ
 ## Документация
 
 - [rtk-crm-documentation.pdf](docs/rtk-crm-documentation.pdf) — единый PDF со всей документацией
+- [RTK-CRM-LCT2026.pptx](docs/presentation/RTK-CRM-LCT2026.pptx) — презентация, 11 слайдов по шаблону ЛЦТ
+- [RTK-CRM-LCT2026.pdf](docs/presentation/RTK-CRM-LCT2026.pdf) — та же презентация в PDF
+- [README презентации](docs/presentation/README.md) — структура слайдов и пересборка
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) — развёртывание
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) — архитектура
 - [KEYCLOAK.md](docs/KEYCLOAK.md) — вход через Keycloak и локальный JWT
@@ -310,3 +319,7 @@ locust -f tests/load/locustfile.py RTKUser \
 Для отдельной проверки десяти параллельных отчётов используйте сценарий
 `ReportsUser`; подробности находятся в
 [tests/load/README.md](tests/load/README.md).
+
+## Лицензия
+
+Проект распространяется по лицензии [MIT](LICENSE).
